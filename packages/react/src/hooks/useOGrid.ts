@@ -23,6 +23,7 @@ import { useOGridCellApi } from './useOGridCellApi';
 import { useOGridNameBox } from './useOGridNameBox';
 import { useOGridHiddenRows } from './useOGridHiddenRows';
 import { useLatestRef } from './useLatestRef';
+import { useOGridCellNotes } from './useOGridCellNotes';
 import { useSortFilterColumns } from './useSortFilterColumns';
 import {
   buildStatusBarConfig,
@@ -218,6 +219,7 @@ export function useOGrid<T>(
     formulaEngine, formulasFollowData, bridgeRef: gridEditBridgeRef,
   });
   const { structureActions } = structure;
+  const dgNoteProps = useOGridCellNotes(props);
 
   // --- Imperative handle (stabilized via refs to avoid invalidation on every state change) ---
   const scrollToRowRef = useRef<IOGridApi<T>['scrollToRow'] | null>(null);
@@ -287,6 +289,7 @@ export function useOGrid<T>(
     rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef, hidingActions,
     findReplace, findRows, onFindPageChange: findRows ? setPage : undefined,
     cellNavigatorRef: nameBox.cellNavigatorRef,
+    ...dgNoteProps,
     emptyState: dgEmptyState,
     ...dgFormulaProps,
   }), [
@@ -301,7 +304,7 @@ export function useOGrid<T>(
     isLoadingResolved, dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows,
-    rowResize, rowHeights, onRowResized, structureActions, hidingActions,
+    rowResize, rowHeights, onRowResized, structureActions, hidingActions, dgNoteProps,
     findReplace, findRows, setPage,
     nameBox.cellNavigatorRef, dgEmptyState, dgFormulaProps,
   ]);

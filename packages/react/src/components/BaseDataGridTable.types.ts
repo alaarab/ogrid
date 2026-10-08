@@ -90,6 +90,25 @@ export interface FindReplacePanelProps {
   focusRequest: number;
 }
 
+/** Props passed to an adapter's cell-note popover renderer. */
+export interface CellNotePopoverRenderProps {
+  /** Always true while rendered; the shared body unmounts the popover when it closes. */
+  open: boolean;
+  /** The noted cell (`<td>`) the popover points at. */
+  anchorEl: HTMLElement;
+  /**
+   * `view` shows the note (hover/focus) and must not take focus; `edit` holds
+   * the note editor, which focuses its own textarea.
+   */
+  mode: 'view' | 'edit';
+  /** Pointer down outside the popover: the editor saves, the viewer closes. */
+  onDismiss: () => void;
+  /** Escape: the editor discards its changes, the viewer closes. */
+  onEscape: () => void;
+  /** Note viewer or editor, rendered inside the popover surface. */
+  content: React.ReactNode;
+}
+
 /**
  * UI primitives an adapter (Radix / Fluent) injects to bind its component
  * library to the shared data-grid body. Element wrappers (`TableEl`, `Tr`,
@@ -123,6 +142,8 @@ export interface DataGridPrimitives {
   renderHeaderSelectAll: (p: HeaderSelectAllRenderProps) => React.ReactNode;
   renderBooleanCell: (p: BooleanCellRenderProps) => React.ReactNode;
   renderPopoverEditor: (p: PopoverEditorRenderProps) => React.ReactNode;
+  /** Cell-note popover (Radix Popover / Fluent Popover). Without it notes open in a plain fixed-position box. */
+  renderCellNotePopover?: (p: CellNotePopoverRenderProps) => React.ReactNode;
   /** Inline editor component (adapter-specific subclass of BaseInlineCellEditor). */
   InlineCellEditor: <T>(p: InlineCellEditorProps<T>) => React.ReactElement;
   /** Column header filter component. */
@@ -139,6 +160,7 @@ export interface DataGridPrimitives {
     onSelectAll: () => void; onClose: () => void;
     structure?: import('./GridContextMenu').GridContextMenuStructure;
     hiding?: import('./GridContextMenu').GridContextMenuHiding;
+    notes?: import('./GridContextMenu').GridContextMenuNotes;
   }>;
   /** Empty-state component. */
   EmptyState: React.ComponentType<{ emptyState: NonNullable<ReturnType<typeof useDataGridTableOrchestration>['emptyState']> }>;

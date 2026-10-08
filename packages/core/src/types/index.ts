@@ -40,6 +40,7 @@ export type {
   IActiveCell,
   ISelectionRange,
   IMergedCell,
+  ICellNote,
   SideBarPanelId,
   ISideBarDef,
   ISheetDef,

@@ -47,6 +47,7 @@ export type {
   IActiveCell,
   ISelectionRange,
   IMergedCell,
+  ICellNote,
   HeaderCell,
   HeaderRow,
   SideBarPanelId,
@@ -466,3 +467,8 @@ export type {
 } from './components/ColumnHeaderFilterRenderers';
 export type { IColumnChooserProps } from './components/ColumnChooserProps';
 export type { IPaginationControlsProps } from './components/PaginationControlsProps';
+
+// Cell notes
+export { cellNoteKey, indexCellNotes, upsertCellNote, removeCellNote, setCellNote, getCellNoteMenuItems } from './utils';
+export type { CellNotePopoverRenderProps } from './components/BaseDataGridTable.types';
+export type { GridContextMenuNotes } from './components/GridContextMenu';

@@ -168,3 +168,5 @@ export type { IResponsiveColumnsConfig } from './responsiveColumns';
 export { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from './dateFormatter';
 export { handleBooleanCellPointerDown } from './checkboxUtils';
 export type { BooleanCellSelectHandlers } from './checkboxUtils';
+export { cellNoteKey, indexCellNotes, upsertCellNote, removeCellNote, setCellNote } from './cellNotes';
+export { getCellNoteMenuItems } from './gridContextMenuHelpers';

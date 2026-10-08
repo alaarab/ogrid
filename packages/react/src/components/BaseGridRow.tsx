@@ -6,7 +6,7 @@ import { areGridRowPropsEqual, getGridCellSurfaceState } from '../utils';
 import { PREVENT_DEFAULT, STOP_PROPAGATION } from '../constants/domHelpers';
 import { ROW_HEADER_INDEX_ATTR } from '../hooks/useSheetSelection';
 import type { GridRowProps } from './createOGrid';
-import type { IColumnDef } from '../types';
+import type { IColumnDef, ICellNote } from '../types';
 import type { DataGridStyles, DataGridPrimitives } from './BaseDataGridTable.types';
 
 /** Layer a (possibly translucent) tint over an opaque base so sticky pinned cells never turn transparent. */
@@ -85,6 +85,10 @@ export interface BaseGridRowProps extends GridRowProps {
   hiddenRowsAfter?: (string | number)[];
   /** Unhide rows from a marker (stable identity). */
   onUnhideRows?: (rowIds: (string | number)[]) => void;
+  /** The note on a cell (red corner marker + aria description). Identity changes with the notes. */
+  getCellNote?: (item: unknown, columnId: string) => ICellNote | undefined;
+  /** Prefix for the cells' note description ids (unique per grid). */
+  noteIdPrefix?: string;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
 }
@@ -123,7 +127,7 @@ function GridRowInner(props: BaseGridRowProps) {
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumber, ariaRowIndexBase,
     leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
     selectionRange, activeCell, cutRange, tabStopColumn = -1, registerTabStop, mergePlan, frozen,
-    customRowHeight, onRowResizeStart, hiddenRowsBefore, hiddenRowsAfter, onUnhideRows, styles, primitives,
+    customRowHeight, onRowResizeStart, hiddenRowsBefore, hiddenRowsAfter, onUnhideRows, getCellNote, noteIdPrefix, styles, primitives,
     onRowHeaderPointerDown,
   } = props;
   const { Tr, Td, renderRowCheckbox } = primitives;
@@ -255,6 +259,8 @@ function GridRowInner(props: BaseGridRowProps) {
           : undefined;
         const isTabStop = tabStopColumn === leadingColCount + cellCol;
         const cellClass = columnMeta.cellClasses[col.columnId];
+        const note = getCellNote?.(merged ? merged.anchorItem : item, merged ? merged.anchorColumn.columnId : col.columnId);
+        const noteDescId = note ? `${noteIdPrefix ?? 'ogrid-note'}-r${cellRow}-c${cellCol}` : undefined;
         return (
           <Td
             key={col.columnId}
@@ -267,6 +273,8 @@ function GridRowInner(props: BaseGridRowProps) {
             colSpan={merged && merged.colSpan > 1 ? merged.colSpan : undefined}
             aria-colindex={leadingColCount + cellCol + 1}
             aria-selected={surfaceState.isActiveRangeCell || surfaceState.isRangeCell ? true : undefined}
+            aria-describedby={noteDescId}
+            data-note-row-id={note ? String(note.rowId) : undefined}
             className={(merged ? `${cellClass ?? ''} ${styles.mergedCell ?? ''}`.trim() : cellClass) || undefined}
             style={bg ? { ...baseStyle, background: isPinnedCell ? opaqueOver(bg) : bg } : baseStyle}
             onPointerDown={PREVENT_DEFAULT}
@@ -274,6 +282,12 @@ function GridRowInner(props: BaseGridRowProps) {
             {merged
               ? renderCellContent(merged.anchorItem, merged.anchorColumn, merged.anchorRow, merged.anchorCol)
               : renderCellContent(item, col, rowIndex, globalIdx)}
+            {note && (
+              <>
+                <span className={styles.cellNoteIndicator} data-ogrid-note-indicator="" aria-hidden="true" />
+                <span id={noteDescId} hidden>{`Note: ${note.text}`}</span>
+              </>
+            )}
           </Td>
         );
       })}

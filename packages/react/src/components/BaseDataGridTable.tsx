@@ -10,6 +10,8 @@ import { useFrozenRowOffsets } from '../hooks/useFrozenRowOffsets';
 import { useStructureContextMenu } from '../hooks/useStructureContextMenu';
 import { useHidingContextMenu } from '../hooks/useHidingContextMenu';
 import { useRowResize } from '../hooks/useRowResize';
+import { useCellNotes } from '../hooks/useCellNotes';
+import { CellNotePopover } from './CellNotePopover';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
 import {
   GRID_ROOT_STYLE,
@@ -56,6 +58,7 @@ const FIND_PANEL_HOST_STYLE: React.CSSProperties = {
   zIndex: 'var(--ogrid-z-find, 30)' as unknown as number,
   maxWidth: 'calc(100% - 8px)',
 };
+let noteIdCounter = 0;
 
 /**
  * Shared DataGridTable body. Adapters (`react-radix`, `react-fluent`) bind their
@@ -177,6 +180,23 @@ export function BaseDataGridTableInner<T>(
       interaction.setSelectionRange(null);
       interaction.setActiveCell(null);
     },
+  });
+  // Excel-style cell notes: corner marker, hover/focus popover, editor (context menu, Shift+F2).
+  // React 17 compatible stable id (no useId).
+  const [noteIdPrefix] = React.useState(() => `ogrid-note-${++noteIdCounter}`);
+  const cellNotes = useCellNotes<T>({
+    notes: gridProps.cellNotes,
+    onNotesChange: gridProps.onCellNotesChange,
+    editable: !!gridProps.cellNotesEditable,
+    author: gridProps.cellNoteAuthor,
+    wrapperRef,
+    getRowId,
+    items: windowed?.loadedRows ?? items,
+    visibleCols,
+    colOffset,
+    activeCell: interaction.activeCell,
+    menuOpen: menuPosition != null,
+    recordAction: o.recordAction,
   });
   // Theme tokens for the portaled context menu (it renders outside the grid).
   const contextMenuTheme = usePortalTheme(wrapperRef, menuPosition != null);
@@ -319,6 +339,8 @@ export function BaseDataGridTableInner<T>(
                     onRowResizeStart={rowResize.onRowResizeStart}
                     hiddenRowGaps={gridProps.hidingActions?.hiddenRowGaps}
                     onUnhideRows={gridProps.hidingActions?.unhideRows}
+                    getCellNote={cellNotes.getCellNote}
+                    noteIdPrefix={noteIdPrefix}
                     styles={styles}
                     primitives={primitives}
                   />
@@ -378,6 +400,7 @@ export function BaseDataGridTableInner<T>(
               onClose={closeContextMenu}
               structure={structureMenu}
               hiding={hidingMenu}
+              notes={cellNotes.menu}
             />
             </div>,
             getContextMenuPortalTarget ? getContextMenuPortalTarget(wrapperRef.current) : document.body
@@ -391,6 +414,14 @@ export function BaseDataGridTableInner<T>(
           <FindReplacePanel find={findReplace.find} onClose={findReplace.close} focusRequest={findReplace.focusRequest} />
         </div>
       )}
+      {/* Outside the wrapper so the editor's keys never reach the grid's key handling. */}
+      <CellNotePopover
+        notes={cellNotes as Parameters<typeof CellNotePopover>[0]['notes']}
+        wrapperRef={wrapperRef}
+        viewId={`${noteIdPrefix}-popover`}
+        styles={styles}
+        primitives={primitives}
+      />
       {statusBarConfig && (
         <StatusBar
           totalCount={statusBarConfig.totalCount}

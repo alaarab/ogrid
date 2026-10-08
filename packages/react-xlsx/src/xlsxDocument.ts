@@ -9,10 +9,11 @@
 // through exactly as ExcelJS read it.
 
 import ExcelJS from 'exceljs';
-import { UndoRedoStack, triggerBlobDownload, type IColumnDef, type RowId } from '@alaarab/ogrid-core';
+import { UndoRedoStack, triggerBlobDownload, type ICellNote, type IColumnDef, type RowId } from '@alaarab/ogrid-core';
 import { createBuiltInFunctions, tokenize, type IGridDataAccessor, type IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { applyStyleEdit, styleHas, type StyleEdit, type XlsxCellStyle } from './cellStyles';
 import { XLSX_MIME_TYPE } from './exportToXlsx';
+import { readSheetNotes, writeSheetNotes } from './cellNotes';
 import { rebaseFormulaRows, toFileFormula } from './formulaReferences';
 import type { IMergedCell, XlsxSelection } from './gridAdapter';
 import {
@@ -29,7 +30,8 @@ import {
 type Op =
   | { t: 'cell'; rowId: number; columnId: string; before: unknown; after: unknown }
   | { t: 'style'; key: string; before: XlsxCellStyle | undefined; after: XlsxCellStyle | undefined }
-  | { t: 'merges'; before: IMergedCell[]; after: IMergedCell[] };
+  | { t: 'merges'; before: IMergedCell[]; after: IMergedCell[] }
+  | { t: 'notes'; before: ICellNote[]; after: ICellNote[] };
 
 /** One sheet's live grid state. Read-only for consumers; change it through the document. */
 export interface XlsxSheetState {
@@ -42,6 +44,8 @@ export interface XlsxSheetState {
   readonly styles: ReadonlyMap<string, XlsxCellStyle>;
   /** Current merged blocks. */
   readonly merges: IMergedCell[];
+  /** Current cell notes (Excel notes on loaded data cells). */
+  readonly notes: ICellNote[];
   /** Current column widths in Excel character units (explicit ones only). */
   readonly columnWidths: Readonly<Record<string, number>>;
   /** Latest formula results reported by the grid's engine, by cellKey. */
@@ -59,6 +63,8 @@ interface MutableSheetState {
   styles: Map<string, XlsxCellStyle>;
   initialMerges: IMergedCell[];
   merges: IMergedCell[];
+  initialNotes: ICellNote[];
+  notes: ICellNote[];
   initialWidths: Record<string, number>;
   columnWidths: Record<string, number>;
   formulaResults: Map<string, unknown>;
@@ -179,6 +185,7 @@ export class XlsxWorkbookDocument {
       if (cached !== undefined) formulaResults.set(cellKey(row.__rowIdx, column.columnId), cached);
       row[column.columnId] = f.formula;
     }
+    const notes = readSheetNotes(worksheet, source);
     const state: MutableSheetState = {
       name,
       source,
@@ -188,6 +195,8 @@ export class XlsxWorkbookDocument {
       styles: new Map(source.formatting.styles),
       initialMerges: source.formatting.merges,
       merges: source.formatting.merges,
+      initialNotes: notes,
+      notes,
       initialWidths: source.formatting.columnWidths,
       columnWidths: { ...source.formatting.columnWidths },
       formulaResults,
@@ -236,6 +245,8 @@ export class XlsxWorkbookDocument {
       if (style) state.styles.set(op.key, style);
       else state.styles.delete(op.key);
       this.touchRow(state, Number(op.key.slice(0, op.key.indexOf(':'))));
+    } else if (op.t === 'notes') {
+      state.notes = op[direction];
     } else {
       state.merges = op[direction];
     }
@@ -353,6 +364,13 @@ export class XlsxWorkbookDocument {
     });
     if (kept.length === state.merges.length) return;
     this.commit(state, [{ t: 'merges', before: state.merges, after: kept }]);
+  }
+
+  /** Replace the sheet's cell notes (the grid's onCellNotesChange lands here). Undoable. */
+  setNotes(sheetName: string, notes: ICellNote[]): void {
+    const state = this.state(sheetName);
+    if (!state || notes === state.notes) return;
+    this.commit(state, [{ t: 'notes', before: state.notes, after: notes }]);
   }
 
   /** Record a column resize from the grid (pixels). Not part of undo history, like the grid's own resizes. */
@@ -551,6 +569,14 @@ export class XlsxWorkbookDocument {
         const b = this.mergeBounds(state, m);
         if (b.top >= 0 && b.left >= 0) ws.mergeCellsWithoutStyle(...range(b));
       }
+    }
+
+    if (state.notes !== state.initialNotes) {
+      writeSheetNotes(state.initialNotes, state.notes, (rowId, columnId) => {
+        const index = this.rowIndexOf(state, rowId);
+        const c = state.columnIndex.get(columnId);
+        return index < 0 || c === undefined ? undefined : ws.getCell(sheetRowOf(index), c + 1);
+      });
     }
 
     for (const [columnId, width] of Object.entries(state.columnWidths)) {

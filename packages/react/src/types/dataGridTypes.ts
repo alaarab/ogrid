@@ -25,6 +25,7 @@ export type {
   IActiveCell,
   ISelectionRange,
   IMergedCell,
+  ICellNote,
   SideBarPanelId,
   ISideBarDef,
   ISheetDef,
@@ -50,6 +51,7 @@ import type {
   ISheetDef,
   IVirtualScrollConfig,
   IMergedCell,
+  ICellNote,
   IRowsChangeEvent,
 } from '@alaarab/ogrid-core';
 
@@ -218,6 +220,25 @@ interface IOGridBaseProps<T> {
    * read-only cells, and Replace all is one undo step. Default: false.
    */
   findReplace?: boolean;
+
+  /**
+   * Excel-style cell notes (controlled). Each note sits on (`rowId`,
+   * `columnId`), shows a red corner marker and opens on hover or focus. Pair
+   * with `onCellNotesChange` to make it editable.
+   */
+  cellNotes?: ICellNote[];
+  /** Initial notes when `cellNotes` is not controlled. */
+  defaultCellNotes?: ICellNote[];
+  /** Called with the full notes array after a note is added, edited or deleted. */
+  onCellNotesChange?: (notes: ICellNote[]) => void;
+  /**
+   * Let users add, edit and delete notes (context menu New/Edit/Delete note,
+   * Shift+F2). Defaults to true when `onCellNotesChange` is set. Without
+   * `cellNotes`, the grid keeps the notes itself (uncontrolled).
+   */
+  cellNotesEditable?: boolean;
+  /** Author stamped on notes the user creates. */
+  cellNoteAuthor?: string;
 
   /** When true, shows a fullscreen toggle button in the toolbar. Default: false. */
   fullScreen?: boolean;
@@ -480,6 +501,14 @@ export interface IOGridDataGridProps<T> {
   findRows?: T[];
   /** @internal Moves the grid to a page so a Find match on it can be shown. */
   onFindPageChange?: (page: number) => void;
+  /** Cell notes to show (red corner marker, popover on hover/focus). */
+  cellNotes?: ICellNote[];
+  /** Called with the full notes array after a note edit; required for editing. */
+  onCellNotesChange?: (notes: ICellNote[]) => void;
+  /** Show New/Edit/Delete note in the context menu and open the note editor on Shift+F2. */
+  cellNotesEditable?: boolean;
+  /** Author stamped on notes the user creates. */
+  cellNoteAuthor?: string;
   isLoading?: boolean;
   loadingMessage?: string;
   editable?: boolean;

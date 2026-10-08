@@ -1,0 +1,107 @@
+---
+sidebar_position: 5.7
+title: Cell Notes
+description: Excel-style notes on cells - red corner marker, hover popover, New/Edit/Delete note, undo, and XLSX import/export
+---
+
+import CellNotesDemo from '@site/src/components/demos/CellNotesDemo';
+
+# Cell Notes
+
+Attach Excel-style notes (comments) to cells. A noted cell shows a small red
+triangle in its top-right corner; hovering it, or moving keyboard focus onto it,
+opens the note. With editing on, the cell context menu offers **New note**,
+**Edit note** and **Delete note**, and **Shift+F2** opens the note editor on the
+active cell, as in Excel.
+
+## Live Demo
+
+<CellNotesDemo />
+
+## Quick Example
+
+Notes are a prop, keyed by row id and column id. Store the array the grid
+reports from `onCellNotesChange`:
+
+```tsx
+import { useState } from 'react';
+import { OGrid, type ICellNote } from '@alaarab/ogrid-react-radix';
+
+function Sheet() {
+  const [notes, setNotes] = useState<ICellNote[]>([
+    { rowId: 1, columnId: 'item', text: 'Order the dotted kind next time.', author: 'Ala' },
+  ]);
+
+  return (
+    <OGrid
+      columns={columns}
+      data={rows}
+      getRowId={(r) => r.id}
+      cellNotes={notes}
+      onCellNotesChange={setNotes}
+      cellNoteAuthor="Ala"
+    />
+  );
+}
+```
+
+The same props work with `@alaarab/ogrid-react-fluent`, where the note opens in
+a Fluent UI `Popover`.
+
+## Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `cellNotes` | `ICellNote[]` | Notes to show (controlled). |
+| `defaultCellNotes` | `ICellNote[]` | Initial notes when `cellNotes` isn't controlled. |
+| `onCellNotesChange` | `(notes: ICellNote[]) => void` | Called with the full array after a note is added, edited or deleted. |
+| `cellNotesEditable` | `boolean` | Show the note items in the context menu and enable Shift+F2. Defaults to `true` when `onCellNotesChange` is set. |
+| `cellNoteAuthor` | `string` | Author stamped on notes the user creates. |
+
+```ts
+interface ICellNote {
+  rowId: RowId;
+  columnId: string;
+  text: string;
+  author?: string;
+  createdAt?: string; // ISO 8601, set on notes the user creates
+}
+```
+
+### Controlled or uncontrolled
+
+- **Controlled:** pass `cellNotes` and `onCellNotesChange`, and store the array.
+- **Uncontrolled:** omit `cellNotes` and set `cellNotesEditable` (optionally
+  seeding `defaultCellNotes`). The grid keeps the notes and still reports each
+  change through `onCellNotesChange`.
+- **Read-only:** pass `cellNotes` alone. Notes show on hover and focus; the
+  context menu has no note items.
+
+## Behavior
+
+- **Notes follow their cell.** They are keyed by row id and column id, so they
+  move with their record through sorting, filtering and paging. A note whose
+  row or column isn't displayed isn't shown.
+- **Editing.** The editor is a text box with **Save** and **Cancel**.
+  Ctrl+Enter (⌘+Enter) saves, Escape cancels, and clicking outside the editor
+  saves. Saving empty text deletes the note.
+- **Undo.** Adding, editing and deleting a note are each one undo step
+  (Ctrl+Z / Ctrl+Y) in the grid's history. When the host owns undo (`onUndo`),
+  record note changes in your own history.
+- **Accessibility.** A noted cell has `aria-describedby` pointing at its note
+  text, so screen readers read the note with the cell. The hover popover has
+  `role="tooltip"`; the editor is a labelled `role="dialog"`.
+
+## Styling
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `--ogrid-note-indicator-color` | `#d13438` | Corner triangle color. |
+| `--ogrid-note-indicator-size` | `7px` | Corner triangle size. |
+| `--ogrid-note-bg` | `var(--ogrid-bg)` | Note popover background. |
+
+## XLSX import and export
+
+[`XlsxGrid`](./xlsx-import) reads each sheet's Excel notes into the grid and
+writes edited notes back on export. Unchanged notes keep their original
+formatting; notes on the promoted header row pass through untouched.
