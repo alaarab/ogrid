@@ -71,10 +71,13 @@ export function useOGrid<T>(
     editable, cellSelection, canUndo, canRedo, rowSelection = 'none', statusBar, pageSizeOptions,
     stickyHeader, columnReorder, responsiveColumns, virtualScroll, rowHeight, density = 'normal',
     mergedCells, frozenRows, findReplace,
+    rowDragging, rangeMove, cellDrop,
     'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     rowResize, rowHeights,
   } = props;
   const onRowResized = useStableOptionalCallback(props.onRowResized);
+  const onRowOrderChange = useStableOptionalCallback(props.onRowOrderChange);
+  const onCellDrop = useStableOptionalCallback(props.onCellDrop);
 
   // Inline consumer callbacks are stabilized so they don't cause cascading re-renders.
   const { getRowId, editVersionRef, onColumnOrderChange, onCellValueChanged, onUndo, onRedo, onClipboardError } =
@@ -296,6 +299,7 @@ export function useOGrid<T>(
     virtualScroll, rowHeight, density, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     mergedCells, frozenRows, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef, hidingActions,
+    rowDragging, onRowOrderChange, rangeMove, cellDrop, onCellDrop,
     findReplace, findRows, onFindPageChange: findRows ? setPage : undefined,
     cellNavigatorRef: nameBox.cellNavigatorRef,
     ...dgNoteProps,
@@ -314,6 +318,7 @@ export function useOGrid<T>(
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, hidingActions, dgNoteProps,
+    rowDragging, onRowOrderChange, rangeMove, cellDrop, onCellDrop,
     findReplace, findRows, setPage,
     nameBox.cellNavigatorRef, dgEmptyState, dgFormulaProps,
   ]);

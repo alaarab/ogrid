@@ -75,6 +75,10 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
       // Only handle primary (left) button  -  let middle-click scroll and right-click context menu work natively
       if (e.button !== 0) return;
+      // A custom cell widget marked with data-ogrid-allow-drag owns its pointer
+      // press (native HTML5 drag), so it never starts a range selection.
+      const dragSource = (e.target as Element | null)?.closest?.('[data-ogrid-allow-drag]');
+      if (dragSource) return;
       const colOff = colOffsetRef.current;
       if (globalColIndex < colOff) return;
       // Prevent native text selection during cell drag

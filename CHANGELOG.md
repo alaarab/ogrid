@@ -6,6 +6,21 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- Drag and drop, opt-in per feature, in both kits. `rowDragging` adds a row
+  handle (row numbers show automatically) and reorders rows; `onRowOrderChange`
+  reports `{ rowIds, fromIndex, toIndex, data }`, the grid keeps the order
+  itself without the callback, and Ctrl/Cmd+Shift+Up/Down moves selected rows
+  from the keyboard. Row dragging is disabled while a sort is active. `rangeMove`
+  moves the selected cell range by dragging its handle (Ctrl/Cmd copies) through
+  the same value path as cut/paste (value parsers, formula-reference shifting,
+  one undo step). `cellDrop` accepts HTML5 drops onto cells with target
+  highlighting; `onCellDrop({ rowId, columnId, dataTransfer, files, text, event })`
+  receives the drop, and without it dropped text is written through the edit
+  path. Custom `renderCell` content can be a native drag source by marking it
+  `data-ogrid-allow-drag`; the `useCellDragSource({ rowId, columnId, payload })`
+  hook returns the props to spread. Core adds `moveRows`, `applyRowOrder`,
+  `computeRowOrderChange`, `isRowMoveNoop`, `rowIndexById` and `moveCellRange`.
+
 - Formula autocomplete and argument hints, in the cell editor and the formula
   bar, in both kits: typing a name after `=`, `(`, a comma or an operator lists
   matching functions (prefix matches first, then contains) and named ranges,
