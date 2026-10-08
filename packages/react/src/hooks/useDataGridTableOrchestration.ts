@@ -43,6 +43,7 @@ export function useDataGridTableOrchestration<T>(
   // ── Core state ──────────────────────────────────────────────────────────
   const state = useDataGridState({
     props,
+    onRowReorderKeyDown: params.onRowReorderKeyDown,
     wrapperRef,
     scrollToIndexRef: props.virtualScroll?.enabled || props.windowed ? scrollToIndexRef : undefined,
   });

@@ -11,6 +11,7 @@ import { useStructureContextMenu } from '../hooks/useStructureContextMenu';
 import { useHidingContextMenu } from '../hooks/useHidingContextMenu';
 import { useFreezeContextMenu } from '../hooks/useFreezeContextMenu';
 import { useCellNotes } from '../hooks/useCellNotes';
+import type { useGridDragDrop, UseGridDragDropParams, UseGridDragDropResult } from '../hooks/useGridDragDrop';
 import { CellNotePopover } from './CellNotePopover';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
 import {
@@ -67,14 +68,42 @@ let noteIdCounter = 0;
  * Both built-in kits set `primitives.useDelegatedCellHandlers`, so cells share
  * one set of stable interaction handlers instead of per-cell closures.
  */
-export function BaseDataGridTableInner<T>(
-  props: IOGridDataGridProps<T> & {
-    styles: DataGridStyles;
-    primitives: DataGridPrimitives;
+export type BaseDataGridTableProps<T> = IOGridDataGridProps<T> & {
+  styles: DataGridStyles;
+  primitives: DataGridPrimitives;
+};
+
+const LazyDragDataGridTable = React.lazy(() => import('./DragDataGridTable.js'));
+
+/** Mount the optional drag hooks only for opted-in grids. */
+export function BaseDataGridTableInner<T>(props: BaseDataGridTableProps<T>): React.ReactElement {
+  if (props.rowDragging || props.rangeMove || props.cellDrop || props.onCellDrop) {
+    const DragTable = LazyDragDataGridTable as React.ComponentType<BaseDataGridTableProps<T> & { renderTable: typeof BaseDataGridTableContent<T> }>;
+    return <React.Suspense fallback={null}><DragTable {...props} renderTable={BaseDataGridTableContent} /></React.Suspense>;
   }
+  return <BaseDataGridTableContent {...props} />;
+}
+
+const IGNORE_DRAG = () => {};
+const IGNORE_DRAG_KEY = () => false;
+function useDisabledDragDrop<T>(params: UseGridDragDropParams<T>): UseGridDragDropResult<T> {
+  return {
+    orderedItems: params.items, isDraggingRow: false, isExternalDragOver: false,
+    dropLine: null, rangeMoveHandle: null,
+    handleRowDragStart: IGNORE_DRAG, handleRangeMoveDragStart: IGNORE_DRAG,
+    handleKeyDown: IGNORE_DRAG_KEY,
+    wrapperHandlers: { onDragOver: IGNORE_DRAG, onDragLeave: IGNORE_DRAG, onDrop: IGNORE_DRAG, onDragEnd: IGNORE_DRAG },
+  };
+}
+
+/** Shared rendering; the optional feature component supplies its hook. */
+export function BaseDataGridTableContent<T>(
+  props: BaseDataGridTableProps<T> & { useDragDrop?: typeof useGridDragDrop }
 ): React.ReactElement {
-  const { styles, primitives, ...gridProps } = props;
-  const o = useDataGridTableOrchestration({ props: gridProps as IOGridDataGridProps<T> });
+  const { styles, primitives, useDragDrop = useDisabledDragDrop, ...gridProps } = props;
+  const dragKeyDownRef = React.useRef<(e: React.KeyboardEvent) => boolean>(IGNORE_DRAG_KEY);
+  const onRowReorderKeyDown = React.useCallback((e: React.KeyboardEvent) => dragKeyDownRef.current(e), []);
+  const o = useDataGridTableOrchestration({ props: gridProps as IOGridDataGridProps<T>, onRowReorderKeyDown });
 
   const {
     wrapperRef, tableContainerRef, lastMouseShiftRef,
@@ -106,9 +135,6 @@ export function BaseDataGridTableInner<T>(
   // Ctrl+F / Ctrl+H open Find & Replace; everything else goes to keyboard navigation.
   const { findReplace } = o;
   const findKeyDown = findReplace.handleKeyDown;
-  const handleWrapperKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    if (!findKeyDown(e)) handleGridKeyDown(e);
-  }, [findKeyDown, handleGridKeyDown]);
 
   // Pre-compute column styles and classNames via shared hook (avoids per-cell object creation)
   const columnMeta = useColumnMeta({
@@ -125,6 +151,35 @@ export function BaseDataGridTableInner<T>(
   });
 
   const renderCellContent = useRenderCellContent(o, styles, primitives);
+
+  // Drag-and-drop: row reorder, range move and external cell drops.
+  const sorted = (gridProps.sortModel?.length ?? 0) > 0 || (gridProps.sortBy ?? '') !== '';
+  const dragDrop = useDragDrop<T>({
+    items,
+    getRowId,
+    visibleCols,
+    colOffset,
+    wrapperRef,
+    containerRef: tableContainerRef,
+    rowDragging: gridProps.rowDragging && !windowed,
+    onRowOrderChange: gridProps.onRowOrderChange,
+    sorted,
+    rangeMove: gridProps.rangeMove,
+    selectionRange,
+    selectedRowIds,
+    activeCell: interaction.activeCell,
+    moveRangeTo: interaction.moveRangeTo,
+    cellDrop: gridProps.cellDrop,
+    onCellDrop: gridProps.onCellDrop,
+    dropTextAt: interaction.dropTextAt,
+    recordAction: o.recordAction,
+  });
+  dragKeyDownRef.current = dragDrop.handleKeyDown;
+
+  // Ctrl+F / Ctrl+H open Find & Replace; Ctrl/Cmd+Shift+Up/Down reorders rows.
+  const handleWrapperKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if (!findKeyDown(e)) handleGridKeyDown(e);
+  }, [findKeyDown, handleGridKeyDown]);
 
   // ARIA grid geometry. aria-rowindex counts header rows and earlier pages;
   // aria-rowcount is -1 ("unknown") when the grid can't see the full total.
@@ -263,6 +318,12 @@ export function BaseDataGridTableInner<T>(
         onPaste={interaction.handleGridPaste}
         onCopy={interaction.handleGridCopy}
         onCut={interaction.handleGridCut}
+        onDragOver={dragDrop.wrapperHandlers.onDragOver}
+        onDrop={dragDrop.wrapperHandlers.onDrop}
+        onDragLeave={dragDrop.wrapperHandlers.onDragLeave}
+        onDragEnd={dragDrop.wrapperHandlers.onDragEnd}
+        data-ogrid-dragging-row={dragDrop.isDraggingRow ? '' : undefined}
+        data-ogrid-external-drag={dragDrop.isExternalDragOver ? '' : undefined}
         style={{
           ['--data-table-column-count' as string]: totalColCount,
           ['--data-table-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'fit-content' : fitToContent ? 'fit-content' : '100%',
@@ -330,6 +391,8 @@ export function BaseDataGridTableInner<T>(
                     popoverAnchorEl={o.editing.popoverAnchorEl}
                     pendingEditorValue={o.editing.pendingEditorValue}
                     onRowHeaderPointerDown={o.handleRowHeaderPointerDown}
+                    rowDragging={!!gridProps.rowDragging && !sorted && !windowed}
+                    onRowDragStart={dragDrop.handleRowDragStart}
                     formulaVersion={gridProps.formulaVersion}
                     conditionalFormat={gridProps.conditionalFormat}
                     pinnedColumns={pinning.pinnedColumns}
@@ -351,6 +414,47 @@ export function BaseDataGridTableInner<T>(
               </TableEl>
               {isReorderDragging && dropIndicatorX != null && (
                 <DropIndicator dropIndicatorX={dropIndicatorX} wrapperLeft={wrapperRef.current?.getBoundingClientRect().left ?? 0} />
+              )}
+              {dragDrop.dropLine && (
+                <div
+                  data-ogrid-row-drop-line=""
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    left: dragDrop.dropLine.left,
+                    top: dragDrop.dropLine.top,
+                    width: dragDrop.dropLine.width,
+                    height: 2,
+                    background: 'var(--ogrid-selection, var(--ogrid-selection-color, #217346))',
+                    pointerEvents: 'none',
+                    zIndex: 5,
+                  }}
+                />
+              )}
+              {gridProps.rangeMove && dragDrop.rangeMoveHandle && (
+                <button
+                  type="button"
+                  data-ogrid-range-move-handle=""
+                  draggable
+                  aria-label="Drag to move the selection"
+                  title="Drag to move the selection (Ctrl/Cmd to copy)"
+                  onDragStart={dragDrop.handleRangeMoveDragStart}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  style={{
+                    position: 'absolute',
+                    left: dragDrop.rangeMoveHandle.left,
+                    top: dragDrop.rangeMoveHandle.top,
+                    width: 11,
+                    height: 11,
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    border: '1px solid #fff',
+                    padding: 0,
+                    background: 'var(--ogrid-selection, var(--ogrid-selection-color, #217346))',
+                    cursor: 'move',
+                    zIndex: 6,
+                  }}
+                />
               )}
               <MarchingAntsOverlay
                 containerRef={tableContainerRef}

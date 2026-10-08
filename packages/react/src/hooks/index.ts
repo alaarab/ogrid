@@ -190,6 +190,19 @@ export type {
   UseColumnReorderParams,
   UseColumnReorderResult,
 } from './useColumnReorder';
+export { useCellDragSource, OGRID_CELL_DRAG_MIME } from './useCellDragSource';
+export type {
+  UseCellDragSourceParams,
+  CellDragSourceProps,
+  CellDragPayload,
+} from './useCellDragSource';
+export { useGridDragDrop, OGRID_ROW_DRAG_MIME } from './useGridDragDrop';
+export type {
+  UseGridDragDropParams,
+  UseGridDragDropResult,
+  CellDropEvent,
+  RowDropLine,
+} from './useGridDragDrop';
 export { useVirtualScroll } from './useVirtualScroll';
 export type {
   IVirtualScrollConfig,
