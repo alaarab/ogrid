@@ -8,13 +8,14 @@ import { LiveDemo } from '../LiveDemo';
  */
 export default function XlsxImportDemo() {
   return (
-    <LiveDemo height={500} title="A formatted two-sheet workbook built in-browser: edit, format, export">
+    <LiveDemo height={540} title="Edit a workbook, insert rows and columns, undo, and export">
       {() => {
         const { XlsxWorkbookGrid } = require('@alaarab/ogrid-react-xlsx') as typeof import('@alaarab/ogrid-react-xlsx');
         const ExcelJS = require('exceljs') as typeof import('exceljs');
 
         function WorkbookDemo() {
           const [workbook, setWorkbook] = React.useState<import('exceljs').Workbook | null>(null);
+          const [doc, setDoc] = React.useState<import('@alaarab/ogrid-react-xlsx').XlsxWorkbookDocument | null>(null);
 
           React.useEffect(() => {
             const wb = new ExcelJS.Workbook();
@@ -47,7 +48,17 @@ export default function XlsxImportDemo() {
           }, []);
 
           if (!workbook) return <div style={{ padding: 16 }}>Building workbook…</div>;
-          return <XlsxWorkbookGrid workbook={workbook} height={480} editable exportFileName="orders.xlsx" />;
+          return (
+            <>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: 8 }}>
+                <button type="button" disabled={!doc} onClick={() => doc?.insertRows('Orders', 0)}>Insert order row</button>
+                <button type="button" disabled={!doc} onClick={() => doc?.deleteRows('Orders', 0)}>Delete first order row</button>
+                <button type="button" disabled={!doc} onClick={() => doc?.insertColumns('Orders', 2)}>Insert column before Amount</button>
+                <button type="button" disabled={!doc} onClick={() => doc?.undo('Orders')}>Undo</button>
+              </div>
+              <XlsxWorkbookGrid workbook={workbook} height={460} editable exportFileName="orders.xlsx" onDocument={setDoc} />
+            </>
+          );
         }
 
         return <WorkbookDemo />;
