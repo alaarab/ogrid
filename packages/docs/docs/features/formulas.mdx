@@ -1,7 +1,7 @@
 ---
 sidebar_position: 5
 title: Formulas
-description: Excel-like formula support with 93 built-in functions, live recalculation, and dependency tracking
+description: Excel-like formula support with 187 built-in functions, live recalculation, and dependency tracking
 ---
 
 import FormulasDemo from '@site/src/components/demos/FormulasDemo';
@@ -280,28 +280,44 @@ Formula errors display in red (controlled by `--ogrid-formula-error-color`):
 `#NAME?` is almost always a typo. Formula function names are case-insensitive — `sum`, `SUM`, and `Sum` all work — but `=SUMM(A1:A5)` gives `#NAME?`.
 :::
 
-## All 93 built-in functions
+## All 187 built-in functions
 
-### Math (30)
-`SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `COUNTA`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `INT`, `TRUNC`, `ABS`, `CEILING`, `FLOOR`, `MOD`, `POWER`, `SQRT`, `PRODUCT`, `SUMPRODUCT`, `MEDIAN`, `LARGE`, `SMALL`, `RANK`, `SIGN`, `LOG`, `LN`, `EXP`, `PI`, `RAND`, `RANDBETWEEN`
+### Math and trigonometry (53)
+`SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `COUNTA`, `PRODUCT`, `SUMPRODUCT`, `SUMSQ`, `SUBTOTAL`, `MEDIAN`, `LARGE`, `SMALL`, `RANK`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `INT`, `TRUNC`, `MROUND`, `CEILING`, `CEILING.MATH`, `FLOOR`, `FLOOR.MATH`, `EVEN`, `ODD`, `ABS`, `MOD`, `POWER`, `SQRT`, `SIGN`, `QUOTIENT`, `LOG`, `LOG10`, `LN`, `EXP`, `PI`, `RAND`, `RANDBETWEEN`, `COMBIN`, `PERMUT`, `FACT`, `GCD`, `LCM`, `SIN`, `COS`, `TAN`, `ASIN`, `ACOS`, `ATAN`, `ATAN2`, `RADIANS`, `DEGREES`
 
-### Logical (10)
-`IF`, `AND`, `OR`, `NOT`, `XOR`, `IFERROR`, `IFNA`, `IFS`, `SWITCH`, `CHOOSE`
+### Logical (11)
+`IF`, `AND`, `OR`, `NOT`, `XOR`, `IFERROR`, `IFNA`, `IFS`, `SWITCH`, `CHOOSE`, `LET`
 
-### Text (22)
-`CONCATENATE`, `CONCAT`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT`, `MID`, `LEN`, `SUBSTITUTE`, `FIND`, `SEARCH`, `REPLACE`, `REPT`, `EXACT`, `PROPER`, `CLEAN`, `CHAR`, `CODE`, `TEXT`, `VALUE`, `TEXTJOIN`
+### Text (32)
+`CONCATENATE`, `CONCAT`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT`, `MID`, `LEN`, `REPT`, `EXACT`, `PROPER`, `CLEAN`, `SUBSTITUTE`, `FIND`, `SEARCH`, `REPLACE`, `CHAR`, `CODE`, `TEXT`, `VALUE`, `NUMBERVALUE`, `TEXTJOIN`, `TEXTSPLIT`, `TEXTBEFORE`, `TEXTAFTER`, `DOLLAR`, `FIXED`, `T`, `N`, `FORMULATEXT`, `PHONETIC`
 
-### Lookup (5)
-`VLOOKUP`, `HLOOKUP`, `XLOOKUP`, `INDEX`, `MATCH`
+### Lookup and reference (19)
+`VLOOKUP`, `HLOOKUP`, `XLOOKUP`, `LOOKUP`, `INDEX`, `MATCH`, `XMATCH`, `INDIRECT`, `OFFSET`, `ADDRESS`, `ROW`, `COLUMN`, `ROWS`, `COLUMNS`, `SEQUENCE`, `TRANSPOSE`, `MMULT`, `MDETERM`, `MINVERSE`
 
-### Date (14)
-`TODAY`, `NOW`, `YEAR`, `MONTH`, `DAY`, `DATE`, `DATEDIF`, `EDATE`, `EOMONTH`, `WEEKDAY`, `HOUR`, `MINUTE`, `SECOND`, `NETWORKDAYS`
+### Date (25)
+`TODAY`, `NOW`, `YEAR`, `MONTH`, `DAY`, `DATE`, `TIME`, `HOUR`, `MINUTE`, `SECOND`, `WEEKDAY`, `WEEKNUM`, `ISOWEEKNUM`, `DATEVALUE`, `TIMEVALUE`, `DATEDIF`, `DAYS`, `DAYS360`, `EDATE`, `EOMONTH`, `YEARFRAC`, `NETWORKDAYS`, `NETWORKDAYS.INTL`, `WORKDAY`, `WORKDAY.INTL`
 
-### Statistics (6)
-`SUMIF`, `COUNTIF`, `AVERAGEIF`, `SUMIFS`, `COUNTIFS`, `AVERAGEIFS`
+### Conditional aggregation (8)
+`SUMIF`, `SUMIFS`, `COUNTIF`, `COUNTIFS`, `AVERAGEIF`, `AVERAGEIFS`, `MAXIFS`, `MINIFS`
 
-### Information (6)
-`ISBLANK`, `ISNUMBER`, `ISTEXT`, `ISERROR`, `ISNA`, `TYPE`
+Criteria use Excel syntax in all of these: `">5"`, `"<>done"`, `"=apple"`, and the wildcards `*`, `?` and `~`.
+
+### Statistics (17)
+`STDEV`, `STDEV.S`, `STDEVP`, `STDEV.P`, `VAR`, `VAR.S`, `VARP`, `VAR.P`, `CORREL`, `PERCENTILE`, `PERCENTILE.INC`, `QUARTILE`, `QUARTILE.INC`, `MODE`, `MODE.SNGL`, `GEOMEAN`, `HARMEAN`
+
+### Information (14)
+`ISBLANK`, `ISNUMBER`, `ISTEXT`, `ISNONTEXT`, `ISLOGICAL`, `ISERROR`, `ISERR`, `ISNA`, `ISODD`, `ISEVEN`, `ISREF`, `ISFORMULA`, `COUNTBLANK`, `TYPE`
+
+### Financial (8)
+`PMT`, `FV`, `PV`, `NPER`, `RATE`, `NPV`, `IRR`, `SLN`
+
+### Where OGrid differs from Excel
+
+- **No spilling.** A formula cell holds one value, so array functions return their first element: `SEQUENCE` gives its start value and `TEXTSPLIT` gives the first piece (first column of the first row). Where Excel returns `#CALC!` for an empty `TEXTSPLIT` result, OGrid returns `#VALUE!`.
+- **No array constants or empty arguments.** `{1,2,3}` and skipped arguments like `TEXTSPLIT(A1,,";")` aren't supported, so pass every argument up to the last one you need.
+- **`SUBTOTAL` can't see hidden rows.** The grid doesn't pass row visibility to the engine, so codes 101-111 work like 1-11. Like Excel, `SUBTOTAL` skips cells that contain their own `SUBTOTAL`, so nested subtotals aren't counted twice.
+- **`XMATCH` binary search.** Search modes `2` and `-2` are accepted but run as a normal first-to-last search, which returns the same position on sorted data.
+- **`LET`** binds names to values for the rest of the call: `=LET(rate, B1, qty, C1, rate * qty)`. A name bound to a range stays a range, so `=LET(r, A1:A10, SUM(r) / COUNT(r))` works. A `LET` name takes priority over a named range with the same name, and it can't look like a cell reference (`x1` is cell X1).
 
 ## Props reference
 

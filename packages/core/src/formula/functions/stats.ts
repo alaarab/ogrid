@@ -56,7 +56,56 @@ function sameShape(a: ASTNode, b: ASTNode): boolean {
   return Math.abs(a.end.row - a.start.row) === Math.abs(b.end.row - b.start.row) && Math.abs(a.end.col - a.start.col) === Math.abs(b.end.col - b.start.col);
 }
 
+/**
+ * MAXIFS/MINIFS(target_range, criteria_range1, criteria1, ...): the max/min of
+ * the numbers in target_range whose criteria cells all match. Text, booleans and
+ * blanks in target_range are ignored; no matching number gives 0, as in Excel.
+ */
+function extremeIfs(name: string, pick: (a: number, b: number) => number): IFormulaFunction {
+  return {
+    minArgs: 3,
+    maxArgs: -1,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      if ((args.length - 1) % 2 !== 0) {
+        return new FormulaError('#VALUE!', `${name} requires a target range + pairs of criteria_range, criteria`);
+      }
+      const targetArg = args[0];
+      if (targetArg === undefined || targetArg.kind !== 'range') {
+        return new FormulaError('#VALUE!', `${name} first argument must be a cell range`);
+      }
+      const target = context.getRangeValues({ start: targetArg.start, end: targetArg.end });
+      const pairs: { range: unknown[][]; criteria: ParsedCriteria }[] = [];
+      for (let i = 1; i < args.length; i += 2) {
+        const rangeArg = args[i];
+        const criteriaArg = args[i + 1];
+        if (rangeArg === undefined || rangeArg.kind !== 'range' || criteriaArg === undefined) {
+          return new FormulaError('#VALUE!', `${name} criteria_range must be a cell range`);
+        }
+        if (!sameShape(targetArg, rangeArg)) return new FormulaError('#VALUE!', `${name} range dimensions must match`);
+        const rawCriteria = evaluator.evaluate(criteriaArg, context);
+        if (rawCriteria instanceof FormulaError) return rawCriteria;
+        pairs.push({ range: context.getRangeValues({ start: rangeArg.start, end: rangeArg.end }), criteria: parseCriteria(rawCriteria) });
+      }
+      let result: number | undefined;
+      for (let r = 0; r < target.length; r++) {
+        const row = target[r];
+        if (row === undefined) continue;
+        for (let c = 0; c < row.length; c++) {
+          const value = row[c];
+          if (!pairs.every(pair => matchesCriteria(pair.range[r]?.[c], pair.criteria, context))) continue;
+          if (value instanceof FormulaError) return value;
+          if (typeof value === 'number') result = result === undefined ? value : pick(result, value);
+        }
+      }
+      return result ?? 0;
+    },
+  };
+}
+
 export function registerStatsFunctions(registry: Map<string, IFormulaFunction>): void {
+  registry.set('MAXIFS', extremeIfs('MAXIFS', Math.max));
+  registry.set('MINIFS', extremeIfs('MINIFS', Math.min));
+
   registry.set('SUMIF', {
     minArgs: 2,
     maxArgs: 3,

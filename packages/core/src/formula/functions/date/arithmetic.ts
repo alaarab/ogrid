@@ -5,7 +5,8 @@ import { toDate, isLeapYear, parseWeekendNumber, dateToSerial, utcDate, serialDa
 
 /**
  * Date arithmetic, differences, and business-day calculations: DATEDIF, EDATE,
- * EOMONTH, NETWORKDAYS, DAYS, DAYS360, ISOWEEKNUM, YEARFRAC, WORKDAY, WORKDAY.INTL.
+ * EOMONTH, NETWORKDAYS, NETWORKDAYS.INTL, DAYS, DAYS360, ISOWEEKNUM, WEEKNUM,
+ * YEARFRAC, WORKDAY, WORKDAY.INTL.
  */
 export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFunction>): void {
   registry.set('DATEDIF', {
@@ -118,19 +119,31 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const start = serialDay(evalArg(evaluator, args[0], context));
+      const start = evalArg(evaluator, args[0], context);
+      const end = evalArg(evaluator, args[1], context);
+      return networkDays(start, end, [false, false, false, false, false, true, true], args[2], context, evaluator);
+    },
+  });
+
+  // NETWORKDAYS.INTL(start, end, [weekend=1], [holidays]): weekend is a 1-17
+  // code (invalid: #NUM!) or a Mon-Sun "0000011" mask (malformed: #VALUE!).
+  registry.set('NETWORKDAYS.INTL', {
+    minArgs: 2,
+    maxArgs: 4,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const start = evalArg(evaluator, args[0], context);
       if (start instanceof FormulaError) return start;
-      const end = serialDay(evalArg(evaluator, args[1], context));
+      const end = evalArg(evaluator, args[1], context);
       if (end instanceof FormulaError) return end;
-      const holidays = holidayDays(args[2], context, evaluator);
-      if (holidays instanceof FormulaError) return holidays;
-      const sign = end >= start ? 1 : -1;
-      const from = Math.min(start, end);
-      const to = Math.max(start, end);
-      const mask = [false, false, false, false, false, true, true];
-      let count = workingDays(from, to, mask);
-      for (const holiday of holidays) if (holiday >= from && holiday <= to && !mask[weekday(holiday)]) count--;
-      return count * sign;
+      let mask = [false, false, false, false, false, true, true];
+      if (args.length >= 3) {
+        const rawWeekend = evalArg(evaluator, args[2], context);
+        if (rawWeekend instanceof FormulaError) return rawWeekend;
+        const parsed = weekendMask(rawWeekend);
+        if (parsed instanceof FormulaError) return parsed;
+        mask = parsed;
+      }
+      return networkDays(start, end, mask, args[3], context, evaluator);
     },
   });
 
@@ -206,13 +219,38 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
       if (rawDate instanceof FormulaError) return rawDate;
       const date = toDate(rawDate);
       if (date instanceof FormulaError) return date;
-      // ISO 8601: week containing the first Thursday
-      const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-      // Set to nearest Thursday: current date + 4 - current day number (Mon=1)
-      const day = d.getUTCDay() || 7; // ISO: Mon=1, Sun=7
-      d.setUTCDate(d.getUTCDate() + 4 - day);
-      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-      return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+      return isoWeek(date);
+    },
+  });
+
+  // --- WEEKNUM(serial_number, [return_type=1]) ---
+  // Week 1 is the week containing January 1; return_type picks the day weeks
+  // start on (1/17 Sunday, 2/11 Monday, 12-16 Tuesday-Saturday). 21 is ISO 8601.
+  registry.set('WEEKNUM', {
+    minArgs: 1,
+    maxArgs: 2,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const rawDate = evalArg(evaluator, args[0], context);
+      if (rawDate instanceof FormulaError) return rawDate;
+      const date = toDate(rawDate);
+      if (date instanceof FormulaError) return date;
+      let returnType = 1;
+      if (args.length >= 2) {
+        const rawRT = evalArg(evaluator, args[1], context);
+        if (rawRT instanceof FormulaError) return rawRT;
+        const rt = toNumber(rawRT);
+        if (rt instanceof FormulaError) return rt;
+        returnType = Math.trunc(rt);
+      }
+      if (returnType === 21) return isoWeek(date);
+      const weekStart = WEEK_START[returnType];
+      if (weekStart === undefined) return new FormulaError('#NUM!', 'Invalid WEEKNUM return_type');
+      const serial = serialDay(rawDate);
+      if (serial instanceof FormulaError) return serial;
+      const jan1 = dateToSerial(utcDate(date.getUTCFullYear(), 0, 1));
+      if (jan1 instanceof FormulaError) return jan1;
+      const offset = (weekday(jan1) - weekStart + 7) % 7;
+      return Math.floor((serial - jan1 + offset) / 7) + 1;
     },
   });
 
@@ -330,6 +368,44 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
       return serialToDate(workday(rawStart, days, weekendMask, args[3], context, evaluator));
     },
   });
+}
+
+/** WEEKNUM return_type to the first day of the week (Mon=0 ... Sun=6). */
+const WEEK_START: Record<number, number> = { 1: 6, 2: 0, 11: 0, 12: 1, 13: 2, 14: 3, 15: 4, 16: 5, 17: 6 };
+
+/** ISO 8601 week number: weeks start Monday; week 1 holds the year's first Thursday. */
+function isoWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = d.getUTCDay() || 7; // Mon=1 ... Sun=7
+  d.setUTCDate(d.getUTCDate() + 4 - day); // the Thursday of this week
+  const yearStart = Date.UTC(d.getUTCFullYear(), 0, 1);
+  return Math.ceil(((d.getTime() - yearStart) / 86400000 + 1) / 7);
+}
+
+/** Weekend argument of the .INTL functions: a 1-17 code or a "0000011" Mon-Sun mask. */
+function weekendMask(raw: unknown): boolean[] | FormulaError {
+  if (typeof raw === 'string') {
+    if (!/^[01]{7}$/.test(raw)) return new FormulaError('#VALUE!', 'Weekend string must be seven 0/1 characters');
+    return raw.split('').map(c => c === '1');
+  }
+  const code = toNumber(raw);
+  if (code instanceof FormulaError) return code;
+  return parseWeekendNumber(Math.trunc(code)) ?? new FormulaError('#NUM!', 'Invalid weekend number');
+}
+
+function networkDays(startValue: unknown, endValue: unknown, mask: boolean[], holidaysArg: ASTNode | undefined, context: IFormulaContext, evaluator: IEvaluator): number | FormulaError {
+  const start = serialDay(startValue);
+  if (start instanceof FormulaError) return start;
+  const end = serialDay(endValue);
+  if (end instanceof FormulaError) return end;
+  const holidays = holidayDays(holidaysArg, context, evaluator);
+  if (holidays instanceof FormulaError) return holidays;
+  const sign = end >= start ? 1 : -1;
+  const from = Math.min(start, end);
+  const to = Math.max(start, end);
+  let count = workingDays(from, to, mask);
+  for (const holiday of holidays) if (holiday >= from && holiday <= to && !mask[weekday(holiday)]) count--;
+  return count * sign;
 }
 
 function holidayDays(arg: ASTNode | undefined, context: IFormulaContext, evaluator: IEvaluator): Set<number> | FormulaError {
