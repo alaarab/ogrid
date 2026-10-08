@@ -29,6 +29,11 @@ function cellOf(text: string): HTMLElement {
   return cell;
 }
 
+function pickNumberFormat(label: string): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Number format' }));
+  fireEvent.click(screen.getByRole('menuitemradio', { name: label }));
+}
+
 describe('XlsxWorkbookGrid formatting', () => {
   test('renders number formats and cell styles from the file', async () => {
     render(<XlsxWorkbookGrid workbook={await styledWorkbook()} height={400} />);
@@ -50,13 +55,14 @@ describe('XlsxWorkbookGrid formatting', () => {
 
     fireEvent.pointerDown(cellOf('Pears'));
     await waitFor(() => expect(cellOf('Pears')).toHaveAttribute('data-active-cell', 'true'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Italic' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Italic' }));
     await waitFor(() => expect(screen.getByText('Pears')).toHaveStyle({ fontStyle: 'italic' }));
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Number format' }), { target: { value: 'currency' } });
+    pickNumberFormat('Currency');
     fireEvent.pointerDown(cellOf('0.5'));
     await waitFor(() => expect(cellOf('0.5')).toHaveAttribute('data-active-cell', 'true'));
-    fireEvent.change(screen.getByRole('combobox', { name: 'Number format' }), { target: { value: 'percent' } });
+    pickNumberFormat('Percent');
     await waitFor(() => expect(screen.getByText('50.00%')).toBeInTheDocument());
 
     if (!doc) throw new Error('document not reported');
@@ -69,6 +75,33 @@ describe('XlsxWorkbookGrid formatting', () => {
     await act(async () => { await Promise.resolve(); });
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     await waitFor(() => expect(screen.getByText('0.5')).toBeInTheDocument());
+  });
+
+  test('toolbar reflects the active cell and applies palette colors', async () => {
+    let doc: XlsxWorkbookDocument | undefined;
+    render(<XlsxWorkbookGrid workbook={await styledWorkbook()} height={400} editable onDocument={(d) => { doc = d; }} />);
+    await waitFor(() => expect(screen.getByText('Apples')).toBeInTheDocument());
+    // Nothing selected yet: formatting is disabled.
+    expect(screen.getByRole('button', { name: 'Bold' })).toBeDisabled();
+
+    fireEvent.pointerDown(cellOf('Apples'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Bold' })).toHaveAttribute('aria-pressed', 'true'));
+    expect(screen.getByRole('button', { name: 'Italic' })).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fill color' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Light green' }));
+    await waitFor(() => expect(screen.getByText('Apples')).toHaveStyle({ background: '#92D050' }));
+    expect(screen.queryByRole('dialog', { name: 'Fill color' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fill color' }));
+    expect(screen.getByRole('button', { name: 'Light green' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'No fill' }));
+
+    if (!doc) throw new Error('document not reported');
+    await act(async () => { await Promise.resolve(); });
+    const ws = (await doc.toWorkbook()).getWorksheet('Sales') as ExcelJS.Worksheet;
+    expect(ws.getCell('A2').fill?.type ?? 'none').not.toBe('pattern');
+    expect(ws.getCell('A2').font?.bold).toBe(true);
   });
 
   test('editing a cell updates the document and the export', async () => {
