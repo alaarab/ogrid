@@ -60,6 +60,17 @@ export function createConditionalFormattingTests(OGrid: React.ComponentType<IOGr
   }
 
   describe('conditional formatting', () => {
+    it.each(['cellValue', 'topBottom'] as const)('formats spilled children with a %s rule', type => {
+      const data = rows.map(row => ({ ...row, sales: undefined as unknown as number }));
+      const rule: IConditionalFormatRule<Row> = type === 'cellValue'
+        ? { type, columnIds: ['sales'], operator: 'greaterThan', value: 1, style: { background: '#c6efce' } }
+        : { type, columnIds: ['sales'], direction: 'top', rank: 1, style: { background: '#c6efce' } };
+      const { container } = renderGrid([rule], { data, formulas: true, initialFormulas: [{ col: 1, row: 0, formula: '=SEQUENCE(3)' }] });
+      expect(td(container, 1, 'sales').hasAttribute('data-cf')).toBe(false);
+      expect(td(container, 3, 'sales').style.backgroundColor).toBe('#c6efce');
+      expect(td(container, 2, 'sales').hasAttribute('data-cf')).toBe(type === 'cellValue');
+    });
+
     it('applies a highlight rule fill to matching cells only, and its text style to their text', () => {
       const { container } = renderGrid([
         { type: 'cellValue', columnIds: ['sales'], operator: 'greaterThan', value: 150, style: { background: '#c6efce', color: '#006100', bold: true } },

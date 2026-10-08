@@ -709,11 +709,18 @@ export class FormulaEngine {
       getFreshCellValue: addr => readCell(addr, true),
       getFreshRangeValues: range => readRange(range, true),
       getFreshArrayRangeValues: range => readRange(range, true, true),
-      getSpillValues: addr => {
+      getSpillRange: addr => {
         const key = toCellKey(addr.col, addr.row, addr.sheet);
         const value = readCell(addr);
         if (value instanceof FormulaError) return value;
-        return this.spills.arrays.get(key) ?? new FormulaError('#REF!', 'Cell has no spill range');
+        const spill = addr.sheet ? this.sheetAccessors.get(addr.sheet)?.getSpillRange?.(addr.col, addr.row) : this.spills.ranges.get(key);
+        if (!spill || spill.anchorCol !== addr.col || spill.anchorRow !== addr.row) return new FormulaError('#REF!', 'Cell has no spill range');
+        return { start: { ...addr, col: spill.anchorCol, row: spill.anchorRow }, end: { ...addr, col: spill.endCol, row: spill.endRow } };
+      },
+      getSpillValues: addr => {
+        const range = context.getSpillRange?.(addr);
+        if (!range || range instanceof FormulaError) return range ?? new FormulaError('#REF!', 'Cell has no spill range');
+        return addr.sheet ? readRange(range, false, true) : this.spills.arrays.get(toCellKey(addr.col, addr.row));
       },
       now: () => contextNow,
       getCellFormula: (addr: ICellAddress): string | undefined => {

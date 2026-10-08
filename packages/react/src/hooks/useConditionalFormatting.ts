@@ -11,7 +11,7 @@ export interface UseConditionalFormattingParams<T> {
   /** Flat leaf columns (column N is formula column N). */
   columns: IColumnDef<T>[];
   /** Formula engine: formula cells are judged by their results, and `formula` rules evaluate through it. */
-  formulaEngine?: Pick<UseFormulaEngineResult, 'enabled' | 'hasFormula' | 'getFormulaValue' | 'createDetachedEvaluator'>;
+  formulaEngine?: Pick<UseFormulaEngineResult, 'enabled' | 'hasFormula' | 'getFormulaValue' | 'createDetachedEvaluator'> & Partial<Pick<UseFormulaEngineResult, 'getSpillRange'>>;
   /** Bumped on every formula recalculation; recomputes formats that read formula results. */
   formulaVersion?: number;
 }
@@ -30,6 +30,7 @@ export function useConditionalFormatting<T>(
   const engineOn = formulaEngine?.enabled === true;
   const hasFormula = formulaEngine?.hasFormula;
   const getFormulaValue = formulaEngine?.getFormulaValue;
+  const getSpillRange = formulaEngine?.getSpillRange;
   const createDetachedEvaluator = formulaEngine?.createDetachedEvaluator;
   // biome-ignore lint/correctness/useExhaustiveDependencies: formulaVersion is the deliberate trigger: a recalc changes formula results the formats read
   return useMemo(() => {
@@ -38,10 +39,10 @@ export function useConditionalFormatting<T>(
       items,
       columns,
       getValue: engineOn && hasFormula && getFormulaValue
-        ? (item, column, row, col) => (row >= 0 && hasFormula(col, row) ? getFormulaValue(col, row) : getCellValue(item, column))
+        ? (item, column, row, col) => (row >= 0 && (hasFormula(col, row) || getSpillRange?.(col, row)) ? getFormulaValue(col, row) : getCellValue(item, column))
         : undefined,
       evaluateFormula: engineOn ? createDetachedEvaluator?.() : undefined,
     });
     return formatter ? (item: T, columnId: string) => formatter.getCellFormat(item, columnId) : undefined;
-  }, [rules, items, columns, engineOn, hasFormula, getFormulaValue, createDetachedEvaluator, formulaVersion]);
+  }, [rules, items, columns, engineOn, hasFormula, getFormulaValue, getSpillRange, createDetachedEvaluator, formulaVersion]);
 }

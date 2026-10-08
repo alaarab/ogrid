@@ -313,6 +313,13 @@ export function createFormulaTests(OGrid: React.ComponentType<IOGridProps<Row>>)
 
   describe('dynamic spills', () => {
     const spillFormula = [{ col: 3, row: 0, formula: '=SEQUENCE(B1)' }];
+    it('blocks output through an empty merge and recovers when unmerged', () => {
+      const { container, rerender } = renderGrid({ initialFormulas: spillFormula, mergedCells: [{ rowId: 2, columnId: 'total', rowSpan: 2 }] });
+      expect(text(container, 1, 'total')).toBe('#SPILL!');
+      rerender({ initialFormulas: spillFormula, mergedCells: [] });
+      expect([1, 2, 3].map(id => text(container, id, 'total'))).toEqual(['1', '2', '3']);
+    });
+
     it('renders children, outlines the range, greys the anchor formula, rejects edits, and copies values', async () => {
       const onChange = jest.fn();
       const { container } = renderGrid({ initialFormulas: spillFormula }, onChange);
