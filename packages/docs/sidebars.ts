@@ -50,6 +50,7 @@ const sidebars: SidebarsConfig = {
         'features/cell-notes',
         'features/conditional-formatting',
         'features/column-reordering',
+        'features/drag-and-drop',
         'features/column-chooser',
         'features/column-types',
         'features/cell-references',

@@ -84,6 +84,10 @@ export interface BaseGridRowProps extends GridRowProps {
   onRowResizeStart?: (e: React.PointerEvent, rowId: string | number) => void;
   /** Pointer down on the row number cell: select the whole row (stable identity). */
   onRowHeaderPointerDown?: (e: React.PointerEvent, rowIndex: number) => void;
+  /** Render a drag handle on the row-number cell for row dragging. */
+  rowDragging?: boolean;
+  /** Start a row drag from the row-number handle (stable identity). */
+  onRowDragStart?: (e: React.DragEvent, rowIndex: number) => void;
   /** Hidden rows right above this row: a double-line marker on its row number unhides them. */
   hiddenRowsBefore?: (string | number)[];
   /** Hidden rows right below this row (the last shown row). */
@@ -134,6 +138,7 @@ function GridRowInner(props: BaseGridRowProps) {
     selectionRange, activeCell, cutRange, tabStopColumn = -1, registerTabStop, mergePlan, frozen,
     customRowHeight, measureRowRef, onRowResizeStart, hiddenRowsBefore, hiddenRowsAfter, onUnhideRows, getCellNote, noteIdPrefix, conditionalFormat, styles, primitives,
     onRowHeaderPointerDown,
+    rowDragging, onRowDragStart,
   } = props;
   const { Tr, Td, renderRowCheckbox } = primitives;
   // Leading columns stay put on horizontal scroll. Radix gets `position: sticky` from CSS;
@@ -211,6 +216,35 @@ function GridRowInner(props: BaseGridRowProps) {
           onPointerDown={onRowHeaderPointerDown ? (e: React.PointerEvent) => onRowHeaderPointerDown(e, rowIndex) : PREVENT_DEFAULT}
         >
           <div className={styles.rowNumberCellInner}>
+            {rowDragging && onRowDragStart && (
+              // Pointer-only drag affordance; keyboard users reorder with Ctrl/Cmd+Shift+Up/Down.
+              <button
+                type="button"
+                className={styles.rowDragHandle}
+                data-ogrid-row-drag-handle=""
+                draggable
+                tabIndex={-1}
+                title="Drag to reorder"
+                aria-label={`Reorder row ${rowIndex + 1}`}
+                onDragStart={(e) => onRowDragStart(e, rowIndex)}
+                onPointerDown={STOP_PROPAGATION}
+                onMouseDown={STOP_PROPAGATION}
+                onClick={STOP_PROPAGATION}
+                style={{
+                  cursor: 'grab',
+                  marginRight: 4,
+                  userSelect: 'none',
+                  letterSpacing: -2,
+                  background: 'none',
+                  border: 0,
+                  padding: 0,
+                  color: 'inherit',
+                  font: 'inherit',
+                }}
+              >
+                ⋮⋮
+              </button>
+            )}
             {rowNumber ?? rowNumberOffset + rowIndex + 1}
           </div>
           {onRowResizeStart && (

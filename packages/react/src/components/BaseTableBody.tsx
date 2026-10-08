@@ -67,6 +67,10 @@ export interface BaseTableBodyProps<T> {
   onRowResizeStart?: (e: React.PointerEvent, rowId: string | number) => void;
   /** Pointer down on a row number cell: select the whole row. */
   onRowHeaderPointerDown?: (e: React.PointerEvent, rowIndex: number) => void;
+  /** Render a drag handle on the row-number cell for row dragging. */
+  rowDragging?: boolean;
+  /** Start a row drag from the row-number handle. */
+  onRowDragStart?: (e: React.DragEvent, rowIndex: number) => void;
   /** Where hidden rows sit (`allowHiding`); with `onUnhideRows`, row numbers show gap markers. */
   hiddenRowGaps?: IHiddenGaps<string | number> | null;
   onUnhideRows?: (rowIds: (string | number)[]) => void;
@@ -144,6 +148,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     selectionRange, activeCell, cutRange, copyRange, isDragging,
     editingCell, tabStopCell, registerTabStop, popoverAnchorEl, pendingEditorValue, formulaVersion, conditionalFormat,
     pinnedColumns, rowNumWidth, mergeLayout, getRowHeight, getRowSize, measureRowRef, onRowResizeStart, getCellNote, noteIdPrefix, styles, primitives, onRowHeaderPointerDown,
+    rowDragging, onRowDragStart,
   } = props;
   // Hidden-row markers need a row-number gutter to sit in.
   const rowGaps = hasRowNumbersCol && props.onUnhideRows ? props.hiddenRowGaps : null;
@@ -254,6 +259,8 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         measureRowRef={virtualScrollEnabled ? measureRowRef : undefined}
         onRowResizeStart={onRowResizeStart}
         onRowHeaderPointerDown={onRowHeaderPointerDown}
+        rowDragging={rowDragging}
+        onRowDragStart={onRowDragStart}
         hiddenRowsBefore={rowGaps?.before.get(rowIdStr)}
         hiddenRowsAfter={rowGaps && rowGaps.lastShown === rowIdStr ? rowGaps.after : undefined}
         onUnhideRows={rowGaps ? props.onUnhideRows : undefined}

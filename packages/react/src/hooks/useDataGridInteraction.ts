@@ -6,6 +6,7 @@ import type { ScrollToRowIndex } from '../utils/scrollCellIntoView';
 import { formatCellReference, getCellValue, expandRangeToMerges, isCoveredCell } from '../utils';
 import type { IMergeLayout } from '../utils';
 import type { ISelectionRange } from '../types';
+import { applyPastedValues, moveCellRange, normalizeSelectionRange, parseTsvClipboard } from '@alaarab/ogrid-core';
 import { useCellSelection } from './useCellSelection';
 import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
@@ -22,6 +23,8 @@ const NOOP = () => {};
 const NOOP_ASYNC = async () => {};
 const NOOP_MOUSE = (_e: React.MouseEvent, _r: number, _c: number) => {};
 const NOOP_KEY = (_e: React.KeyboardEvent) => {};
+const NOOP_MOVE_RANGE = (_row: number, _col: number, _copy: boolean) => {};
+const NOOP_DROP_TEXT = (_row: number, _col: number, _text: string) => {};
 
 export interface UseDataGridInteractionParams<T> {
   items: T[];
@@ -398,6 +401,90 @@ export function useDataGridInteraction<T>(
   });
   const handlePasteValues = useCallback(() => { void handlePasteValuesAsync(); }, [handlePasteValuesAsync]);
 
+  // ── Drag-and-drop edit routing ──────────────────────────────────────────
+  // Range move and default cell drop produce the same `ICellValueChangedEvent`s
+  // as cut/paste, so they reuse valueParser, formula shifting and undo here.
+  const flatColIndexById = useMemo(
+    () => (flatColumns ? new Map(flatColumns.map((c, i) => [c.columnId, i] as const)) : null),
+    [flatColumns],
+  );
+  const moveFormulaOptions = useMemo(() => {
+    if (!viewFormulas || !flatColumns) return undefined;
+    return {
+      colOffset,
+      flatColumns,
+      getFormula: viewFormulas.getFormula,
+      hasFormula: viewFormulas.hasFormula,
+      setFormula: viewFormulas.setFormula,
+      formulaRow: (row: number) => formulaRowRef.current?.(row) ?? row,
+    };
+  }, [viewFormulas, flatColumns, colOffset, formulaRowRef]);
+  const moveFormulaSource = useMemo(() => {
+    if (!moveFormulaOptions || !selectionRange || !flatColIndexById) return undefined;
+    const norm = normalizeSelectionRange(selectionRange);
+    const sheetRows: number[] = [];
+    const flatCols: number[] = [];
+    for (let r = norm.startRow; r <= norm.endRow; r++) sheetRows.push(moveFormulaOptions.formulaRow(r));
+    for (let c = norm.startCol; c <= norm.endCol; c++) {
+      const col = visibleCols[c];
+      flatCols.push(col ? (flatColIndexById.get(col.columnId) ?? -1) : -1);
+    }
+    return { sheetRows, flatCols };
+  }, [moveFormulaOptions, selectionRange, visibleCols, flatColIndexById]);
+
+  const applyCellEdits = useCallback(
+    (events: ICellValueChangedEvent<T>[]) => {
+      if (events.length === 0) return;
+      const many = events.length > 1;
+      if (many) undoRedo.beginBatch();
+      for (const event of events) onCellValueChanged?.(event);
+      if (many) undoRedo.endBatch();
+    },
+    [onCellValueChanged, undoRedo.beginBatch, undoRedo.endBatch],
+  );
+
+  const moveRangeTo = useCallback(
+    (targetRow: number, targetCol: number, copy: boolean) => {
+      if (!selectionRange) return;
+      const events = moveCellRange({
+        items,
+        visibleCols,
+        source: selectionRange,
+        targetRow,
+        targetCol,
+        copy,
+        formulaOptions: moveFormulaOptions,
+        formulaSource: moveFormulaSource,
+        isCoveredCell: isCoveredMergeCell,
+      });
+      applyCellEdits(events);
+    },
+    [selectionRange, items, visibleCols, moveFormulaOptions, moveFormulaSource, isCoveredMergeCell, applyCellEdits],
+  );
+
+  const dropTextAt = useCallback(
+    (rowIndex: number, colIndex: number, text: string) => {
+      const parsed = parseTsvClipboard(text);
+      if (parsed.length === 0) return;
+      const events = applyPastedValues(
+        parsed,
+        rowIndex,
+        colIndex,
+        items,
+        visibleCols,
+        moveFormulaOptions && {
+          colOffset: moveFormulaOptions.colOffset,
+          flatColumns: moveFormulaOptions.flatColumns,
+          setFormula: moveFormulaOptions.setFormula,
+          formulaRow: moveFormulaOptions.formulaRow,
+        },
+        isCoveredMergeCell,
+      );
+      applyCellEdits(events);
+    },
+    [items, visibleCols, moveFormulaOptions, isCoveredMergeCell, applyCellEdits],
+  );
+
   const handleCellMouseDown = useCallback(
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
       if (e.button !== 0) return;
@@ -480,6 +567,8 @@ export function useDataGridInteraction<T>(
     cutRange: cellSelection ? cutRange : null,
     copyRange: cellSelection ? copyRange : null,
     clearClipboardRanges: cellSelection ? clearClipboardRanges : NOOP,
+    moveRangeTo: cellSelection ? moveRangeTo : (NOOP_MOVE_RANGE as typeof moveRangeTo),
+    dropTextAt: cellSelection ? dropTextAt : (NOOP_DROP_TEXT as typeof dropTextAt),
     canUndo,
     canRedo,
     onUndo: undo,
@@ -489,7 +578,7 @@ export function useDataGridInteraction<T>(
     cellSelection, activeCell, setActiveCell, selectionRange, setSelectionRange,
     handleCellMouseDown, handleSelectAllCells, hasCellSelection, handleGridKeyDown, handleGridPaste, handleGridCopy, handleGridCut,
     handleFillHandleMouseDown, handleFillHandleDoubleClick, handlePasteValues, handleCopy, handleCut, handlePaste, cutRange, copyRange,
-    clearClipboardRanges, canUndo, canRedo, undo, redo,
+    clearClipboardRanges, moveRangeTo, dropTextAt, canUndo, canRedo, undo, redo,
     isDragging,
   ]);
 

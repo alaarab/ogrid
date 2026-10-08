@@ -184,6 +184,17 @@ export {
 } from './utils';
 export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams } from './utils';
 
+// Utils  -  rowReorder / rangeMove (drag-and-drop)
+export {
+  moveRows,
+  applyRowOrder,
+  computeRowOrderChange,
+  rowIndexById,
+  isRowMoveNoop,
+  moveCellRange,
+} from './utils';
+export type { IRowOrderChange, MoveCellRangeParams, RangeMoveFormulaOptions } from './utils';
+
 // Utils  -  virtualScroll
 export {
   computeVisibleRange,
