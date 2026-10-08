@@ -56,6 +56,7 @@ export {
   type XlsxExportOptions,
 } from './exportToXlsx';
 export { XlsxWorkbookDocument, type XlsxSheetState } from './xlsxDocument';
+export { conditionalFormatsOf, type ConditionalFormatLayout } from './conditionalFormats';
 export { FormatToolbar, type FormatToolbarProps } from './FormatToolbar';
 export { formatWithNumFmt, formatGeneral, isDateFormat, type FormattedValue } from './numFmt';
 export {

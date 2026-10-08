@@ -153,6 +153,19 @@
     --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
     --ogrid-range-bg: rgba(46, 160, 67, 0.15);
 
+    /* Conditional formatting (light values are the var() fallbacks in core) */
+    --ogrid-cf-bad-bg: rgba(248, 81, 73, 0.24);
+    --ogrid-cf-bad-text: #ff9a94;
+    --ogrid-cf-neutral-bg: rgba(210, 153, 34, 0.26);
+    --ogrid-cf-neutral-text: #f2cc60;
+    --ogrid-cf-good-bg: rgba(46, 160, 67, 0.26);
+    --ogrid-cf-good-text: #7ee2a0;
+    --ogrid-cf-bar: #4f7fc0;
+    --ogrid-cf-bar-fade: rgba(79, 127, 192, 0.2);
+    --ogrid-cf-bar-negative: #d9534f;
+    --ogrid-cf-bar-negative-fade: rgba(217, 83, 79, 0.2);
+    --ogrid-cf-scale-veil: rgba(30, 30, 30, 0.45);
+
     /* Accent & Selection */
     --ogrid-accent: #4da6ff;
     --ogrid-accent-dark: #3390e0;
@@ -202,6 +215,19 @@
   --ogrid-bg-selected-hover: #1f3650;
   --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
   --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+
+  /* Conditional formatting (light values are the var() fallbacks in core) */
+  --ogrid-cf-bad-bg: rgba(248, 81, 73, 0.24);
+  --ogrid-cf-bad-text: #ff9a94;
+  --ogrid-cf-neutral-bg: rgba(210, 153, 34, 0.26);
+  --ogrid-cf-neutral-text: #f2cc60;
+  --ogrid-cf-good-bg: rgba(46, 160, 67, 0.26);
+  --ogrid-cf-good-text: #7ee2a0;
+  --ogrid-cf-bar: #4f7fc0;
+  --ogrid-cf-bar-fade: rgba(79, 127, 192, 0.2);
+  --ogrid-cf-bar-negative: #d9534f;
+  --ogrid-cf-bar-negative-fade: rgba(217, 83, 79, 0.2);
+  --ogrid-cf-scale-veil: rgba(30, 30, 30, 0.45);
 
   /* Accent & Selection */
   --ogrid-accent: #4da6ff;

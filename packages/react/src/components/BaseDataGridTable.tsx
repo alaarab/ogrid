@@ -331,6 +331,7 @@ export function BaseDataGridTableInner<T>(
                     pendingEditorValue={o.editing.pendingEditorValue}
                     onRowHeaderPointerDown={o.handleRowHeaderPointerDown}
                     formulaVersion={gridProps.formulaVersion}
+                    conditionalFormat={gridProps.conditionalFormat}
                     pinnedColumns={pinning.pinnedColumns}
                     rowNumWidth={hasRowNumbersCol ? (columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH) : undefined}
                     mergeLayout={mergeLayout}

@@ -1,7 +1,7 @@
 // Memoized row component (skips re-render for rows unaffected by selection changes)
 
 import * as React from 'react';
-import { CHECKBOX_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, conditionalFormatCellStyle } from '@alaarab/ogrid-core';
 import { areGridRowPropsEqual, getGridCellSurfaceState } from '../utils';
 import { PREVENT_DEFAULT, STOP_PROPAGATION } from '../constants/domHelpers';
 import { ROW_HEADER_INDEX_ATTR } from '../hooks/useSheetSelection';
@@ -127,7 +127,7 @@ function GridRowInner(props: BaseGridRowProps) {
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumber, ariaRowIndexBase,
     leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
     selectionRange, activeCell, cutRange, tabStopColumn = -1, registerTabStop, mergePlan, frozen,
-    customRowHeight, onRowResizeStart, hiddenRowsBefore, hiddenRowsAfter, onUnhideRows, getCellNote, noteIdPrefix, styles, primitives,
+    customRowHeight, onRowResizeStart, hiddenRowsBefore, hiddenRowsAfter, onUnhideRows, getCellNote, noteIdPrefix, conditionalFormat, styles, primitives,
     onRowHeaderPointerDown,
   } = props;
   const { Tr, Td, renderRowCheckbox } = primitives;
@@ -261,6 +261,14 @@ function GridRowInner(props: BaseGridRowProps) {
         const cellClass = columnMeta.cellClasses[col.columnId];
         const note = getCellNote?.(merged ? merged.anchorItem : item, merged ? merged.anchorColumn.columnId : col.columnId);
         const noteDescId = note ? `${noteIdPrefix ?? 'ogrid-note'}-r${cellRow}-c${cellCol}` : undefined;
+        const cellItem = merged ? merged.anchorItem : item;
+        const cellColumn = merged ? merged.anchorColumn : col;
+        const cf = conditionalFormat?.(cellItem, cellColumn.columnId);
+        // Conditional fill/bar/border sit under the selection tint; the active cell shows them as-is.
+        const cfStyle = cf && conditionalFormatCellStyle(cf, {
+          tint: bg && !surfaceState.isActiveRangeCell ? bg : undefined,
+          opaque: isPinnedCell || !!frozen,
+        });
         return (
           <Td
             key={col.columnId}
@@ -276,12 +284,13 @@ function GridRowInner(props: BaseGridRowProps) {
             aria-describedby={noteDescId}
             data-note-row-id={note ? String(note.rowId) : undefined}
             className={(merged ? `${cellClass ?? ''} ${styles.mergedCell ?? ''}`.trim() : cellClass) || undefined}
-            style={bg ? { ...baseStyle, background: isPinnedCell ? opaqueOver(bg) : bg } : baseStyle}
+            data-cf={cf ? '' : undefined}
+            style={cfStyle ? { ...baseStyle, ...cfStyle } : bg ? { ...baseStyle, background: isPinnedCell ? opaqueOver(bg) : bg } : baseStyle}
             onPointerDown={PREVENT_DEFAULT}
           >
             {merged
-              ? renderCellContent(merged.anchorItem, merged.anchorColumn, merged.anchorRow, merged.anchorCol)
-              : renderCellContent(item, col, rowIndex, globalIdx)}
+              ? renderCellContent(merged.anchorItem, merged.anchorColumn, merged.anchorRow, merged.anchorCol, cf)
+              : renderCellContent(item, col, rowIndex, globalIdx, cf)}
             {note && (
               <>
                 <span className={styles.cellNoteIndicator} data-ogrid-note-indicator="" aria-hidden="true" />

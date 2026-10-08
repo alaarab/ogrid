@@ -366,3 +366,29 @@ export type { IPaginationControlsProps as IPaginationControlsBaseProps } from '@
 
 // Cell notes
 export { upsertCellNote, removeCellNote, setCellNote } from '@alaarab/ogrid-react';
+// Conditional formatting
+export {
+  createConditionalFormatter,
+  conditionalFormatCellStyle,
+  conditionalFormatTextStyle,
+  getConditionalFormatIcon,
+  CONDITIONAL_FORMAT_STYLES,
+  COLOR_SCALES,
+  useConditionalFormatting,
+} from '@alaarab/ogrid-react';
+export type {
+  IConditionalFormatRule,
+  IConditionalFormatStyle,
+  IConditionalFormatValueBound,
+  IColorScaleStop,
+  ICellConditionalFormat,
+  ICellDataBar,
+  ICellIcon,
+  ConditionalFormatOperator,
+  ConditionalFormatTextOperator,
+  ConditionalFormatDatePeriod,
+  ConditionalFormatIconSet,
+  IConditionalFormatContext,
+  IConditionalFormatter,
+  UseConditionalFormattingParams,
+} from '@alaarab/ogrid-react';

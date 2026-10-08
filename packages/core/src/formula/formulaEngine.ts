@@ -43,6 +43,39 @@ interface EngineContext extends IFormulaContext {
   getFreshRangeValues(range: ICellRange): unknown[][];
 }
 
+const REF_ERROR_NODE: ASTNode = { kind: 'error', error: new FormulaError('#REF!', 'Reference out of range') };
+
+function shiftAddress(a: ICellAddress, dCol: number, dRow: number): ICellAddress | null {
+  const col = a.absCol ? a.col : a.col + dCol;
+  const row = a.absRow ? a.row : a.row + dRow;
+  if (col < 0 || row < 0) return null;
+  return col === a.col && row === a.row ? a : { ...a, col, row };
+}
+
+/** Copy of `node` with relative references moved by (dCol, dRow); off-sheet references become #REF!. */
+function shiftReferences(node: ASTNode, dCol: number, dRow: number): ASTNode {
+  if (dCol === 0 && dRow === 0) return node;
+  switch (node.kind) {
+    case 'cellRef': {
+      const address = shiftAddress(node.address, dCol, dRow);
+      return address ? { ...node, address } : REF_ERROR_NODE;
+    }
+    case 'range': {
+      const start = shiftAddress(node.start, dCol, dRow);
+      const end = shiftAddress(node.end, dCol, dRow);
+      return start && end ? { ...node, start, end } : REF_ERROR_NODE;
+    }
+    case 'functionCall':
+      return { ...node, args: node.args.map((a) => shiftReferences(a, dCol, dRow)) };
+    case 'binaryOp':
+      return { ...node, left: shiftReferences(node.left, dCol, dRow), right: shiftReferences(node.right, dCol, dRow) };
+    case 'unaryOp':
+      return { ...node, operand: shiftReferences(node.operand, dCol, dRow) };
+    default:
+      return node;
+  }
+}
+
 interface FormulaDependencies {
   cells: Set<CellKey>;
   ranges: IRangeDependency[];
@@ -295,6 +328,34 @@ export class FormulaEngine {
     this.recalcCells(recalcOrder, accessor, updatedCells, plan.cyclic);
 
     return { updatedCells };
+  }
+
+  /**
+   * An evaluator for formulas that live in no cell (conditional formats,
+   * validation rules). Each formula is written for `anchor`; evaluating it
+   * for another cell shifts its relative references by the distance from the
+   * anchor, as copying the formula there would (`$` parts stay). Reads the
+   * engine's current values; stores nothing. Make a new evaluator after the
+   * data or formulas change: it caches parsed formulas and volatile results.
+   */
+  createDetachedEvaluator(accessor: IGridDataAccessor): (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown {
+    const context = this.createContext(accessor);
+    const parsed = new Map<string, ASTNode>();
+    return (formula, anchor, cell) => {
+      let ast = parsed.get(formula);
+      if (!ast) {
+        ast = this.parseFormula(formula);
+        parsed.set(formula, ast);
+      }
+      const shifted = shiftReferences(ast, cell.col - anchor.col, cell.row - anchor.row);
+      try {
+        const result = this.evaluator.evaluate(shifted, { ...context, currentCell: { col: cell.col, row: cell.row, absCol: false, absRow: false } });
+        return Array.isArray(result) ? result[0]?.[0] ?? null : result;
+      } catch (err) {
+        if (err instanceof FormulaError) return err;
+        return new FormulaError('#VALUE!', err instanceof Error ? err.message : String(err));
+      }
+    };
   }
 
   /**

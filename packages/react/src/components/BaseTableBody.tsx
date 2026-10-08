@@ -8,7 +8,7 @@ import type { RowMergePlan, MergedCellRender, BaseGridRowProps } from './BaseGri
 import type { useColumnMeta } from '../hooks/useColumnMeta';
 import type { GridRowProps } from './createOGrid';
 import type { IColumnDef, WindowedDataState } from '../types';
-import type { IVisibleColumnRange, IMergeLayout, IHiddenGaps } from '@alaarab/ogrid-core';
+import type { ICellConditionalFormat, IVisibleColumnRange, IMergeLayout, IHiddenGaps } from '@alaarab/ogrid-core';
 import type { DataGridStyles, DataGridPrimitives } from './BaseDataGridTable.types';
 
 export interface BaseTableBodyProps<T> {
@@ -24,7 +24,7 @@ export interface BaseTableBodyProps<T> {
   selectedRowIds: Set<string | number>;
   visibleCols: IColumnDef<T>[];
   columnMeta: ReturnType<typeof useColumnMeta>;
-  renderCellContent: (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number) => React.ReactNode;
+  renderCellContent: (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number, cf?: ICellConditionalFormat) => React.ReactNode;
   handleSingleRowClick: (e: React.MouseEvent<HTMLTableRowElement>) => void;
   handleRowCheckboxChange: (rowId: string | number, checked: boolean, rowIndex: number, shiftKey: boolean) => void;
   lastMouseShiftRef: React.MutableRefObject<boolean>;
@@ -49,6 +49,8 @@ export interface BaseTableBodyProps<T> {
   pendingEditorValue?: unknown;
   /** Formula recalculation counter; a change repaints every row. */
   formulaVersion?: number;
+  /** Conditional format of a cell; a new function repaints every row. */
+  conditionalFormat?: (item: T, columnId: string) => ICellConditionalFormat | undefined;
   pinnedColumns: Record<string, 'left' | 'right'>;
   rowNumWidth?: number;
   /** Merged cells resolved against the displayed rows and visible columns. */
@@ -136,7 +138,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumberOf, ariaRowIndexBase,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
-    editingCell, tabStopCell, registerTabStop, popoverAnchorEl, pendingEditorValue, formulaVersion,
+    editingCell, tabStopCell, registerTabStop, popoverAnchorEl, pendingEditorValue, formulaVersion, conditionalFormat,
     pinnedColumns, rowNumWidth, mergeLayout, getRowHeight, onRowResizeStart, getCellNote, noteIdPrefix, styles, primitives, onRowHeaderPointerDown,
   } = props;
   // Hidden-row markers need a row-number gutter to sit in.
@@ -234,6 +236,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         popoverAnchorEl={isEditingRow ? popoverAnchorEl : undefined}
         pendingEditorValue={isEditingRow ? pendingEditorValue : undefined}
         formulaVersion={formulaVersion}
+        conditionalFormat={conditionalFormat as GridRowProps['conditionalFormat']}
         tabStopColumn={tabStopHere && tabStopCell ? tabStopCell.columnIndex : -1}
         mergePlan={mergePlan}
         mergeStateKey={mergePlan ? mergeStateKey : undefined}

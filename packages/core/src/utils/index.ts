@@ -170,3 +170,14 @@ export { handleBooleanCellPointerDown } from './checkboxUtils';
 export type { BooleanCellSelectHandlers } from './checkboxUtils';
 export { cellNoteKey, indexCellNotes, upsertCellNote, removeCellNote, setCellNote } from './cellNotes';
 export { getCellNoteMenuItems } from './gridContextMenuHelpers';
+export {
+  createConditionalFormatter,
+  conditionalFormatCellStyle,
+  conditionalFormatTextStyle,
+  getConditionalFormatIcon,
+  interpolateColor,
+  parseCssColor,
+  CONDITIONAL_FORMAT_STYLES,
+  COLOR_SCALES,
+} from './conditionalFormatting';
+export type { IConditionalFormatContext, IConditionalFormatter, ConditionalFormatCellStyleOptions } from './conditionalFormatting';
