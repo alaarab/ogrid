@@ -4,7 +4,7 @@
 // and color swatches reflect the active cell's style.
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { colorToCss, cssToArgb, NUMBER_FORMAT_PRESETS, themePaletteOf, type StyleEdit, type XlsxCellStyle } from './cellStyles';
+import { colorToCss, cssToArgb, NUMBER_FORMAT_PRESETS, themePaletteOf, COMMON_FONTS, type BorderLineStyle, type BorderOptions, type BorderScope, type StyleEdit, type XlsxCellStyle } from './cellStyles';
 import { FORMAT_TOOLBAR_CSS } from './formatToolbarStyles';
 import type { XlsxSelection } from './gridAdapter';
 import { cellKey } from './sheetMapper';
@@ -20,7 +20,7 @@ export interface FormatToolbarProps {
 }
 
 type Toggle = 'bold' | 'italic' | 'underline' | 'strike';
-type Menu = 'fill' | 'fontColor' | 'numFmt';
+type Menu = 'fill' | 'fontColor' | 'numFmt' | 'fontFamily' | 'fontSize' | 'borders';
 
 export function FormatToolbar({ document: doc, sheetName, getSelection, exportFileName }: FormatToolbarProps) {
   useSyncExternalStore(doc.subscribe, doc.getVersion, doc.getVersion);
@@ -66,6 +66,20 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
     ? doc.sheet(sheetName)?.styles.get(cellKey(current.rowIds[0] as string | number, current.columnIds[0] as string))
     : undefined;
   const font = activeStyle?.font as Record<string, unknown> | undefined;
+  const fontName = typeof font?.name === 'string' && font.name ? font.name : undefined;
+  const fontSize = typeof font?.size === 'number' ? font.size : undefined;
+  const fontChoices = useMemo(() => {
+    const names = new Set<string>(COMMON_FONTS);
+    for (const ws of doc.workbook.worksheets) {
+      ws.eachRow((row) => {
+        row.eachCell((cell) => {
+          const name = cell.font?.name;
+          if (name) names.add(name);
+        });
+      });
+    }
+    return Array.from(names);
+  }, [doc]);
   const fillColor = fillCss(activeStyle, palette);
   const fontColor = colorToCss(activeStyle?.font?.color as Partial<import('exceljs').Color> | undefined, palette);
   const horizontal = activeStyle?.alignment?.horizontal;
@@ -76,6 +90,10 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
   const style = (edit: StyleEdit | { kind: Toggle }) => {
     const sel = selection();
     if (sel) doc.applyStyle(sheetName, sel, edit);
+  };
+  const applyBorder = (opts: BorderOptions) => {
+    const sel = selection();
+    if (sel) doc.applyBorders(sheetName, sel, opts);
   };
 
   const iconButton = (label: string, icon: React.ReactNode, onClick: () => void, opts: { pressed?: boolean; disabled?: boolean } = {}) => (
@@ -125,6 +143,20 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
       </div>
       <span className="ogrid-xtb-sep" aria-hidden />
       <div className="ogrid-xtb-group">
+        <FontFamilyMenu
+          {...menuProps('fontFamily')}
+          current={fontName}
+          fonts={fontChoices}
+          onPick={(name) => style({ kind: 'fontFamily', value: name })}
+        />
+        <FontSizeMenu
+          {...menuProps('fontSize')}
+          current={fontSize}
+          onPick={(size) => style({ kind: 'fontSize', value: size })}
+        />
+      </div>
+      <span className="ogrid-xtb-sep" aria-hidden />
+      <div className="ogrid-xtb-group">
         {toggle('bold', 'Bold', <BoldIcon />)}
         {toggle('italic', 'Italic', <ItalicIcon />)}
         {toggle('underline', 'Underline', <UnderlineIcon />)}
@@ -155,6 +187,8 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
         {align('center', 'Align center', <AlignIcon lines={[[3, 21], [7, 17], [5, 19]]} />)}
         {align('right', 'Align right', <AlignIcon lines={[[3, 21], [9, 21], [7, 21]]} />)}
       </div>
+      <span className="ogrid-xtb-sep" aria-hidden />
+      <BorderMenu {...menuProps('borders')} onPick={applyBorder} />
       <span className="ogrid-xtb-sep" aria-hidden />
       <NumberFormatMenu
         {...menuProps('numFmt')}
@@ -416,10 +450,235 @@ function NumberFormatMenu(props: NumberFormatMenuProps) {
   );
 }
 
+interface FontFamilyMenuProps extends MenuBaseProps {
+  current: string | undefined;
+  fonts: string[];
+  onPick: (name: string | null) => void;
+}
+
+/** A font-family picker: the common fonts plus every font the workbook uses. */
+function FontFamilyMenu(props: FontFamilyMenuProps) {
+  const { current, fonts, onPick, open, disabled } = props;
+  const { anchorRef, trigger, popover, pick } = useMenu(props);
+  const label = current ?? 'Default';
+  return (
+    <span className="ogrid-xtb-anchor" ref={anchorRef}>
+      <button
+        type="button"
+        className="ogrid-xtb-btn ogrid-xtb-font"
+        aria-label="Font"
+        title={`Font: ${label}`}
+        aria-haspopup="menu"
+        data-xtb-item=""
+        disabled={disabled}
+        {...trigger}
+      >
+        <span className="ogrid-xtb-font-name">{label}</span>
+        <ChevronIcon />
+      </button>
+      {open && (
+        <div role="menu" aria-label="Font family" className="ogrid-xtb-pop ogrid-xtb-font-pop" {...popover}>
+          <button
+            type="button"
+            role="menuitemradio"
+            aria-checked={!current}
+            aria-label="Default font"
+            className="ogrid-xtb-item"
+            data-xtb-nav=""
+            tabIndex={-1}
+            onClick={() => pick(() => onPick(null))}
+          >
+            <span className="ogrid-xtb-check">{!current && <CheckIcon />}</span>
+            Default
+          </button>
+          {fonts.map((name) => (
+            <button
+              key={name}
+              type="button"
+              role="menuitemradio"
+              aria-checked={name === current}
+              aria-label={name}
+              className="ogrid-xtb-item"
+              data-xtb-nav=""
+              tabIndex={-1}
+              style={{ fontFamily: `"${name}", var(--ogrid-font, inherit)` }}
+              onClick={() => pick(() => onPick(name))}
+            >
+              <span className="ogrid-xtb-check">{name === current && <CheckIcon />}</span>
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
+
+/** Sizes offered as one-click picks; the input accepts any 8–72. */
+const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72];
+
+interface FontSizeMenuProps extends MenuBaseProps {
+  current: number | undefined;
+  onPick: (size: number) => void;
+}
+
+/** A font-size picker: a number input plus common sizes. */
+function FontSizeMenu(props: FontSizeMenuProps) {
+  const { current, onPick, open, disabled } = props;
+  const { anchorRef, trigger, popover, pick } = useMenu(props);
+  const [value, setValue] = useState(String(current ?? 11));
+  useEffect(() => { setValue(String(current ?? 11)); }, [current]);
+  const commit = () => {
+    const n = Number(value);
+    if (Number.isFinite(n) && n >= 8 && n <= 72) pick(() => onPick(Math.round(n)));
+  };
+  return (
+    <span className="ogrid-xtb-anchor" ref={anchorRef}>
+      <button
+        type="button"
+        className="ogrid-xtb-btn ogrid-xtb-size"
+        aria-label="Font size"
+        title={`Font size: ${current ?? 11}`}
+        aria-haspopup="menu"
+        data-xtb-item=""
+        disabled={disabled}
+        {...trigger}
+      >
+        <span className="ogrid-xtb-font-size">{current ?? 11}</span>
+        <ChevronIcon />
+      </button>
+      {open && (
+        <div role="menu" aria-label="Font size" className="ogrid-xtb-pop ogrid-xtb-size-pop" {...popover}>
+          <div className="ogrid-xtb-size-row">
+            <input
+              type="number"
+              min={8}
+              max={72}
+              step={1}
+              value={value}
+              aria-label="Font size value"
+              data-xtb-nav=""
+              className="ogrid-xtb-size-input"
+              onMouseDown={(e) => e.stopPropagation()}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commit(); } }}
+            />
+            <button type="button" className="ogrid-xtb-size-apply" data-xtb-nav="" onClick={commit}>Apply</button>
+          </div>
+          <div className="ogrid-xtb-size-list">
+            {FONT_SIZES.map((size) => (
+              <button
+                key={size}
+                type="button"
+                role="menuitemradio"
+                aria-checked={size === current}
+                aria-label={String(size)}
+                className="ogrid-xtb-item"
+                data-xtb-nav=""
+                tabIndex={-1}
+                onClick={() => pick(() => onPick(size))}
+              >
+                <span className="ogrid-xtb-check">{size === current && <CheckIcon />}</span>
+                {size}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
+
+interface BorderMenuProps extends MenuBaseProps {
+  onPick: (opts: BorderOptions) => void;
+}
+
+const BORDER_LINE_STYLES: BorderLineStyle[] = ['thin', 'medium', 'thick', 'dashed', 'dotted', 'double'];
+
+const BORDER_SCOPES: Array<{ id: BorderScope; label: string; icon: React.ReactNode }> = [
+  { id: 'all', label: 'All borders', icon: <BorderIcon scope="all" /> },
+  { id: 'outside', label: 'Outside borders', icon: <BorderIcon scope="outside" /> },
+  { id: 'inside', label: 'Inside borders', icon: <BorderIcon scope="inside" /> },
+  { id: 'top', label: 'Top border', icon: <BorderIcon scope="top" /> },
+  { id: 'bottom', label: 'Bottom border', icon: <BorderIcon scope="bottom" /> },
+  { id: 'left', label: 'Left border', icon: <BorderIcon scope="left" /> },
+  { id: 'right', label: 'Right border', icon: <BorderIcon scope="right" /> },
+  { id: 'none', label: 'No border', icon: <BorderIcon scope="none" /> },
+];
+
+/** A borders picker: edge buttons, a line style and a color. */
+function BorderMenu(props: BorderMenuProps) {
+  const { onPick, open, disabled } = props;
+  const { anchorRef, trigger, popover, pick } = useMenu(props);
+  const [lineStyle, setLineStyle] = useState<BorderLineStyle>('thin');
+  const [color, setColor] = useState('#000000');
+  const apply = (scope: BorderScope) => pick(() => onPick({ scope, lineStyle, argb: color ? cssToArgb(color) : null }));
+  return (
+    <span className="ogrid-xtb-anchor" ref={anchorRef}>
+      <button
+        type="button"
+        className="ogrid-xtb-btn ogrid-xtb-icon"
+        aria-label="Borders"
+        title="Borders"
+        aria-haspopup="dialog"
+        data-xtb-item=""
+        disabled={disabled}
+        {...trigger}
+      >
+        <BordersIcon />
+      </button>
+      {open && (
+        <div role="dialog" aria-label="Borders" className="ogrid-xtb-pop ogrid-xtb-border-pop" {...popover}>
+          <div className="ogrid-xtb-border-grid">
+            {BORDER_SCOPES.map((scope) => (
+              <button
+                key={scope.id}
+                type="button"
+                className="ogrid-xtb-border-btn"
+                aria-label={scope.label}
+                title={scope.label}
+                data-xtb-nav=""
+                onClick={() => apply(scope.id)}
+              >
+                {scope.icon}
+              </button>
+            ))}
+          </div>
+          <label className="ogrid-xtb-item ogrid-xtb-border-field">
+            Line style
+            <select
+              className="ogrid-xtb-select"
+              value={lineStyle}
+              aria-label="Border line style"
+              data-xtb-nav=""
+              onChange={(e) => setLineStyle(e.target.value as BorderLineStyle)}
+            >
+              {BORDER_LINE_STYLES.map((style) => (
+                <option key={style} value={style}>{style}</option>
+              ))}
+            </select>
+          </label>
+          <label className="ogrid-xtb-item ogrid-xtb-custom ogrid-xtb-border-field">
+            Line color
+            <input
+              type="color"
+              value={color}
+              aria-label="Border color"
+              data-xtb-nav=""
+              onChange={(e) => setColor(e.target.value)}
+            />
+          </label>
+        </div>
+      )}
+    </span>
+  );
+}
+
 // ---- Helpers -------------------------------------------------------------------
 
 /** Buttons keep focus (and the selection highlight) in the grid. */
 function keepFocus(e: React.MouseEvent) {
+  if (e.target instanceof Element && e.target.closest('input, select')) return;
   e.preventDefault();
 }
 
@@ -446,6 +705,7 @@ function navItems(root: HTMLElement | null, selector = '[data-xtb-nav]'): HTMLEl
  * in the next row. Returns whether the key was handled.
  */
 function moveFocus(root: HTMLElement | null, key: string, twoD: boolean, selector?: string): boolean {
+  if (document.activeElement?.matches('input, select')) return false;
   const items = navItems(root, selector);
   if (!items.length) return false;
   const active = items.indexOf(document.activeElement as HTMLElement);
@@ -532,6 +792,37 @@ const UnmergeIcon = () => (
   <Svg><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M12 5v14" /><path d="M10 12H6.5" /><path d="m8 10-2 2 2 2" /><path d="M14 12h3.5" /><path d="m16 10 2 2-2 2" /></Svg>
 );
 const DownloadIcon = () => <Svg><path d="M12 15V3" /><path d="m7 10 5 5 5-5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /></Svg>;
+
+const BordersIcon = () => (
+  <Svg><rect x="3" y="3" width="18" height="18" rx="1.5" /><path d="M9 3v18" /><path d="M15 3v18" /><path d="M3 9h18" /><path d="M3 15h18" /></Svg>
+);
+
+/** Preview of the border scope: a bold edge, an inner grid, or a dashed "none". */
+function BorderIcon({ scope }: { scope: BorderScope }) {
+  const boldEdge = (side: 'top' | 'right' | 'bottom' | 'left') => {
+    if (scope !== 'all' && scope !== 'outside' && scope !== side) return null;
+    const d = side === 'top' ? 'M4 4h16' : side === 'bottom' ? 'M4 20h16' : side === 'left' ? 'M4 4v16' : 'M20 4v16';
+    return <path key={side} d={d} strokeWidth={2.6} />;
+  };
+  return (
+    <Svg size={15}>
+      {scope !== 'inside' && (
+        <rect
+          x="4"
+          y="4"
+          width="16"
+          height="16"
+          rx="1.5"
+          strokeWidth={scope === 'none' ? 1 : 1.4}
+          strokeDasharray={scope === 'none' ? '3 2.5' : undefined}
+        />
+      )}
+      {boldEdge('top')}{boldEdge('right')}{boldEdge('bottom')}{boldEdge('left')}
+      {(scope === 'all' || scope === 'inside') && <path d="M12 4v16" strokeWidth={1.4} />}
+      {(scope === 'all' || scope === 'inside') && <path d="M4 12h16" strokeWidth={1.4} />}
+    </Svg>
+  );
+}
 const ChevronIcon = () => <span className="ogrid-xtb-chevron"><Svg size={14}><path d="m6 9 6 6 6-6" /></Svg></span>;
 const CheckIcon = () => <Svg size={14} strokeWidth={2.4}><path d="M20 6 9 17l-5-5" /></Svg>;
 const PlusIcon = () => <Svg size={14}><path d="M12 5v14" /><path d="M5 12h14" /></Svg>;

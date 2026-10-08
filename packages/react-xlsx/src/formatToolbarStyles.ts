@@ -158,4 +158,75 @@ export const FORMAT_TOOLBAR_CSS = `
   border: 0;
   padding: 0;
 }
+.ogrid-xtb-font { min-width: 116px; justify-content: space-between; padding: 0 4px 0 6px; }
+.ogrid-xtb-font .ogrid-xtb-chevron { opacity: 0.6; }
+.ogrid-xtb-font-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 96px;
+  white-space: nowrap;
+}
+.ogrid-xtb-font-pop { max-height: 320px; overflow-y: auto; min-width: 160px; }
+.ogrid-xtb-size { min-width: 56px; justify-content: space-between; padding: 0 4px 0 8px; }
+.ogrid-xtb-size .ogrid-xtb-chevron { opacity: 0.6; }
+.ogrid-xtb-font-size { font-variant-numeric: tabular-nums; }
+.ogrid-xtb-size-pop { min-width: 120px; }
+.ogrid-xtb-size-row { display: flex; gap: 4px; padding: 2px 2px 6px; }
+.ogrid-xtb-size-input {
+  width: 64px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--ogrid-border, #e0e0e0);
+  border-radius: var(--ogrid-radius-sm, 4px);
+  background: var(--ogrid-bg, #fff);
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.ogrid-xtb-size-apply {
+  flex: 1 1 auto;
+  height: 28px;
+  border: 0;
+  border-radius: var(--ogrid-radius-sm, 4px);
+  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.05));
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.ogrid-xtb-size-apply:hover { background: var(--ogrid-active-bg, rgba(0, 0, 0, 0.08)); }
+.ogrid-xtb-size-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; max-height: 220px; overflow-y: auto; }
+.ogrid-xtb-border-pop { min-width: 208px; }
+.ogrid-xtb-border-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 2px 2px 6px; }
+.ogrid-xtb-border-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--ogrid-border, #e0e0e0);
+  border-radius: var(--ogrid-radius-sm, 4px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.ogrid-xtb-border-btn:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.05)); }
+.ogrid-xtb-border-field { justify-content: space-between; gap: 8px; }
+.ogrid-xtb-select {
+  height: 24px;
+  padding: 0 4px;
+  border: 1px solid var(--ogrid-border, #e0e0e0);
+  border-radius: 3px;
+  background: var(--ogrid-bg, #fff);
+  color: inherit;
+  font: inherit;
+}
+.ogrid-xtb-border-field.ogrid-xtb-custom { position: relative; }
+.ogrid-xtb-border-field.ogrid-xtb-custom input[type="color"] {
+  position: static;
+  width: 40px;
+  height: 22px;
+  opacity: 1;
+  padding: 0;
+}
 `;

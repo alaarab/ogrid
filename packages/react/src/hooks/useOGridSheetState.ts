@@ -6,13 +6,14 @@ import type { UseOGridRowSelectionState } from './useOGridRowSelection';
 import type { UseOGridColumnLayoutState } from './useOGridColumnLayout';
 import type { UseOGridColumnVisibilityState } from './useOGridColumnVisibility';
 import type { UseOGridHiddenRowsState } from './useOGridHiddenRows';
+import type { UseOGridFreezeResult } from './useOGridFreeze';
 import type { SheetScopedGridState } from './useOGrid.types';
 import type { IOGridProps, ISortModelItem, RowId } from '../types';
 
 /** The props whose presence makes a sheet-scoped slot controlled (never written on a sheet switch). */
 export type SheetStateControlProps = Pick<
   IOGridProps<unknown>,
-  'visibleColumns' | 'sort' | 'sortModel' | 'filters' | 'page' | 'selectedRows' | 'columnOrder' | 'hiddenRowIds'
+  'visibleColumns' | 'sort' | 'sortModel' | 'filters' | 'page' | 'selectedRows' | 'columnOrder' | 'hiddenRowIds' | 'frozenRows' | 'frozenColumns'
 >;
 
 /** The raw (non-notifying) setters a sheet switch writes through. */
@@ -24,10 +25,11 @@ export interface SheetStateSlices {
   selection: Pick<UseOGridRowSelectionState<unknown>, 'setInternalSelectedRows'>;
   columnLayout: Pick<UseOGridColumnLayoutState, 'setInternalColumnOrder' | 'setColumnWidthOverrides' | 'setPinnedOverrides'>;
   hiddenRows?: Pick<UseOGridHiddenRowsState, 'setInternalHiddenRowIds'>;
+  freeze?: Pick<UseOGridFreezeResult, 'setInternalRows' | 'setInternalColumns'>;
 }
 
 /** State for a sheet seen for the first time: its own defaults, nothing inherited. */
-export function sheetStateDefaults(defaultSort: SortState, defaultSortModel?: ISortModelItem[]): SheetScopedGridState {
+export function sheetStateDefaults(defaultSort: SortState, defaultSortModel?: ISortModelItem[], defaultFrozenRows = 0, defaultFrozenColumns = 0): SheetScopedGridState {
   return {
     visibleColumns: undefined,
     sort: defaultSort,
@@ -39,6 +41,8 @@ export function sheetStateDefaults(defaultSort: SortState, defaultSortModel?: IS
     columnWidths: {},
     pinned: undefined,
     hiddenRowIds: [],
+    frozenRows: defaultFrozenRows,
+    frozenColumns: defaultFrozenColumns,
   };
 }
 
@@ -64,6 +68,8 @@ export function applySheetState(state: SheetScopedGridState, props: SheetStateCo
   s.columnLayout.setColumnWidthOverrides(state.columnWidths);
   if (state.pinned !== undefined) s.columnLayout.setPinnedOverrides(state.pinned);
   if (props.hiddenRowIds === undefined) s.hiddenRows?.setInternalHiddenRowIds(state.hiddenRowIds ?? []);
+  if (props.frozenRows === undefined) s.freeze?.setInternalRows(state.frozenRows ?? 0);
+  if (props.frozenColumns === undefined) s.freeze?.setInternalColumns(state.frozenColumns ?? 0);
 }
 
 /**
@@ -78,7 +84,7 @@ export function applySheetState(state: SheetScopedGridState, props: SheetStateCo
  * not something the sheet's columns or rows give meaning to.
  */
 export function useOGridSheetState(
-  props: SheetStateControlProps & Pick<IOGridProps<unknown>, 'activeSheet' | 'defaultSortModel'>,
+  props: SheetStateControlProps & Pick<IOGridProps<unknown>, 'activeSheet' | 'defaultSortModel' | 'defaultFrozenRows' | 'defaultFrozenColumns'>,
   current: SheetScopedGridState,
   defaultSortField: string,
   defaultSortDirection: SortState['direction'],
@@ -87,7 +93,8 @@ export function useOGridSheetState(
   useSheetScopedState<SheetScopedGridState>({
     activeSheet: props.activeSheet,
     current,
-    defaults: () => sheetStateDefaults({ field: defaultSortField, direction: defaultSortDirection }, props.defaultSortModel),
+    defaults: () => sheetStateDefaults({ field: defaultSortField, direction: defaultSortDirection }, props.defaultSortModel,
+      props.defaultFrozenRows, props.defaultFrozenColumns),
     apply: (state) => applySheetState(state, props, slices),
   });
 }
