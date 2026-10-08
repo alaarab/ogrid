@@ -4,10 +4,11 @@ import * as React from 'react';
 import { partitionColumnsForVirtualization } from '../utils';
 import { WindowedPlaceholderRow } from './WindowedPlaceholderRow';
 import { GridRow } from './BaseGridRow';
+import type { RowMergePlan, MergedCellRender } from './BaseGridRow';
 import type { useColumnMeta } from '../hooks/useColumnMeta';
 import type { GridRowProps } from './createOGrid';
 import type { IColumnDef, WindowedDataState } from '../types';
-import type { IVisibleColumnRange } from '@alaarab/ogrid-core';
+import type { IVisibleColumnRange, IMergeLayout } from '@alaarab/ogrid-core';
 import type { DataGridStyles, DataGridPrimitives } from './BaseDataGridTable.types';
 
 export interface BaseTableBodyProps<T> {
@@ -50,8 +51,70 @@ export interface BaseTableBodyProps<T> {
   formulaVersion?: number;
   pinnedColumns: Record<string, 'left' | 'right'>;
   rowNumWidth?: number;
+  /** Merged cells resolved against the displayed rows and visible columns. */
+  mergeLayout?: IMergeLayout | null;
+  /** First N displayed rows stay visible below the header (always rendered). */
+  frozenRows?: number;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
+}
+
+interface MergePlans {
+  byRow: Map<number, RowMergePlan>;
+  /** Row each merge is drawn from, keyed by `anchorRow:anchorCol` (data column). */
+  drawRowOfAnchor: Map<string, number>;
+}
+
+/**
+ * Which cells of the rendered rows/columns each merge draws from or covers.
+ * A merge is drawn from its first rendered row and column, so a block cut by
+ * the virtual row window or the column window shows the visible portion
+ * (with its anchor's content) instead of disappearing or misaligning.
+ */
+function buildMergePlans(
+  layout: IMergeLayout,
+  items: readonly unknown[],
+  visibleCols: readonly IColumnDef<unknown>[],
+  renderedCols: readonly number[] | undefined,
+  frozenCount: number,
+  bodyStart: number,
+  bodyEnd: number,
+): MergePlans {
+  const byRow = new Map<number, RowMergePlan>();
+  const drawRowOfAnchor = new Map<string, number>();
+  const colRendered = renderedCols ? new Set(renderedCols) : null;
+  for (const m of layout.merges) {
+    // Merges never cross the frozen boundary (resolveMergedCells clips them).
+    const lo = m.startRow < frozenCount ? 0 : bodyStart;
+    const hi = m.startRow < frozenCount ? frozenCount - 1 : bodyEnd;
+    const r0 = Math.max(m.startRow, lo);
+    const r1 = Math.min(m.endRow, hi);
+    if (r0 > r1) continue;
+    const cols: number[] = [];
+    for (let c = m.startCol; c <= m.endCol; c++) if (!colRendered || colRendered.has(c)) cols.push(c);
+    const anchorItem = items[m.startRow];
+    const anchorColumn = visibleCols[m.startCol];
+    if (cols.length === 0 || anchorItem === undefined || anchorColumn === undefined) continue;
+    const firstCol = cols[0] as number;
+    const draw: MergedCellRender = {
+      rowSpan: r1 - r0 + 1,
+      colSpan: cols.length,
+      anchorRow: m.startRow,
+      anchorCol: m.startCol,
+      anchorItem,
+      anchorColumn,
+    };
+    drawRowOfAnchor.set(`${m.startRow}:${m.startCol}`, r0);
+    for (let r = r0; r <= r1; r++) {
+      let plan = byRow.get(r);
+      if (!plan) {
+        plan = {};
+        byRow.set(r, plan);
+      }
+      for (const c of cols) plan[c] = r === r0 && c === firstCol ? draw : null;
+    }
+  }
+  return { byRow, drawRowOfAnchor };
 }
 
 export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
@@ -62,9 +125,15 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumberOf, ariaRowIndexBase,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
     editingCell, tabStopCell, registerTabStop, popoverAnchorEl, pendingEditorValue, formulaVersion,
-    pinnedColumns, rowNumWidth, styles, primitives,
+    pinnedColumns, rowNumWidth, mergeLayout, styles, primitives,
   } = props;
   const { Tbody } = primitives;
+  const rowCount = windowed ? windowed.rowCount : items.length;
+  const frozenCount = Math.max(0, Math.min(props.frozenRows ?? 0, rowCount));
+  // Rows rendered below the frozen ones: the virtual window (minus frozen rows), or all.
+  const virtualRows = virtualScrollEnabled || windowed != null;
+  const bodyStart = virtualRows ? Math.max(visibleRange.startIndex, frozenCount) : frozenCount;
+  const bodyEnd = virtualRows ? Math.min(visibleRange.endIndex, rowCount - 1) : rowCount - 1;
 
   // Partition columns when column virtualization is active
   const partition = React.useMemo(() => {
@@ -97,9 +166,33 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     };
   }, [partition, visibleCols]);
 
+  const mergePlans = React.useMemo(
+    () => mergeLayout
+      ? buildMergePlans(mergeLayout, items, visibleCols as IColumnDef<unknown>[], globalColIndexMap, frozenCount, bodyStart, bodyEnd)
+      : null,
+    [mergeLayout, items, visibleCols, globalColIndexMap, frozenCount, bodyStart, bodyEnd]
+  );
+  // Interaction state a merged cell reads from rows the comparator doesn't check.
+  const mergeStateKey = mergePlans
+    ? [
+        activeCell ? `${activeCell.rowIndex},${activeCell.columnIndex}` : '',
+        selectionRange ? `${selectionRange.startRow},${selectionRange.startCol},${selectionRange.endRow},${selectionRange.endCol}` : '',
+        cutRange ? `${cutRange.startRow},${cutRange.startCol},${cutRange.endRow},${cutRange.endCol}` : '',
+        copyRange ? `${copyRange.startRow},${copyRange.startCol},${copyRange.endRow},${copyRange.endCol}` : '',
+        isDragging ? '1' : '0',
+        editingCell ? `${String(editingCell.rowId)},${editingCell.columnId}` : '',
+      ].join('|')
+    : undefined;
+  // The tab stop of a merged cell sits in the row the merge is drawn from.
+  const tabStopDrawRow = tabStopCell != null && mergePlans
+    ? mergePlans.drawRowOfAnchor.get(`${tabStopCell.rowIndex}:${tabStopCell.columnIndex - (hasCheckboxCol ? 1 : 0) - (hasRowNumbersCol ? 1 : 0)}`)
+    : undefined;
+
   const renderRow = (item: T, rowIndex: number) => {
     const rowIdStr = getRowId(item);
     const isEditingRow = editingCell != null && editingCell.rowId === rowIdStr;
+    const mergePlan = mergePlans?.byRow.get(rowIndex);
+    const tabStopHere = tabStopCell != null && (tabStopDrawRow != null ? tabStopDrawRow === rowIndex : tabStopCell.rowIndex === rowIndex);
     return (
       <GridRow
         key={rowIdStr}
@@ -127,7 +220,10 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         popoverAnchorEl={isEditingRow ? popoverAnchorEl : undefined}
         pendingEditorValue={isEditingRow ? pendingEditorValue : undefined}
         formulaVersion={formulaVersion}
-        tabStopColumn={tabStopCell != null && tabStopCell.rowIndex === rowIndex ? tabStopCell.columnIndex : -1}
+        tabStopColumn={tabStopHere && tabStopCell ? tabStopCell.columnIndex : -1}
+        mergePlan={mergePlan}
+        mergeStateKey={mergePlan ? mergeStateKey : undefined}
+        frozen={rowIndex < frozenCount ? (rowIndex === frozenCount - 1 ? 'last' : 'inner') : undefined}
         registerTabStop={registerTabStop}
         leftSpacerWidth={leftSpacerWidth}
         rightSpacerWidth={rightSpacerWidth}
@@ -150,10 +246,10 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
   // Windowed (lazy) data source: render the visible index range, reading each
   // row from the cache. Not-yet-loaded rows render a placeholder of identical
   // height so the scroll geometry holds while data streams in.
-  const renderWindowedRows = (): React.ReactNode[] => {
+  const renderWindowedRows = (from: number, to: number): React.ReactNode[] => {
     const out: React.ReactNode[] = [];
     if (!windowed) return out;
-    for (let i = visibleRange.startIndex; i <= visibleRange.endIndex; i++) {
+    for (let i = from; i <= to; i++) {
       const slot = windowed.getRow(i);
       if (slot.status === 'loaded') {
         out.push(renderRow(slot.row, i));
@@ -173,21 +269,34 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     return out;
   };
 
+  // Frozen rows render ahead of the window and take its place in the scroll
+  // geometry: the spacers shrink by the frozen rows' height so the total holds.
+  const frozenHeight = frozenCount * rowHeight;
+  const topSpacer = virtualScrollEnabled
+    ? Math.max(0, visibleRange.offsetTop + (bodyStart - visibleRange.startIndex) * rowHeight - frozenHeight)
+    : 0;
+  const bottomSpacer = virtualScrollEnabled
+    ? Math.max(0, visibleRange.offsetBottom - Math.max(0, frozenCount - 1 - visibleRange.endIndex) * rowHeight)
+    : 0;
+
   return (
     <Tbody>
-      {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
-        <tr style={{ height: visibleRange.offsetTop }} aria-hidden />
+      {virtualRows && frozenCount > 0 && (windowed
+        ? renderWindowedRows(0, frozenCount - 1)
+        : items.slice(0, frozenCount).map((item, i) => renderRow(item, i)))}
+      {virtualScrollEnabled && topSpacer > 0 && (
+        <tr style={{ height: topSpacer }} aria-hidden />
       )}
       {windowed
-        ? renderWindowedRows()
+        ? renderWindowedRows(bodyStart, visibleRange.endIndex)
         : virtualScrollEnabled
-        ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1).map((item, i) =>
-            renderRow(item, visibleRange.startIndex + i)
+        ? items.slice(bodyStart, visibleRange.endIndex + 1).map((item, i) =>
+            renderRow(item, bodyStart + i)
           )
         : items.map((item, rowIndex) => renderRow(item, rowIndex))
       }
-      {virtualScrollEnabled && visibleRange.offsetBottom > 0 && (
-        <tr style={{ height: visibleRange.offsetBottom }} aria-hidden />
+      {virtualScrollEnabled && bottomSpacer > 0 && (
+        <tr style={{ height: bottomSpacer }} aria-hidden />
       )}
     </Tbody>
   );

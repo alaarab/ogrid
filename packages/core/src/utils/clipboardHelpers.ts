@@ -43,6 +43,8 @@ export function formatCellValueForTsv(
  * @param formulaOptions  Optional formula-aware options. When provided, cells with
  *                        formulas will have their formula string copied instead of
  *                        the computed value.
+ * @param isCoveredCell  Optional: cells covered by a merged cell (not its anchor)
+ *                        copy as empty, so a merge copies its anchor value once.
  * @returns TSV string with rows separated by \\r\\n and columns by \\t.
  */
 export function formatSelectionAsTsv<T>(
@@ -54,7 +56,8 @@ export function formatSelectionAsTsv<T>(
     flatColumns: IColumnDef<T>[];
     getFormula?: (col: number, row: number) => string | undefined;
     hasFormula?: (col: number, row: number) => boolean;
-  }
+  },
+  isCoveredCell?: (row: number, col: number) => boolean
 ): string {
   const norm = normalizeSelectionRange(range);
   // Precompute columnId -> flat index once instead of findIndex per copied cell.
@@ -69,6 +72,10 @@ export function formatSelectionAsTsv<T>(
       const item = items[r];
       const col = visibleCols[c];
       if (item === undefined || col === undefined) break;
+      if (isCoveredCell?.(r, c)) {
+        cells.push('');
+        continue;
+      }
       // Check formula first  -  copy formula text instead of computed value
       if (formulaOptions?.hasFormula && formulaOptions?.getFormula) {
         const flatColIndex = flatColIndexById?.get(col.columnId) ?? -1;
@@ -177,6 +184,8 @@ export function parseTsvClipboard(text: string): string[][] {
  * @param items        Array of all row data objects.
  * @param visibleCols  Visible column definitions.
  * @param formulaOptions  Optional formula-aware options.
+ * @param isCoveredCell  Optional: target cells covered by a merged cell (not
+ *                       its anchor) are skipped; only the anchor takes a value.
  * @returns Array of cell value changed events to apply.
  */
 export function applyPastedValues<T>(
@@ -189,7 +198,8 @@ export function applyPastedValues<T>(
     colOffset: number;
     flatColumns: IColumnDef<T>[];
     setFormula?: (col: number, row: number, formula: string | null) => void;
-  }
+  },
+  isCoveredCell?: (row: number, col: number) => boolean
 ): ICellValueChangedEvent<T>[] {
   const events: ICellValueChangedEvent<T>[] = [];
   // Precompute columnId -> flat index once instead of findIndex per pasted cell.
@@ -203,6 +213,7 @@ export function applyPastedValues<T>(
       const targetRow = anchorRow + r;
       const targetCol = anchorCol + c;
       if (targetRow >= items.length || targetCol >= visibleCols.length) continue;
+      if (isCoveredCell?.(targetRow, targetCol)) continue;
       const item = items[targetRow];
       const col = visibleCols[targetCol];
       if (item === undefined || col === undefined) continue;

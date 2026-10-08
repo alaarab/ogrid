@@ -34,9 +34,12 @@ export function measureRange(
   const topLeft = container.querySelector(
     `[data-row-index="${range.startRow}"][data-col-index="${startGlobalCol}"]`
   ) as HTMLElement | null;
-  const bottomRight = container.querySelector(
+  // A merged cell's covered corner isn't rendered: its anchor carries the end coordinates.
+  const bottomRight = (container.querySelector(
     `[data-row-index="${range.endRow}"][data-col-index="${endGlobalCol}"]`
-  ) as HTMLElement | null;
+  ) ?? container.querySelector(
+    `[data-merge-end-row="${range.endRow}"][data-merge-end-col="${endGlobalCol}"]`
+  )) as HTMLElement | null;
 
   if (!topLeft || !bottomRight) return null;
 
@@ -90,7 +93,15 @@ export function buildCellIndex(container: HTMLElement | null): Map<number, HTMLE
     const el = cells[i] as HTMLElement;
     const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
     const c = parseInt(el.getAttribute('data-col-index') ?? '', 10);
-    if (!Number.isNaN(r) && !Number.isNaN(c)) {
+    if (Number.isNaN(r) || Number.isNaN(c)) continue;
+    // A merged cell's anchor also stands in for the cells it covers.
+    const endR = parseInt(el.getAttribute('data-merge-end-row') ?? '', 10);
+    const endC = parseInt(el.getAttribute('data-merge-end-col') ?? '', 10);
+    if (!Number.isNaN(endR) && !Number.isNaN(endC)) {
+      for (let rr = r; rr <= endR; rr++) {
+        for (let cc = c; cc <= endC; cc++) index.set(rr * CELL_INDEX_STRIDE + cc, el);
+      }
+    } else {
       index.set(r * CELL_INDEX_STRIDE + c, el);
     }
   }

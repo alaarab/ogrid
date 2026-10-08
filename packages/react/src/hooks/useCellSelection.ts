@@ -17,6 +17,8 @@ export interface UseCellSelectionParams {
    * leaves it in place. Without it, Shift+click extends from the range's start.
    */
   activeCell?: IActiveCell | null;
+  /** Grows every range the selection takes (e.g. to whole merged cells). */
+  expandRange?: (range: ISelectionRange) => ISelectionRange;
 }
 
 export interface UseCellSelectionResult {
@@ -42,6 +44,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   // Use ref for colOffset to prevent drag restart mid-drag when colOffset changes
   const colOffsetRef = useLatestRef(colOffset);
   const activeCellRef = useLatestRef(activeCell);
+  const expandRangeRef = useLatestRef(params.expandRange);
 
   const [selectionRange, _setSelectionRange] = useState<ISelectionRange | null>(null);
   const isDraggingRef = useRef(false);
@@ -61,10 +64,12 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   selectionRangeRef.current = selectionRange;
 
   // Deduplicating setter  -  skips re-render when the range hasn't actually changed.
-  const setSelectionRange = useCallback((next: ISelectionRange | null) => {
+  const setSelectionRange = useCallback((range: ISelectionRange | null) => {
+    const expand = expandRangeRef.current;
+    const next = range && expand ? expand(range) : range;
     if (rangesEqual(selectionRangeRef.current, next)) return;
     _setSelectionRange(next);
-  }, []);
+  }, [expandRangeRef]);
 
   const handleCellMouseDown = useCallback(
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
@@ -233,12 +238,14 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       const cell = dataCellAtPoint(wrapper, px, py, colOffsetRef.current);
       if (!cell) return null;
       const start = dragStartRef.current;
-      return normalizeSelectionRange({
+      const range = normalizeSelectionRange({
         startRow: start.row,
         startCol: start.col,
         endRow: cell.row,
         endCol: cell.col,
       });
+      const expand = expandRangeRef.current;
+      return expand ? expand(range) : range;
     };
 
     /** rAF-synced auto-scroll loop.  Reads layout once per frame, then writes. */
@@ -425,7 +432,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       stopAutoScroll();
       removeOverlay();
     };
-  }, [setActiveCell, colOffsetRef, setSelectionRange, wrapperRef]);
+  }, [setActiveCell, colOffsetRef, setSelectionRange, wrapperRef, expandRangeRef]);
 
   return {
     selectionRange,

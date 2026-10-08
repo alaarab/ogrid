@@ -144,6 +144,11 @@ export function getCellInteractionProps(
     onPointerCancel: longPressEnd,
     onContextMenu: handlers.handleCellContextMenu,
   };
+  if (descriptor.mergeEnd) {
+    // Lets range measuring and drag marking find a merged cell by its covered corner.
+    props['data-merge-end-row'] = descriptor.mergeEnd.row;
+    props['data-merge-end-col'] = descriptor.mergeEnd.col;
+  }
 
   if (delegated) {
     // Stable shared handlers — zero per-cell closures.

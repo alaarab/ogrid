@@ -23,11 +23,22 @@ export function scrollCellIntoView(
   const wrapperRect = wrapper.getBoundingClientRect();
   const cellRect = cell.getBoundingClientRect();
 
-  // Vertical scroll (account for sticky thead)
+  // Frozen top rows cover the body below the header: a scrolling row must clear them too.
+  const frozenRows = cell.closest('tr[data-frozen-row]')
+    ? null
+    : wrapper.querySelectorAll('tbody > tr[data-frozen-row]');
+  const lastFrozen = frozenRows && frozenRows.length > 0 ? frozenRows[frozenRows.length - 1] : null;
+  const visibleTop = lastFrozen
+    ? Math.max(wrapperRect.top + headerHeight, lastFrozen.getBoundingClientRect().bottom)
+    : wrapperRect.top + headerHeight;
+
+  // Vertical scroll (account for sticky thead and frozen rows). A virtual
+  // grid already scrolled by index; it only needs clearing the frozen rows.
   if (!scrollToIndex) {
-    const visibleTop = wrapperRect.top + headerHeight;
     if (cellRect.top < visibleTop) wrapper.scrollTop -= visibleTop - cellRect.top;
     else if (cellRect.bottom > wrapperRect.bottom) wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
+  } else if (lastFrozen && cellRect.top < visibleTop) {
+    wrapper.scrollTop -= visibleTop - cellRect.top;
   }
 
   // Horizontal scroll: only when the wrapper actually scrolls horizontally

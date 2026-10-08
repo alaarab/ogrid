@@ -200,6 +200,22 @@ export interface IActiveCell {
   columnIndex: number;
 }
 
+/**
+ * A merged cell block (Excel-style "Merge Cells"). The anchor cell at
+ * (`rowId`, `columnId`) renders across `rowSpan` rows and `colSpan` columns;
+ * the cells it covers are not rendered. Spans default to 1 and count
+ * DISPLAYED rows (after sort/filter/paging) and VISIBLE columns, starting at
+ * the anchor. A merge whose anchor is not displayed is ignored; spans are
+ * clipped at the end of the view, at the pinned/unpinned column boundary and
+ * at the frozen-row boundary.
+ */
+export interface IMergedCell {
+  rowId: RowId;
+  columnId: string;
+  rowSpan?: number;
+  colSpan?: number;
+}
+
 // --- Cell range selection (spreadsheet-style) ---
 
 /** Rectangular cell range (inclusive). Column indices are data-column indices (0 = first data column). */

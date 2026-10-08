@@ -39,6 +39,7 @@ export type {
   IStatusBarProps,
   IActiveCell,
   ISelectionRange,
+  IMergedCell,
   SideBarPanelId,
   ISideBarDef,
   ISheetDef,
@@ -212,6 +213,10 @@ export type { ArrowNavigationContext, ArrowNavigationResult } from './utils';
 
 // Utils  -  selectionHelpers
 export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, computeAutoScrollDelta, getSelectAllRange, applyRangeRowSelection, computeRowSelectionState } from './utils';
+
+// Utils  -  mergedCells
+export { resolveMergedCells, isCoveredCell, expandRangeToMerges, isSingleMergeRange } from './utils';
+export type { IResolvedMerge, IMergeLayout, ResolveMergedCellsParams } from './utils';
 
 // Utils  -  clipboardHelpers
 export {

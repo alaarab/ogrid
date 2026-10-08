@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
-import { getDataGridStatusBarConfig, computeAggregations, getCellValue } from '../utils';
+import { getDataGridStatusBarConfig, computeAggregations, getCellValue, resolveMergedCells } from '../utils';
+import type { IMergeLayout } from '../utils';
 import { isColumnEditable } from '@alaarab/ogrid-core';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef, IFormulaCellWriter } from '../types';
@@ -14,6 +15,12 @@ import { useDataGridEditing } from './useDataGridEditing';
 import { useDataGridInteraction } from './useDataGridInteraction';
 import { useDataGridContextMenu } from './useDataGridContextMenu';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
+
+/** `frozenRows` clamped to a whole number of displayed rows. */
+function resolveFrozenRowCount(frozenRows: number | undefined, rowCount: number): number {
+  if (typeof frozenRows !== 'number' || !Number.isFinite(frozenRows) || frozenRows <= 0) return 0;
+  return Math.min(Math.floor(frozenRows), rowCount);
+}
 
 /** The grid moves focus itself (roving tabindex in useGridCellFocus). */
 const ACTIVE_CELL_OPTIONS = { focus: false } as const;
@@ -154,6 +161,10 @@ export interface DataGridViewModelState<T> {
   statusBarConfig: IStatusBarProps | null;
   showEmptyInGrid: boolean;
   onCellError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  /** Merged cells resolved against the displayed rows and visible columns (null when none apply). */
+  mergeLayout: IMergeLayout | null;
+  /** Frozen top rows, clamped to the displayed row count. */
+  frozenRows: number;
 }
 
 /** Column pinning state and column header menu. */
@@ -254,7 +265,7 @@ export function useDataGridState<T>(
     setPendingEditorValue,
   } = useCellEditing();
 
-  const { activeCell, setActiveCell } = useActiveCell(wrapperRef, editingCell, scrollToIndexRef, ACTIVE_CELL_OPTIONS);
+  const { activeCell, setActiveCell: setActiveCellRaw } = useActiveCell(wrapperRef, editingCell, scrollToIndexRef, ACTIVE_CELL_OPTIONS);
 
   // --- 1. Layout, pinning, header menu ---
   const layoutResult = useDataGridLayout<T>({
@@ -284,6 +295,47 @@ export function useDataGridState<T>(
     hasCheckboxCol,
   } = layoutResult;
   const flatColumns = layoutResult.layout.flatColumns;
+
+  // --- Frozen rows and merged cells (resolved against the displayed rows) ---
+  const frozenRows = resolveFrozenRowCount(props.frozenRows, rowItems.length);
+  const { mergedCells } = props;
+  const { rowIndexByRowId } = layoutResult.layout;
+  const livePinned = layoutResult.pinning.pinnedColumns;
+  // A windowed source holds only some rows, so merges (which need whole spans) are off there.
+  const isWindowed = props.windowed != null;
+  const mergeLayout = useMemo<IMergeLayout | null>(() => {
+    if (!mergedCells || mergedCells.length === 0 || isWindowed) return null;
+    const pinnedSide = new Map<string, 'left' | 'right' | undefined>();
+    for (const c of visibleCols) pinnedSide.set(c.columnId, livePinned[c.columnId] ?? c.pinned);
+    return resolveMergedCells({
+      mergedCells,
+      rowIndexOf: (id) => rowIndexByRowId.get(id),
+      rowCount: items.length,
+      columnIds: visibleCols.map((c) => c.columnId),
+      pinnedSideOf: (id) => pinnedSide.get(id),
+      frozenRows,
+    });
+  }, [mergedCells, isWindowed, rowIndexByRowId, items.length, visibleCols, livePinned, frozenRows]);
+  const mergeLayoutRef = useLatestRef(mergeLayout);
+  const colOffsetRef = useLatestRef(colOffset);
+  // The active cell of a merged block is always its anchor (top-left) cell.
+  const setActiveCell = useCallback((cell: { rowIndex: number; columnIndex: number } | null) => {
+    const layout = mergeLayoutRef.current;
+    const off = colOffsetRef.current;
+    if (cell && layout && cell.columnIndex >= off) {
+      const m = layout.mergeAt(cell.rowIndex, cell.columnIndex - off);
+      if (m && (m.startRow !== cell.rowIndex || m.startCol + off !== cell.columnIndex)) {
+        setActiveCellRaw({ rowIndex: m.startRow, columnIndex: m.startCol + off });
+        return;
+      }
+    }
+    setActiveCellRaw(cell);
+  }, [mergeLayoutRef, colOffsetRef, setActiveCellRaw]);
+  // Enter-commit moves below the whole merged block.
+  const rowBelow = useCallback((rowIndex: number, dataCol: number) => {
+    const m = mergeLayoutRef.current?.mergeAt(rowIndex, dataCol);
+    return (m ? m.endRow : rowIndex) + 1;
+  }, [mergeLayoutRef]);
 
   // --- Formula coordinates ---
   // The formula engine is keyed by flat column index + sheet row (see
@@ -383,6 +435,7 @@ export function useDataGridState<T>(
     formulaCol,
     formulaRow,
     formulaCells,
+    mergeLayout,
   });
 
   const {
@@ -413,6 +466,7 @@ export function useDataGridState<T>(
     onFormulaCellChanged: formulaCells ? undefined : props.onFormulaCellChanged,
     formulas: props.formulas,
     flatColumns,
+    rowBelow,
   });
 
   // --- Formula bar writer: sheet cell -> the grid's normal edit path ---
@@ -525,6 +579,7 @@ export function useDataGridState<T>(
       hasFormula: props.hasFormula,
       getFormula: props.getFormula,
       formulaVersion: props.formulaVersion,
+      mergeLayout,
     }),
     [
       editingCell,
@@ -545,6 +600,7 @@ export function useDataGridState<T>(
       props.hasFormula,
       props.getFormula,
       props.formulaVersion,
+      mergeLayout,
     ]
   );
 
@@ -582,8 +638,8 @@ export function useDataGridState<T>(
   }), [selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected]);
 
   const viewModelsState = useMemo<DataGridViewModelState<T>>(() => ({
-    headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError,
-  }), [headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError]);
+    headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError, mergeLayout, frozenRows,
+  }), [headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError, mergeLayout, frozenRows]);
 
   return {
     layout: layoutResult.layout,
