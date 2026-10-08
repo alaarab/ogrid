@@ -211,4 +211,30 @@ describe('dynamic arrays in real XLSX files', () => {
     expect(normalizeFormula('_xlfn.SINGLE(A1:A10)')).toBe('=@A1:A10');
     expect(toFileFormula("='A1#'!B2+'@C3'!D4")).toBe("'A1#'!B2+'@C3'!D4");
   });
+
+  test('structure redo restores shifted spill caches even after a later recalculation', async () => {
+    const source = new ExcelJS.Workbook();
+    const ws = source.addWorksheet('Arrays');
+    ws.addRows([[10, 10], [null, 11], [null, null]]);
+    ws.getCell('B1').value = { formula: '_xlfn.SEQUENCE(2,1,A1)', shareType: 'array', ref: 'B1:B2', result: 10 };
+    const doc = new XlsxWorkbookDocument(await workbookFromBlob(await xlsxBlobFromWorkbook(source)), { headerRow: 'none' });
+    doc.insertRows('Arrays', 0);
+    doc.insertColumns('Arrays', 0);
+    doc.setCellValues('Arrays', [{ rowId: 1, columnId: 'B', value: 100 }]);
+    await Promise.resolve();
+    const state = doc.sheet('Arrays')!;
+    const result = new FormulaEngine().loadFormulas(state.source.initialFormulas, {
+      getCellValue: (col, row) => state.rows[row]?.[state.columns[col]?.columnId ?? ''],
+      getRowCount: () => state.rows.length, getColumnCount: () => state.columns.length,
+    });
+    doc.recordFormulaResults('Arrays', result);
+    expect((await workbookFromBlob(await doc.toBlob())).getWorksheet('Arrays')!.getCell('C3').value).toBe(101);
+    doc.undo('Arrays'); // input edit
+    doc.undo('Arrays'); // column insert
+    doc.redo('Arrays'); // original column insert snapshot
+    const out = (await workbookFromBlob(await doc.toBlob())).getWorksheet('Arrays')!;
+    expect(out.getCell('C2').value).toMatchObject({ formula: '_xlfn.SEQUENCE(2,1,B2)', ref: 'C2:C3', result: 10 });
+    expect(out.getCell('C3').value).toBe(11);
+    expect(doc.sheetAccessors().Arrays!.getSpillRange!(2, 1)).toEqual({ anchorCol: 2, anchorRow: 1, endCol: 2, endRow: 2 });
+  });
 });
