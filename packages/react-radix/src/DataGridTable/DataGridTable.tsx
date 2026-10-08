@@ -10,6 +10,7 @@ import { GridContextMenu } from './GridContextMenu';
 import { EmptyState } from './EmptyState';
 import { LoadingOverlay } from './LoadingOverlay';
 import { DropIndicator } from './DropIndicator';
+import { FindReplacePanel } from '../FindReplacePanel/FindReplacePanel';
 import {
   createDataGridTable,
   POPOVER_ANCHOR_STYLE,
@@ -39,6 +40,7 @@ const primitives: DataGridPrimitives = {
   LoadingOverlay,
   DropIndicator,
   StatusBar,
+  FindReplacePanel,
   renderRowCheckbox: ({ checked, onCheckedChange, ariaLabel }) => (
     <Checkbox.Root
       className={styles.rowCheckbox}

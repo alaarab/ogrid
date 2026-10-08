@@ -1,0 +1,115 @@
+---
+sidebar_position: 11.7
+title: Find & Replace
+description: Excel-style Find & Replace with Ctrl+F / Ctrl+H, match options, wrapping navigation and one-step undo for Replace all
+---
+
+import FindReplaceDemo from '@site/src/components/demos/FindReplaceDemo';
+
+# Find & Replace
+
+Search the grid the way Excel does: **Ctrl+F** opens Find, **Ctrl+H** opens Replace. A compact panel floats at the grid's top-right corner, every match is lightly highlighted, and the current match becomes the active cell.
+
+## Live Demo
+
+<FindReplaceDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+<OGrid
+  columns={columns}
+  data={rows}
+  getRowId={(r) => r.id}
+  editable
+  onCellValueChanged={handleChange}
+  findReplace
+/>;
+```
+
+The same prop works on `@alaarab/ogrid-react-fluent` (the panel uses Fluent v9 `Input`, `Button`, `Checkbox` and `Select`) and on the bare `DataGridTable`.
+
+## Keyboard
+
+| Key | Where | Action |
+|---|---|---|
+| Ctrl+F (Cmd+F) | Grid focused | Open Find (again: re-select the query) |
+| Ctrl+H | Grid focused | Open Replace (Find only on a read-only grid) |
+| Enter / Shift+Enter | Find box | Next / previous match, wrapping at the ends |
+| Enter | Replace box | Replace the current match and go to the next |
+| Escape | Panel | Close and return focus to the active cell |
+
+The shortcuts only apply while the grid has focus, so the browser's own find still works everywhere else on the page. While a cell editor is open, Ctrl+F belongs to the editor.
+
+## Options
+
+Open them with the **⋯** button.
+
+| Option | Default | Meaning |
+|---|---|---|
+| Match case | off | Upper/lower case must match |
+| Match entire cell contents | off | The whole cell text must equal the query |
+| Within selection | off | Search only the range that was selected when the panel opened (a single-cell selection searches the whole grid, as in Excel) |
+| Search: by rows / by columns | by rows | The order Enter walks the matches |
+| Look in: values / formulas | values | **Values** searches the displayed text (after `valueFormatter`, dates and booleans formatted; a formula cell's result). **Formulas** searches the underlying content: the raw value, or a formula cell's formula |
+
+## What gets searched
+
+- Every filtered row, in the current sort order, across **all pages**. When the next match is on another page, the grid moves to that page.
+- Visible columns only. Hidden columns are not searched.
+- Under virtual scrolling, the grid scrolls the match into view.
+- Covered cells of a [merged cell](./merged-cells) are skipped; the anchor is searched.
+- Server-side and windowed data sources: only the rows the grid holds (the current page, or the loaded rows).
+- With `formulas` on, the search covers the displayed rows (all rows when not paginated).
+
+The status shows `3 of 12` (or `No results`) and is announced to screen readers through an `aria-live` region.
+
+## Replace
+
+Replacement edits go through the same path as typing or pasting:
+
+- The replaced text is parsed by the column's `valueParser` (or its built-in `type` parser). A value the parser rejects is skipped.
+- Each change reaches `onCellValueChanged`.
+- **Replace all is one undo step**: Ctrl+Z restores every cell it changed.
+- Cells in read-only columns (or rows where `editable` returns false) are skipped. The status reports the count, e.g. `Replaced 5 cells, 8 skipped`.
+- With **Look in: values**, formula cells are skipped rather than overwritten. With **Look in: formulas**, a result that starts with `=` is written as a formula.
+- Matching is literal text: `$`, `*` and `?` in the query or the replacement have no special meaning.
+
+## Headless: `useFindReplace`
+
+Building your own table on the headless hooks? `useFindReplace` holds the panel state, runs the matcher and turns replaces into value changes; you render the panel and decide what "go to a match" means.
+
+```tsx
+import { useFindReplace } from '@alaarab/ogrid-react';
+
+const find = useFindReplace({
+  rows,                     // every searchable row, display order
+  columns,                  // visible columns
+  getRowId: (r) => r.id,
+  activeCell,               // { rowIndex, columnIndex } where searching starts
+  selection,                // ISelectionRange for "Within selection"
+  onNavigate: (m) => {      // m: { rowId, columnId, rowIndex, columnIndex }
+    setActiveCell({ row: m.rowIndex, col: m.columnIndex });
+  },
+  onCellEdit: (events) => { // one call per Replace / Replace all
+    setRows((prev) => applyEvents(prev, events));
+  },
+});
+
+// Ctrl+F: find.open('find'), Ctrl+H: find.open('replace')
+<input value={find.query} onChange={(e) => find.setQuery(e.target.value)} />
+<span aria-live="polite">{find.statusText}</span>
+<button onClick={find.next}>Next</button>
+<button onClick={find.replaceAll} disabled={!find.canReplace}>Replace all</button>
+```
+
+The matcher is also available as pure functions: `findMatches`, `findNextMatchIndex`, `planReplace` and `replaceInCellText` from `@alaarab/ogrid-core` (re-exported by `@alaarab/ogrid-react`).
+
+## Theming
+
+| CSS variable | Default | Used for |
+|---|---|---|
+| `--ogrid-find-match-bg` | `rgba(255, 213, 0, 0.28)` | Match highlight |
+| `--ogrid-z-find` | `30` | Panel stacking order |

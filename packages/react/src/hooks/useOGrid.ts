@@ -64,7 +64,7 @@ export function useOGrid<T>(
     emptyState, entityLabelPlural = 'items', layoutMode = 'fill', suppressHorizontalScroll,
     editable, cellSelection, canUndo, canRedo, rowSelection = 'none', statusBar, pageSizeOptions,
     stickyHeader, columnReorder, responsiveColumns, virtualScroll, rowHeight, density = 'normal',
-    mergedCells, frozenRows,
+    mergedCells, frozenRows, findReplace,
     'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     rowResize, rowHeights,
   } = props;
@@ -217,6 +217,14 @@ export function useOGrid<T>(
     render: emptyState?.render,
   }), [filtersState.hasActiveFilters, clearAllFilters, emptyState]);
 
+  // Find & Replace searches every filtered row; a paginated client-side grid
+  // only displays one page, so it gets the full list and a page setter. With
+  // formulas the search stays on the displayed rows (formula cells are
+  // addressed through the displayed-row map).
+  const findRows = findReplace && !isServerSide && !isWindowed && !fullyVirtualized && pageSize !== 'all' && !props.formulas
+    ? dataFetchingState.allFilteredItems
+    : undefined;
+
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
     scrollToRowRef, items: displayItems, windowed, columns: columnsProp, getRowId,
     sortBy: sortingState.sort.field, sortDirection: sortingState.sort.direction, onColumnSort: sortingState.handleSort,
@@ -235,6 +243,7 @@ export function useOGrid<T>(
     virtualScroll, rowHeight, density, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     mergedCells, frozenRows,
     rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef,
+    findReplace, findRows, onFindPageChange: findRows ? setPage : undefined,
     emptyState: dgEmptyState,
     ...dgFormulaProps,
   }), [
@@ -250,6 +259,7 @@ export function useOGrid<T>(
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows,
     rowResize, rowHeights, onRowResized, structureActions,
+    findReplace, findRows, setPage,
     dgEmptyState, dgFormulaProps,
   ]);
 

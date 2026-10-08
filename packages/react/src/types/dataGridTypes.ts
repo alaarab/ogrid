@@ -193,6 +193,14 @@ interface IOGridBaseProps<T> {
    * and virtual scrolling. Default: 0.
    */
   frozenRows?: number;
+  /**
+   * Excel-style Find & Replace. Ctrl+F (Cmd+F) opens Find and Ctrl+H opens
+   * Replace while the grid has focus; the browser's own find is untouched
+   * when it doesn't. Searches every filtered row across pages. Replace runs
+   * through each column's `valueParser` and `onCellValueChanged`, skips
+   * read-only cells, and Replace all is one undo step. Default: false.
+   */
+  findReplace?: boolean;
 
   /** When true, shows a fullscreen toggle button in the toolbar. Default: false. */
   fullScreen?: boolean;
@@ -416,6 +424,15 @@ export interface IOGridDataGridProps<T> {
    * and virtual scrolling. Default: 0.
    */
   frozenRows?: number;
+  /** Enable the Find & Replace panel (Ctrl+F / Ctrl+H). */
+  findReplace?: boolean;
+  /**
+   * @internal Every filtered, sorted row across pages, for Find & Replace on a
+   * paginated grid. Omitted when `items` already holds every row.
+   */
+  findRows?: T[];
+  /** @internal Moves the grid to a page so a Find match on it can be shown. */
+  onFindPageChange?: (page: number) => void;
   isLoading?: boolean;
   loadingMessage?: string;
   editable?: boolean;

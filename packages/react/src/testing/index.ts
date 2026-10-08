@@ -13,3 +13,4 @@ export { createColumnModelTests } from './columnModelTestFactory';
 export { createFormulaTests } from './formulaTestFactory';
 export { createMergedCellsTests } from './mergedCellsTestFactory';
 export { createStructureEditTests } from './structureEditTestFactory';
+export { createFindReplaceTests } from './findReplaceTestFactory';
