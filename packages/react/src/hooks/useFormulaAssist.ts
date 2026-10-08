@@ -12,15 +12,8 @@
 
 import * as React from 'react';
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import {
-  applyFormulaCompletion,
-  getFormulaCaretContext,
-  getFormulaCompletions,
-  getFunctionMetadata,
-  getSignatureParts,
-  listFunctions,
-} from '@alaarab/ogrid-core/formula';
 import type { IFormulaCompletion } from '@alaarab/ogrid-core';
+import { useFormulaAssistModule } from './formulaAssistModule';
 import { FormulaAssistContext, FormulaAssistHost } from '../components/FormulaAssist';
 import type { IFormulaArgumentHint } from '../components/FormulaAssist';
 
@@ -74,7 +67,9 @@ const visuallyHidden: React.CSSProperties = {
 export function useFormulaAssist(params: UseFormulaAssistParams): UseFormulaAssistResult {
   const { value, onChange, getInput, enabled: enabledParam } = params;
   const config = useContext(FormulaAssistContext);
-  const enabled = enabledParam && config != null;
+  // Function metadata and autocomplete load lazily; help stays inactive until they arrive.
+  const assist = useFormulaAssistModule(enabledParam && config != null);
+  const enabled = enabledParam && config != null && assist != null;
 
   const idRef = useRef('');
   if (!idRef.current) idRef.current = `ogrid-formula-assist-${++assistIdCounter}`;
@@ -127,18 +122,18 @@ export function useFormulaAssist(params: UseFormulaAssistParams): UseFormulaAssi
 
   const functions = config?.functions;
   const namedRanges = config?.namedRanges;
-  const functionList = useMemo(() => (enabled ? listFunctions(functions) : []), [enabled, functions]);
+  const functionList = useMemo(() => (enabled && assist ? assist.listFunctions(functions) : []), [enabled, assist, functions]);
 
   const context = useMemo(
-    () => (enabled && focused && value.startsWith('=') ? getFormulaCaretContext(value, caret ?? value.length) : null),
-    [enabled, focused, value, caret],
+    () => (enabled && assist && focused && value.startsWith('=') ? assist.getFormulaCaretContext(value, caret ?? value.length) : null),
+    [enabled, assist, focused, value, caret],
   );
   const token = context?.token ?? null;
   const tokenKey = token ? `${token.start}:${token.prefix}` : null;
 
   const items = useMemo(
-    () => (token && tokenKey !== dismissedKey ? getFormulaCompletions(token.prefix, functionList, namedRanges) : []),
-    [token, tokenKey, dismissedKey, functionList, namedRanges],
+    () => (assist && token && tokenKey !== dismissedKey ? assist.getFormulaCompletions(token.prefix, functionList, namedRanges) : []),
+    [assist, token, tokenKey, dismissedKey, functionList, namedRanges],
   );
   const open = items.length > 0;
 
@@ -150,18 +145,18 @@ export function useFormulaAssist(params: UseFormulaAssistParams): UseFormulaAssi
 
   const call = context?.call ?? null;
   const hint = useMemo<IFormulaArgumentHint | null>(() => {
-    if (!call) return null;
-    const meta = getFunctionMetadata(call.name, functions);
-    return meta ? { parts: getSignatureParts(meta, call.argIndex), description: meta.description } : null;
-  }, [call, functions]);
+    if (!call || !assist) return null;
+    const meta = assist.getFunctionMetadata(call.name, functions);
+    return meta ? { parts: assist.getSignatureParts(meta, call.argIndex), description: meta.description } : null;
+  }, [assist, call, functions]);
 
   const valueRef = useRef(value);
   valueRef.current = value;
   const select = useCallback(
     (index: number) => {
       const item = items[index];
-      if (!token || !item) return;
-      const next = applyFormulaCompletion(valueRef.current, token, item);
+      if (!assist || !token || !item) return;
+      const next = assist.applyFormulaCompletion(valueRef.current, token, item);
       const el = getInputRef.current();
       if (el) {
         // Write the DOM first so React sees an unchanged value and keeps the caret.
@@ -172,7 +167,7 @@ export function useFormulaAssist(params: UseFormulaAssistParams): UseFormulaAssi
       onChange(next.text);
       setCaret(next.caret);
     },
-    [items, token, onChange],
+    [assist, items, token, onChange],
   );
 
   const handleKeyDown = useCallback(
