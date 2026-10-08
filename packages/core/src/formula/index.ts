@@ -57,7 +57,10 @@ export {
   toCellKey,
   fromCellKey,
   adjustFormulaReferences,
+  shiftFormulaReferences,
+  shiftFormulaCells,
 } from './cellAddressUtils';
+export type { StructureAxis } from './cellAddressUtils';
 
 // Tokenizer
 export { tokenize } from './tokenizer';

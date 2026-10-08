@@ -28,6 +28,9 @@ export interface UseDataGridLayoutParams<T> {
   onColumnSort?: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   responsiveColumns?: boolean | IResponsiveColumnsConfig;
   wrapperRef: RefObject<HTMLDivElement | null>;
+  /** Column structure edits for the header menu (omit to hide those items). */
+  onInsertColumn?: (columnId: string, side: 'left' | 'right') => void;
+  onDeleteColumn?: (columnId: string) => void;
 }
 
 export interface UseDataGridLayoutResult<T> {
@@ -270,6 +273,8 @@ export function useDataGridLayout<T>(
     onColumnResized,
     onAutosizeColumn: handleAutosizeColumn,
     columns: flatColumns,
+    onInsertColumn: params.onInsertColumn,
+    onDeleteColumn: params.onDeleteColumn,
   });
 
   // Memoize layout sub-object

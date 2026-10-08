@@ -46,6 +46,7 @@ export type {
   IVirtualScrollConfig,
   IColumnReorderConfig,
   IOGridApi,
+  IRowsChangeEvent,
 } from './dataGridTypes';
 
 // Utility functions

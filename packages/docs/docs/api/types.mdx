@@ -239,6 +239,46 @@ interface ISideBarDef {
 />
 ```
 
+## IRowsChangeEvent&lt;T&gt;
+
+Passed to `onRowsChange` when rows are inserted or deleted (context menu, `insertRows`/`deleteRows`, or undo/redo of either).
+
+```typescript
+interface IRowsChangeEvent<T> {
+  type: 'insert' | 'delete';
+  rows: T[];
+  indexes: number[];
+  data: T[];
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `type` | `'insert' \| 'delete'` | Whether rows were inserted or deleted. |
+| `rows` | `T[]` | The inserted or deleted rows, in data order. |
+| `indexes` | `number[]` | Index of each row: in the new array for an insert, in the old array for a delete. |
+| `data` | `T[]` | The complete data array after the change. Pass it to your state setter. |
+
+## IColumnsChangeEvent&lt;T&gt;
+
+Passed to `onColumnsChange` when a column is inserted or deleted.
+
+```typescript
+interface IColumnsChangeEvent<T> {
+  type: 'insert' | 'delete';
+  column: IColumnDef<T>;
+  index: number;
+  columns: (IColumnDef<T> | IColumnGroupDef<T>)[];
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `type` | `'insert' \| 'delete'` | Whether the column was inserted or deleted. |
+| `column` | `IColumnDef<T>` | The inserted or deleted column. |
+| `index` | `number` | Leaf (flattened) index: where the column now sits, or where it sat before a delete. |
+| `columns` | `(IColumnDef<T> \| IColumnGroupDef<T>)[]` | The complete `columns` value after the change. Pass it to your state setter. |
+
 ## IRowSelectionChangeEvent&lt;T&gt;
 
 Event object passed to the `onSelectionChange` callback when row selection changes.
@@ -636,6 +676,8 @@ import type {
   IStatusBarProps,
   ISideBarDef,
   IRowSelectionChangeEvent,
+  IRowsChangeEvent,
+  IColumnsChangeEvent,
   IColumnDef,
   IColumnGroupDef,
   IDataSource,

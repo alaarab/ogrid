@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, formatShortcut } from '../utils';
+import { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, getStructureMenuItems, formatShortcut } from '../utils';
 import type { GridContextMenuHandlerProps } from '../utils';
 import { useMenuKeyboardNav } from '../hooks/useMenuKeyboardNav';
 
@@ -11,17 +11,31 @@ export interface GridContextMenuClassNames {
   contextMenuDivider?: string;
 }
 
+/** Structure-edit section of the context menu (`allowStructureEdits`). */
+export interface GridContextMenuStructure {
+  /** Selected rows the row items apply to; 0 hides them. */
+  rowCount: number;
+  /** Selected columns the column items apply to; 0 hides them. */
+  columnCount: number;
+  canInsertRows: boolean;
+  canDeleteRows: boolean;
+  /** Runs a structure item: insertRowAbove, insertRowBelow, deleteRows, insertColumnLeft, insertColumnRight, deleteColumns. */
+  onAction: (id: string) => void;
+}
+
 export interface GridContextMenuProps extends GridContextMenuHandlerProps {
   x: number;
   y: number;
   hasSelection: boolean;
   canUndo: boolean;
   canRedo: boolean;
+  /** Insert/delete row and column items. Omit to hide them. */
+  structure?: GridContextMenuStructure;
   classNames?: GridContextMenuClassNames;
 }
 
 export function GridContextMenu(props: GridContextMenuProps): React.ReactElement {
-  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, classNames } = props;
+  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, structure, classNames } = props;
   const ref = React.useRef<HTMLDivElement>(null);
   const handlers = React.useMemo(
     () => getContextMenuHandlers({ onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, onClose }),
@@ -36,6 +50,18 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
       return false;
     },
     [hasSelection, canUndo, canRedo]
+  );
+
+  const structureItems = React.useMemo(
+    () => (structure
+      ? getStructureMenuItems({
+        rowCount: structure.rowCount,
+        columnCount: structure.columnCount,
+        canInsertRows: structure.canInsertRows,
+        canDeleteRows: structure.canDeleteRows,
+      })
+      : []),
+    [structure]
   );
 
   const { onKeyDown } = useMenuKeyboardNav(ref, { active: true, onClose });
@@ -59,13 +85,13 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
   // Compute viewport-aware menu position to prevent overflow on small screens
   const menuStyle = React.useMemo((): React.CSSProperties => {
     const menuWidth = 200;
-    const menuHeight = GRID_CONTEXT_MENU_ITEMS.length * 44 + 16; // approx
+    const menuHeight = (GRID_CONTEXT_MENU_ITEMS.length + structureItems.length) * 44 + 16; // approx
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const left = x + menuWidth > vw ? Math.max(0, vw - menuWidth - 8) : x;
     const top = y + menuHeight > vh ? Math.max(0, vh - menuHeight - 8) : y;
     return { left, top };
-  }, [x, y]);
+  }, [x, y, structureItems.length]);
 
   return (
     <div
@@ -93,6 +119,23 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
                 {formatShortcut(item.shortcut)}
               </span>
             )}
+          </button>
+        </React.Fragment>
+      ))}
+      {structureItems.map((item) => (
+        <React.Fragment key={item.id}>
+          {item.dividerBefore && <div className={classNames?.contextMenuDivider} />}
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className={classNames?.contextMenuItem}
+            onClick={() => {
+              structure?.onAction(item.id);
+              onClose();
+            }}
+          >
+            <span className={classNames?.contextMenuItemLabel}>{item.label}</span>
           </button>
         </React.Fragment>
       ))}

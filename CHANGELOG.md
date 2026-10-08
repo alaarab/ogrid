@@ -23,6 +23,37 @@ All notable changes to OGrid will be documented in this file.
   one (`--ogrid-frozen-divider`). Works with pinned columns (sticky on both
   axes) and virtual scrolling (frozen rows are always rendered); keyboard
   navigation scrolls rows out from under them.
+- Cell-level grid API: `getCellValue(rowId, columnId)` returns a cell's value
+  (a formula cell's result), and `setCellValue(rowId, columnId, value)` writes
+  through the edit path (`valueParser`, `onCellValueChanged`, undo history,
+  `=` formulas). Works for rows on other pages.
+- Structure editing: `insertRows(index, rows?)`, `deleteRows(rowIds)`,
+  `insertColumn(index, column?)` and `deleteColumn(columnId)` on the grid API,
+  reported through the new `onRowsChange` / `onColumnsChange` props
+  (`IRowsChangeEvent`, `IColumnsChangeEvent`) with the complete new array.
+  `createRow` builds blank rows. Each edit is one undo step, and with
+  `formulas` on, formula cells and references shift like a spreadsheet's
+  (deleted references become `#REF!`). Named ranges and other-sheet
+  references are not shifted.
+- `allowStructureEdits` adds "Insert row above/below", "Delete row",
+  "Insert column left/right" and "Delete column" to the cell context menu
+  (acting on the selected rows/columns) and the column items to the column
+  header menu. Core exports `getStructureMenuItems` and pure helpers
+  (`insertRowsAt`, `removeRowsById`, `insertColumnAt`, `removeColumnById`, ...);
+  the formula subpath exports `shiftFormulaReferences` and `shiftFormulaCells`.
+- Per-row resize: `rowResize` adds a drag handle to the bottom edge of each row
+  number (with `showRowNumbers` / `cellReferences`); `rowHeights` (controlled)
+  and `onRowResized(rowId, height)`. Off with virtual scrolling and windowed
+  data sources.
+- `useUndoRedo` returns `recordAction({ undo, redo })` for custom undo steps.
+- `remapMergedCells(merges, axis, beforeIds, afterIds)` carries `mergedCells`
+  through row/column inserts and deletes (grow, shrink, move the anchor, drop
+  single-cell merges). Row resize works with `frozenRows`.
+
+### Changed
+
+- Ctrl+Z / Ctrl+Y work while no cell is active (e.g. after deleting the
+  selected rows).
 
 ### Fixed
 

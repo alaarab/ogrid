@@ -221,6 +221,30 @@
   transition: left 0.05s;
 }
 
+// ---- Row resize handle (bottom edge of a row number, `rowResize`) ----
+
+.rowResizeHandle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 6px;
+  cursor: row-resize;
+  user-select: none;
+  touch-action: none; // Prevent browser scroll during the drag
+  z-index: var(--ogrid-z-resize-handle, 1);
+
+  &:hover,
+  &:active {
+    background-color: var(--ogrid-accent, #0078d4);
+  }
+
+  @media (pointer: coarse) {
+    height: 12px;
+    bottom: -6px;
+  }
+}
+
 // ---- Column resize handle ----
 
 .resizeHandle {

@@ -211,6 +211,18 @@ export function useKeyboardNavigation<T>(
         ) {
           setActiveCell({ rowIndex: 0, columnIndex: colOffset });
           e.preventDefault();
+        } else if ((e.ctrlKey || e.metaKey) && editingCell == null) {
+          // Undo/redo apply to the whole grid (e.g. a row deleted from the
+          // menu cleared the selection), so they work without an active cell.
+          const k = e.key.toLowerCase();
+          const redoKey = k === 'y' || (k === 'z' && e.shiftKey);
+          if (redoKey && onRedo) {
+            e.preventDefault();
+            onRedo();
+          } else if (k === 'z' && !e.shiftKey && onUndo) {
+            e.preventDefault();
+            onUndo();
+          }
         }
         return;
       }

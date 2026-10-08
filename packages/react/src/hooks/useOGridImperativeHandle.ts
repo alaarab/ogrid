@@ -36,6 +36,8 @@ export interface UseOGridImperativeHandleParams<T> {
   columns: ReadonlyArray<{ columnId: string }>;
   getRowId: (item: T) => RowId;
   scrollToRowRef: React.RefObject<IOGridApi<T>['scrollToRow'] | null>;
+  /** Cell and structure-edit methods (stable callbacks from useOGridCellApi / useOGridStructureEdits). */
+  editApi: Pick<IOGridApi<T>, 'getCellValue' | 'setCellValue' | 'insertRows' | 'deleteRows' | 'insertColumn' | 'deleteColumn'>;
 }
 
 /**
@@ -67,7 +69,9 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
     columns,
     getRowId,
     scrollToRowRef,
+    editApi,
   } = params;
+  const { getCellValue, setCellValue, insertRows, deleteRows, insertColumn, deleteColumn } = editApi;
 
   const visibleColumnsRef = useLatestRef(visibleColumns);
   const sortRef = useLatestRef(sortingState.sort);
@@ -141,6 +145,12 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
         onColumnOrderChange?.(order);
       },
       scrollToRow: (index, options) => scrollToRowRef.current?.(index, options),
+      getCellValue,
+      setCellValue,
+      insertRows,
+      deleteRows,
+      insertColumn,
+      deleteColumn,
     }),
     [
       isServerSide, setVisibleColumns, setSort, defaultSortField, defaultSortDirection, setFilters,
@@ -154,6 +164,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       setInternalData, setInternalLoading, setInternalColumnOrder,
       setColumnWidthOverrides, setPinnedOverrides,
       scrollToRowRef,
+      getCellValue, setCellValue, insertRows, deleteRows, insertColumn, deleteColumn,
     ]
   );
 }

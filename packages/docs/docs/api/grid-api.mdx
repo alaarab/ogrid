@@ -68,6 +68,12 @@ interface IOGridApi<T> {
   scrollToRow: (index: number, options?: { align?: 'start' | 'center' | 'end' }) => void;
   getColumnOrder: () => string[];
   setColumnOrder: (order: string[]) => void;
+  getCellValue: (rowId: RowId, columnId: string) => unknown;
+  setCellValue: (rowId: RowId, columnId: string, value: unknown) => void;
+  insertRows: (index: number, rows?: T[]) => void;
+  deleteRows: (rowIds: RowId[]) => void;
+  insertColumn: (index: number, column?: IColumnDef<T>) => void;
+  deleteColumn: (columnId: string) => void;
 }
 ```
 
@@ -79,6 +85,24 @@ interface IOGridApi<T> {
 | `setLoading` | `(loading: boolean) => void` | Sets the loading state of the grid. When `true`, the grid displays a loading indicator. |
 | `getDisplayedRows` | `() => T[]` | Returns the currently displayed (filtered, sorted, paginated) rows. Windowed data sources return all loaded records in absolute row order, excluding unloaded placeholders. |
 | `refreshData` | `() => void` | Re-triggers a data fetch. Server-side only; no-op for client-side grids. |
+
+### Cell Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `getCellValue` | `(rowId: RowId, columnId: string) => unknown` | Reads a cell: the computed result for a formula cell, otherwise the column's value (`valueGetter` or `row[columnId]`). `undefined` when the row or column doesn't exist. Client-side grids find any row in `data`; server-side grids only loaded rows. |
+| `setCellValue` | `(rowId: RowId, columnId: string, value: unknown) => void` | Writes a cell as if the user typed `value`: the column's `valueParser` runs (a rejected value is dropped), `onCellValueChanged` fires, the change joins the undo history, and with `formulas` on a string starting with `=` becomes the cell's formula. Ignores `editable`. Rows on other pages work too. |
+
+### Structure Methods
+
+Insert and delete rows and columns. Each call is one undo step, and with `formulas` on, formula cells and references move the way they do in a spreadsheet. See [Structure Editing](../features/structure-editing).
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `insertRows` | `(index: number, rows?: T[]) => void` | Inserts rows before `index` in `data` (`data.length` appends). Without `rows`, inserts one row from the `createRow` prop. Reported through `onRowsChange`. Client-side grids only. |
+| `deleteRows` | `(rowIds: RowId[]) => void` | Deletes rows by id. Reported through `onRowsChange`. Client-side grids only. |
+| `insertColumn` | `(index: number, column?: IColumnDef<T>) => void` | Inserts a column so it becomes leaf column `index` of the flattened `columns`. Without `column`, a blank editable column (`column1`, `column2`, ...) is inserted. Reported through `onColumnsChange`. |
+| `deleteColumn` | `(columnId: string) => void` | Deletes a column. Reported through `onColumnsChange`. Row data keeps the field. |
 
 ### Column State Methods
 
