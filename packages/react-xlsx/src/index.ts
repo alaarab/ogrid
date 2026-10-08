@@ -99,6 +99,8 @@ export interface MountOptions {
   onTruncated?: XlsxWorkbookGridProps['onTruncated'];
   /** Allow cell editing. Defaults to false. */
   editable?: boolean;
+  /** Outline existing invalid cells with red ellipses. */
+  circleInvalidData?: boolean;
   /** Show the formatting toolbar. Defaults to `editable`. */
   toolbar?: boolean;
   /** Toolbar Export button file name; omit to hide the button. */
@@ -144,3 +146,5 @@ function rest(opts: MountOptions) {
   const { workbook: _w, blob: _b, ...r } = opts;
   return r;
 }
+
+export { readDataValidations, writeDataValidations, validationSourceResolver } from './dataValidation';

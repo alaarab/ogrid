@@ -2,7 +2,7 @@
   {
     "name": "core",
     "path": "packages/core/dist/esm/index.js",
-    "limit": "29 kB"
+    "limit": "31.2 kB"
   },
   {
     "name": "core formula assist (lazy)",
@@ -12,7 +12,7 @@
   {
     "name": "react",
     "path": "packages/react/dist/esm/index.js",
-    "limit": "146.1 kB",
+    "limit": "152 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist"
     ]
@@ -22,7 +22,8 @@
     "path": "packages/react-radix/dist/esm/index.js",
     "limit": "184.8 kB",
     "ignore": [
-      "@alaarab/ogrid-core/formula/assist"
+      "@alaarab/ogrid-core/formula/assist",
+      "./DataValidationDialog-*.js"
     ]
   },
   {
@@ -30,7 +31,8 @@
     "path": "packages/react-fluent/dist/esm/index.js",
     "limit": "226.1 kB",
     "ignore": [
-      "@alaarab/ogrid-core/formula/assist"
+      "@alaarab/ogrid-core/formula/assist",
+      "./DataValidationDialog-*.js"
     ]
   },
   {
@@ -39,7 +41,8 @@
     "limit": "509.7 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist",
-      "./streamingReader.js"
+      "./streamingReader.js",
+      "./DataValidationDialog-*.js"
     ]
   },
   {
@@ -50,6 +53,29 @@
   {
     "name": "react-xlsx-browser",
     "path": "packages/react-xlsx-browser/dist/ogrid-xlsx.js",
-    "limit": "505.8 kB"
+    "limit": "505.8 kB",
+    "ignore": [
+      "./DataValidationDialog-*.js"
+    ]
+  },
+  {
+    "name": "react validation form (lazy)",
+    "path": "packages/react/dist/esm/data-validation.js",
+    "limit": "6.7 kB"
+  },
+  {
+    "name": "react-radix validation dialog (lazy)",
+    "path": "packages/react-radix/dist/esm/DataValidationDialog-*.js",
+    "limit": "29.7 kB"
+  },
+  {
+    "name": "react-fluent validation dialog (lazy)",
+    "path": "packages/react-fluent/dist/esm/DataValidationDialog-*.js",
+    "limit": "56.4 kB"
+  },
+  {
+    "name": "react-xlsx-browser validation dialog (lazy)",
+    "path": "packages/react-xlsx-browser/dist/DataValidationDialog-*.js",
+    "limit": "29.3 kB"
   }
 ]

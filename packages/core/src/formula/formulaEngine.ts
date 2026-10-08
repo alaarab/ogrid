@@ -363,10 +363,61 @@ export class FormulaEngine {
    * engine's current values; stores nothing. Make a new evaluator after the
    * data or formulas change: it caches parsed formulas and volatile results.
    */
-  createDetachedEvaluator(accessor: IGridDataAccessor): (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown {
-    const context = this.createContext(accessor);
+  createDetachedEvaluator(accessor: IGridDataAccessor, options?: { proposed?: { col: number; row: number; value: unknown; alias?: { sheet: string; col: number; row: number } }; preserveArrays?: boolean }): (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown {
+    const baseContext = this.createContext(accessor);
+    const proposed = options?.proposed;
+    const candidate = proposed && typeof proposed.value === 'string' && proposed.value.startsWith('=') ? this.parseFormula(proposed.value) : undefined;
+    const candidateKey = proposed ? toCellKey(proposed.col, proposed.row) : undefined;
+    const dependencies = candidate ? extractDependencies(candidate) : undefined;
+    if (dependencies && proposed?.alias && candidateKey) {
+      // Qualified references to the grid's worksheet address target the same candidate.
+      const aliasKey = toCellKey(proposed.alias.col, proposed.alias.row, proposed.alias.sheet);
+      if (dependencies.cells.delete(aliasKey)) dependencies.cells.add(candidateKey);
+      for (const range of dependencies.ranges) {
+        if (range.sheet === proposed.alias.sheet && proposed.alias.col >= range.minCol && proposed.alias.col <= range.maxCol && proposed.alias.row >= range.minRow && proposed.alias.row <= range.maxRow) dependencies.cells.add(candidateKey);
+      }
+    }
+    const circular = candidateKey && dependencies && this.depGraph.wouldCreateCycle(candidateKey, dependencies.cells, dependencies.ranges);
+    const localValues = new Map<string, unknown>();
+    const active = new Set<string>();
+    const context: IFormulaContext = proposed ? {
+      ...baseContext,
+      getCellValue: (addr) => {
+        const target = (!addr.sheet && addr.col === proposed.col && addr.row === proposed.row) || (addr.sheet === proposed.alias?.sheet && addr.col === proposed.alias?.col && addr.row === proposed.alias?.row);
+        if (target && !candidate) return proposed.value;
+        if (addr.sheet && !target) return baseContext.getCellValue(addr);
+        const key = target ? candidateKey as string : toCellKey(addr.col, addr.row);
+        const ast = target ? candidate : this.parsedFormulas.get(key);
+        if (!ast) return baseContext.getCellValue(addr);
+        if (localValues.has(key)) return localValues.get(key);
+        if (active.has(key)) return new FormulaError('#CIRC!');
+        active.add(key);
+        try {
+          const result = this.evaluator.evaluate(ast, { ...context, currentCell: target ? { col: proposed.col, row: proposed.row, absCol: false, absRow: false } : addr });
+          const value = Array.isArray(result) ? result[0]?.[0] ?? null : result;
+          localValues.set(key, value);
+          return value;
+        } finally { active.delete(key); }
+      },
+      getRangeValues: (range) => {
+        const source = range.start.sheet ? this.sheetAccessors.get(range.start.sheet) : accessor;
+        if (!source) return [[new FormulaError('#REF!')]];
+        const minRow = Math.min(range.start.row, range.end.row), minCol = Math.min(range.start.col, range.end.col);
+        const maxRow = Math.min(Math.max(range.start.row, range.end.row), source.getRowCount() - 1);
+        const maxCol = Math.min(Math.max(range.start.col, range.end.col), source.getColumnCount() - 1);
+        if ((maxRow - minRow + 1) * (maxCol - minCol + 1) > this.maxRangeCells) throw new FormulaError('#VALUE!', 'Range too large');
+        const values: unknown[][] = [];
+        for (let r = minRow; r <= maxRow; r++) {
+          const row: unknown[] = [];
+          for (let c = minCol; c <= maxCol; c++) row.push(context.getCellValue({ ...range.start, row: r, col: c }));
+          values.push(row);
+        }
+        return values;
+      },
+    } : baseContext;
     const parsed = new Map<string, ASTNode>();
     return (formula, anchor, cell) => {
+      if (circular) return new FormulaError('#CIRC!', 'Circular reference detected');
       let ast = parsed.get(formula);
       if (!ast) {
         ast = this.parseFormula(formula);
@@ -374,12 +425,13 @@ export class FormulaEngine {
       }
       const shifted = shiftReferences(ast, cell.col - anchor.col, cell.row - anchor.row);
       try {
+        if (candidateKey && candidate && formula === proposed?.value) active.add(candidateKey);
         const result = this.evaluator.evaluate(shifted, { ...context, currentCell: { col: cell.col, row: cell.row, absCol: false, absRow: false } });
-        return Array.isArray(result) ? result[0]?.[0] ?? null : result;
+        return Array.isArray(result) && !options?.preserveArrays ? result[0]?.[0] ?? null : result;
       } catch (err) {
         if (err instanceof FormulaError) return err;
         return new FormulaError('#VALUE!', err instanceof Error ? err.message : String(err));
-      }
+      } finally { if (candidateKey) active.delete(candidateKey); }
     };
   }
 

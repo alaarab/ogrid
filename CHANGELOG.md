@@ -43,6 +43,7 @@ All notable changes to OGrid will be documented in this file.
   `data-ogrid-allow-drag`; the `useCellDragSource({ rowId, columnId, payload })`
   hook returns the props to spread. Core adds `moveRows`, `applyRowOrder`,
   `computeRowOrderChange`, `isRowMoveNoop`, `rowIndexById` and `moveCellRange`.
+- Excel-style data validation across core, React, Radix, Fluent, and XLSX: all rule types, cell-level lists, input messages, stop/warning/information alerts, invalid-data circles, and a lazy range editor. XLSX validation edits are undoable and round-trip on export.
 
 - Formula autocomplete and argument hints, in the cell editor and the formula
   bar, in both kits: typing a name after `=`, `(`, a comma or an operator lists
@@ -325,6 +326,9 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- Validation dialog chunks and their UI dependencies have separate Brotli
+  budgets; size checks exclude these deferred assets from the main entries.
+
 - Find/Replace panels, cell-note popovers and XLSX formatting controls load
   when opened. The no-bundler XLSX package preserves local lazy chunks for
   optional UI, drag behavior and media; copy its complete `dist/` directory.
@@ -365,6 +369,13 @@ All notable changes to OGrid will be documented in this file.
   `frozenRows`; they display once the grid supports those props.
 
 ### Fixed
+
+- Streamed workbooks carry mapped validation rules into Enable editing and
+  restore validation serialization after worker hydration, retaining date
+  formula bounds in native workbook export as well as edited document export.
+
+- Data validation preserves independent relative anchors, unloaded fragments, formula date bounds, clock bounds, comma-containing lists and 1904 workbook dates in XLSX round-trips. Restored legacy mapper dropdowns and exposed per-cell rules on `SheetGridData`.
+- Warning cut/paste and fill decisions retain one undo transaction; validated drag moves preserve rejected sources. Structural edits and undo shift validation references, anchors and targets. Candidate formulas reject direct, indirect, range and inactive-branch cycles without changing the live engine.
 
 - Range moves reject protected source cells before writing destinations,
   including dynamic-array spill children. Spill anchors can move across frozen

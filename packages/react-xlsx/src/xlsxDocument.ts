@@ -14,6 +14,8 @@ import { createBuiltInFunctions, tokenize, parseRange, type IGridDataAccessor, t
 import { applyBorderSides, applyStyleEdit, borderSidesForCell, styleHas, type BorderOptions, type StyleEdit, type XlsxCellStyle } from './cellStyles';
 import { xlsxBlobFromWorkbook } from './exportToXlsx';
 import { attachSourceArchive, copyDynamicArrays, markDynamicArray, sourceArchiveOf } from './sourceArchive';
+import { writeDataValidations, preserveDataValidationSerialization } from './dataValidation';
+import type { IDataValidationRule } from '@alaarab/ogrid-core';
 import { readSheetNotes, writeSheetNotes } from './cellNotes';
 import { rebaseFormulaRows, toFileFormula } from './formulaReferences';
 import { cloneWorkbook, editWorkbookStructure } from './workbookStructure';
@@ -36,6 +38,7 @@ type Op =
   | { t: 'style'; key: string; before: XlsxCellStyle | undefined; after: XlsxCellStyle | undefined }
   | { t: 'merges'; before: IMergedCell[]; after: IMergedCell[] }
   | { t: 'notes'; before: ICellNote[]; after: ICellNote[] }
+  | { t: 'validations'; before: IDataValidationRule<SheetRow>[]; after: IDataValidationRule<SheetRow>[] }
   | { t: 'outputs'; before: OutputSnapshot; after: OutputSnapshot }
   | { t: 'structure'; before: DocumentSnapshot; after: DocumentSnapshot };
 
@@ -66,6 +69,7 @@ export interface XlsxSheetState {
   readonly frozen: { rows: number; columns: number };
   /** Current cell notes (Excel notes on loaded data cells). */
   readonly notes: ICellNote[];
+  readonly dataValidations: IDataValidationRule<SheetRow>[];
   /** Current column widths in Excel character units (explicit ones only). */
   readonly columnWidths: Readonly<Record<string, number>>;
   /** Current row heights in points by row id (explicit ones only). */
@@ -93,6 +97,8 @@ interface MutableSheetState {
   merges: IMergedCell[];
   frozen: { rows: number; columns: number };
   freezeEdited: boolean;
+  initialDataValidations: IDataValidationRule<SheetRow>[];
+  dataValidations: IDataValidationRule<SheetRow>[];
   initialNotes: ICellNote[];
   notes: ICellNote[];
   initialWidths: Record<string, number>;
@@ -269,6 +275,9 @@ export class XlsxWorkbookDocument {
       }
     }
     const notes = prepared?.notes ?? readSheetNotes(worksheet, source);
+    // Mapping (including the worker-prepared path) already translated rule
+    // ranges and formula anchors into the grid's header-relative coordinates.
+    const dataValidations = source.dataValidations;
     const state: MutableSheetState = {
       name,
       source,
@@ -280,6 +289,7 @@ export class XlsxWorkbookDocument {
       merges: source.formatting.merges,
       frozen: source.formatting.frozen,
       freezeEdited: false,
+      initialDataValidations: dataValidations, dataValidations,
       initialNotes: notes,
       notes,
       initialWidths: source.formatting.columnWidths,
@@ -289,7 +299,7 @@ export class XlsxWorkbookDocument {
       formulaResults,
       outputResults,
       spillRanges: source.arrayRanges ?? [],
-      columns: source.columns,
+      columns: source.columns.map(column => ({ ...column, cellEditor: undefined, cellEditorParams: undefined })),
       columnIndex: new Map(source.columns.map((c, i) => [c.columnId, i])),
     };
     this.sheets.set(name, state);
@@ -346,6 +356,8 @@ export class XlsxWorkbookDocument {
       if (style) state.styles.set(op.key, style);
       else state.styles.delete(op.key);
       this.touchRow(state, Number(op.key.slice(0, op.key.indexOf(':'))));
+    } else if (op.t === 'validations') {
+      state.dataValidations = op[direction];
     } else if (op.t === 'notes') {
       state.notes = op[direction];
     } else {
@@ -632,6 +644,12 @@ export class XlsxWorkbookDocument {
     this.emit();
   }
 
+  /** Replace validation rules; changes are undoable and exported as Excel validations. */
+  setDataValidations(sheetName: string, rules: IDataValidationRule<SheetRow>[]): void {
+    const state = this.state(sheetName);
+    if (state && rules !== state.dataValidations) this.commit(state, [{ t: 'validations', before: state.dataValidations, after: rules }]);
+  }
+
   /** Record a column resize from the grid (pixels). Not part of undo history, like the grid's own resizes. */
   setColumnWidth(sheetName: string, columnId: string, px: number): void {
     const state = this.state(sheetName);
@@ -821,8 +839,7 @@ export class XlsxWorkbookDocument {
    * round-trips. Formulas are written as formulas with the latest known result.
    */
   async toWorkbook(): Promise<ExcelJS.Workbook> {
-    const out = new ExcelJS.Workbook();
-    await out.xlsx.load(await (this.editedWorkbook ?? this.workbook).xlsx.writeBuffer());
+    const out = cloneWorkbook(this.editedWorkbook ?? this.workbook);
     copyDynamicArrays(this.editedWorkbook ?? this.workbook, out);
     let valuesChanged = false;
     for (const state of this.sheets.values()) {
@@ -833,6 +850,7 @@ export class XlsxWorkbookDocument {
     if (valuesChanged) out.calcProperties = { ...out.calcProperties, fullCalcOnLoad: true };
     const source = sourceArchiveOf(this.workbook);
     if (source) attachSourceArchive(out, source);
+    preserveDataValidationSerialization(out);
     return out;
   }
 
@@ -973,6 +991,9 @@ export class XlsxWorkbookDocument {
       }
     }
 
+    if (state.dataValidations !== state.initialDataValidations) {
+      writeDataValidations(ws, state.dataValidations, { headerPromoted: state.source.formatting.headerPromoted, rowCount: state.rows.length, columnCount: state.columns.length }, state.rows);
+    }
     if (state.notes !== state.initialNotes) {
       writeSheetNotes(state.initialNotes, state.notes, (rowId, columnId) => {
         const index = this.rowIndexOf(state, rowId);

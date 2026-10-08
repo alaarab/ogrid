@@ -7,10 +7,11 @@ import {
   removeColumnById,
   removeRowsById,
   restoreRemovedRows,
+  type IDataValidationRule,
   type IRemovedRow,
   type IColumnDef as ICoreColumnDef,
 } from '@alaarab/ogrid-core';
-import { shiftFormulaCells, type StructureAxis } from '@alaarab/ogrid-core/formula';
+import { shiftFormulaCells, shiftFormulaReferences, adjustFormulaReferences, type StructureAxis } from '@alaarab/ogrid-core/formula';
 import { useLatestRef } from './useLatestRef';
 import type { UseFormulaEngineResult } from './useFormulaEngine';
 import type {
@@ -27,7 +28,8 @@ import type {
 type ColumnTree<T> = (IColumnDef<T> | IColumnGroupDef<T>)[];
 type FormulaList = Array<{ col: number; row: number; formula: string }>;
 /** Formula snapshots taken around a structure edit, restored on undo/redo. */
-type FormulaShift = { before: FormulaList; after: FormulaList } | null;
+type EditSnapshot<T> = { formulas?: FormulaList; validations: IDataValidationRule<T>[] };
+type MetadataShift<T> = { before: EditSnapshot<T>; after: EditSnapshot<T> };
 
 export interface UseOGridStructureEditsParams<T> {
   props: Pick<IOGridProps<T>, 'data' | 'columns' | 'allowStructureEdits' | 'onRowsChange' | 'onColumnsChange' | 'createRow'>;
@@ -48,6 +50,7 @@ export interface UseOGridStructureEditsParams<T> {
   formulaEngine: Pick<UseFormulaEngineResult, 'enabled' | 'getAllFormulas' | 'loadFormulas'>;
   /** Engine follows formula text in the data (host-owned undo): leave its formulas alone. */
   formulasFollowData: boolean;
+  validationRules: { rules: IDataValidationRule<T>[]; change: (rules: IDataValidationRule<T>[]) => void };
   /** The grid's edit path and undo history (filled by the table). */
   bridgeRef: MutableRefObject<IGridEditBridge<T> | null>;
 }
@@ -76,7 +79,7 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
   const {
     props, isServerSide, displayData, setInternalData, getRowId, editVersionRef, structureVersionRef,
     columnOrder, effectiveColumnOrder, setInternalColumnOrder, onColumnOrderChange,
-    formulaEngine, formulasFollowData, bridgeRef,
+    formulaEngine, formulasFollowData, bridgeRef, validationRules,
   } = params;
   const { allowStructureEdits, createRow } = props;
   const dataControlled = props.data !== undefined;
@@ -110,23 +113,35 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
     columnOrder, onColumnOrderChange, formulaEngine, formulasFollowData,
   });
 
-  // --- Formulas ---
-  const shiftFormulas = useCallback(
-    (shifts: ReadonlyArray<{ axis: StructureAxis; at: number; count: number }>): FormulaShift => {
+  const validationRef = useLatestRef(validationRules.rules);
+  const validationChangeRef = useLatestRef(validationRules.change);
+  // --- Formulas and validation ---
+  const shiftMetadata = useCallback(
+    (shifts: ReadonlyArray<{ axis: StructureAxis; at: number; count: number }>): MetadataShift<T> => {
       const { formulaEngine: engine, formulasFollowData: followData } = latest.current;
-      if (!engine.enabled || followData) return null;
-      const before = engine.getAllFormulas();
-      if (before.length === 0) return { before, after: before };
-      let after = before;
-      for (const s of shifts) after = shiftFormulaCells(after, s.axis, s.at, s.count);
-      engine.loadFormulas(after);
-      return { before, after };
-    },
-    [latest]
+      const before: EditSnapshot<T> = { formulas: engine.enabled && !followData ? engine.getAllFormulas() : undefined, validations: validationRef.current };
+      let rules = before.validations, formulas = before.formulas;
+      const columns = flattenColumns(columnsRef.current).map(c => c.columnId);
+      for (const shift of shifts) {
+        if (formulas) formulas = shiftFormulaCells(formulas, shift.axis, shift.at, shift.count);
+        rules = shiftValidationRules(rules, columns, shift.axis, shift.at, shift.count);
+        if (shift.axis === 'col') {
+          if (shift.count < 0) columns.splice(shift.at, -shift.count);
+          else columns.splice(shift.at, 0, ...Array.from({ length: shift.count }, (_, i) => `__inserted_${i}`));
+        }
+      }
+      if (formulas) engine.loadFormulas(formulas);
+      if (rules !== before.validations) { validationRef.current = rules; validationChangeRef.current(rules); }
+      return { before, after: { formulas, validations: rules } };
+    }, [latest, validationRef, validationChangeRef]
   );
-  const restoreFormulas = useCallback((list: FormulaList | undefined) => {
-    if (list) latest.current.formulaEngine.loadFormulas(list);
-  }, [latest]);
+  const restoreMetadata = useCallback((snapshot: EditSnapshot<T>) => {
+    if (snapshot.formulas) latest.current.formulaEngine.loadFormulas(snapshot.formulas);
+    if (snapshot.validations !== validationRef.current) {
+      validationRef.current = snapshot.validations;
+      validationChangeRef.current(snapshot.validations);
+    }
+  }, [latest, validationRef, validationChangeRef]);
   const record = useCallback((undo: () => void, redo: () => void) => {
     bridgeRef.current?.recordUndoable({ undo, redo });
   }, [bridgeRef]);
@@ -161,21 +176,21 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
   const insertRowsInternal = useCallback((index: number, rows: T[]) => {
     const at = Math.max(0, Math.min(dataRef.current.length, Math.trunc(index) || 0));
     const ids = rows.map((r) => latest.current.getRowId(r));
-    const formulas = shiftFormulas([{ axis: 'row', at, count: rows.length }]);
+    const formulas = shiftMetadata([{ axis: 'row', at, count: rows.length }]);
     putRows(at, rows);
     // Undo removes the rows as they are then (edits included), so redo restores those.
     let removed: IRemovedRow<T>[] = rows.map((row, i) => ({ index: at + i, row }));
     record(
       () => {
         removed = takeRows(ids);
-        restoreFormulas(formulas?.before);
+        restoreMetadata(formulas.before);
       },
       () => {
         restoreRows(removed);
-        restoreFormulas(formulas?.after);
+        restoreMetadata(formulas.after);
       },
     );
-  }, [latest, shiftFormulas, putRows, record, takeRows, restoreRows, restoreFormulas]);
+  }, [latest, shiftMetadata, putRows, record, takeRows, restoreRows, restoreMetadata]);
 
   const insertRows = useCallback((index: number, rows?: T[]) => {
     const st = latest.current;
@@ -208,19 +223,19 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
     });
     if (indexes.length === 0) return;
     // Delete from the bottom up so each shift sees the rows above it unmoved.
-    const formulas = shiftFormulas(indexes.slice().reverse().map((at) => ({ axis: 'row' as const, at, count: -1 })));
+    const formulas = shiftMetadata(indexes.slice().reverse().map((at) => ({ axis: 'row' as const, at, count: -1 })));
     let removed = takeRows(rowIds);
     record(
       () => {
         restoreRows(removed);
-        restoreFormulas(formulas?.before);
+        restoreMetadata(formulas.before);
       },
       () => {
         removed = takeRows(rowIds);
-        restoreFormulas(formulas?.after);
+        restoreMetadata(formulas.after);
       },
     );
-  }, [latest, isServerSide, shiftFormulas, takeRows, record, restoreRows, restoreFormulas]);
+  }, [latest, isServerSide, shiftMetadata, takeRows, record, restoreRows, restoreMetadata]);
 
   // --- Columns ---
   const setOrder = useCallback((next: string[]) => {
@@ -276,7 +291,7 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
   const insertColumnsInternal = useCallback((index: number, columns: IColumnDef<T>[]) => {
     const total = flattenColumns(columnsRef.current).length;
     const at = Math.max(0, Math.min(total, Math.trunc(index) || 0));
-    const formulas = shiftFormulas([{ axis: 'col', at, count: columns.length }]);
+    const formulas = shiftMetadata([{ axis: 'col', at, count: columns.length }]);
     batchColumns(() => columns.forEach((c, i) => { putColumn(at + i, c); }));
     let current = columns.map((column, i) => ({ column, index: at + i }));
     record(
@@ -288,14 +303,14 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
           .map((c) => takeColumn(c.columnId))
           .filter((r): r is { column: IColumnDef<T>; index: number } => r !== null)
           .sort((a, b) => a.index - b.index);
-        restoreFormulas(formulas?.before);
+        restoreMetadata(formulas.before);
       }),
       () => batchColumns(() => {
         for (const { column, index: i } of current) putColumn(i, column);
-        restoreFormulas(formulas?.after);
+        restoreMetadata(formulas.after);
       }),
     );
-  }, [shiftFormulas, putColumn, record, takeColumn, restoreFormulas, batchColumns]);
+  }, [shiftMetadata, putColumn, record, takeColumn, restoreMetadata, batchColumns]);
 
   const newColumns = useCallback((count: number): IColumnDef<T>[] => {
     const ids = flattenColumns(columnsRef.current).map((c) => c.columnId);
@@ -336,7 +351,7 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
       .sort((a, b) => b.index - a.index);
     if (targets.length === 0) return;
     // Right to left, so each shift sees the columns to its left unmoved.
-    const formulas = shiftFormulas(targets.map((t) => ({ axis: 'col' as const, at: t.index, count: -1 })));
+    const formulas = shiftMetadata(targets.map((t) => ({ axis: 'col' as const, at: t.index, count: -1 })));
     const takeAll = () => {
       const removed: Array<{ column: IColumnDef<T>; index: number }> = [];
       batchColumns(() => {
@@ -351,14 +366,14 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
     record(
       () => batchColumns(() => {
         for (const r of removed.slice().sort((a, b) => a.index - b.index)) putColumn(r.index, r.column);
-        restoreFormulas(formulas?.before);
+        restoreMetadata(formulas.before);
       }),
       () => {
         removed = takeAll();
-        restoreFormulas(formulas?.after);
+        restoreMetadata(formulas.after);
       },
     );
-  }, [latest, shiftFormulas, takeColumn, record, putColumn, restoreFormulas, batchColumns]);
+  }, [latest, shiftMetadata, takeColumn, record, putColumn, restoreMetadata, batchColumns]);
 
   const deleteColumn = useCallback((columnId: string) => deleteColumns([columnId]), [deleteColumns]);
 
@@ -399,4 +414,33 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
   }, [allowStructureEdits, canInsertRows, canEditRows, canEditColumns, insertRowsNear, deleteRows, insertColumnsNear, deleteColumns]);
 
   return { insertRows, deleteRows, insertColumn, deleteColumn, structureActions };
+}
+
+/** Shift each rule from its surviving anchor, just as a cell formula moves on a structure edit. */
+function shiftValidationRules<T>(rules: IDataValidationRule<T>[], columns: string[], axis: StructureAxis, at: number, count: number): IDataValidationRule<T>[] {
+  if (!rules.length) return rules;
+  const endDeleted = at - count;
+  const move = (n: number) => n < at ? n : count > 0 ? n + count : Math.max(at, n + count);
+  return rules.flatMap(rule => {
+    const start = rule.rows?.start ?? 0, end = rule.rows?.end ?? Infinity;
+    const anchor = rule.anchor ?? { columnId: rule.columnIds[0] ?? '', row: start };
+    const deleted = axis === 'col' && count < 0 ? columns.slice(at, endDeleted) : [];
+    const columnIds = rule.columnIds.filter(id => !deleted.includes(id));
+    if (!columnIds.length || (axis === 'row' && count < 0 && start >= at && end < endDeleted)) return [];
+    const nextStart = axis === 'row' ? move(start) : start;
+    const nextEnd = axis === 'row' ? (end < at ? end : count > 0 ? end + count : end >= endDeleted ? end + count : at - 1) : end;
+    // When the original anchor is removed, copy its formula to the first survivor before shifting references.
+    const survivorCol = deleted.includes(anchor.columnId) ? columnIds[0] ?? '' : anchor.columnId;
+    const survivorRow = axis === 'row' && count < 0 && anchor.row >= at && anchor.row < endDeleted ? Math.max(start, endDeleted) : anchor.row;
+    const shift = (formula: string) => shiftFormulaReferences(adjustFormulaReferences(formula, columns.indexOf(survivorCol) - columns.indexOf(anchor.columnId), survivorRow - anchor.row), axis, at, count);
+    const next = { ...rule, columnIds, anchor: { columnId: survivorCol, row: axis === 'row' ? move(survivorRow) : survivorRow },
+      ...(rule.rows || axis === 'row' ? { rows: { start: nextStart, ...(Number.isFinite(nextEnd) ? { end: nextEnd } : {}) } } : {}) };
+    if (next.type === 'custom') next.formula = shift(next.formula);
+    else if (next.type === 'list') { if (next.source) next.source = shift(next.source); }
+    else {
+      if (typeof next.value === 'string' && next.value.startsWith('=')) next.value = shift(next.value);
+      if (typeof next.value2 === 'string' && next.value2.startsWith('=')) next.value2 = shift(next.value2);
+    }
+    return [next];
+  });
 }

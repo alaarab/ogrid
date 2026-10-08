@@ -9,6 +9,7 @@ import { diskRoundTrip } from './fixtures/xlsxFile';
 import { workbookFromBlob } from '../sheetMapper';
 import type { XlsxWorkbookDocument } from '../xlsxDocument';
 import { XlsxWorkbookGrid } from '../XlsxWorkbookGrid';
+import { preserveDataValidationSerialization } from '../dataValidation';
 
 test('Cancel stops the pending preview and clears its progress indicator', async () => {
   const wb = new ExcelJS.Workbook();
@@ -34,6 +35,57 @@ test('a streamed file switches to the editable model only after Enable editing',
   expect(screen.getByText('Alice')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Enable editing' })).not.toBeInTheDocument();
 });
+
+test.each(['worker', 'fallback'] as const)('Enable editing preserves validation enforcement and formula-bound exports through the %s handover', async (transport) => {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Values');
+  ws.addRows([['Count', 'Status', 'Limit', 'Date'], [2, 'Open', 10, new Date('2026-01-01T00:00:00Z')]]);
+  ws.getCell('A2').dataValidation = {
+    type: 'whole', operator: 'between', formulae: [1, '$C$2'],
+    showErrorMessage: true, errorStyle: 'stop', error: 'Choose a count within the limit.',
+  };
+  ws.getCell('B2').dataValidation = { type: 'list', formulae: ['"Open,Closed"'] };
+  ws.getCell('D2').dataValidation = { type: 'date', operator: 'greaterThanOrEqual', formulae: ['DATE(2026,1,1)'] };
+  preserveDataValidationSerialization(wb);
+  const blob = await diskRoundTrip(await xlsxBlobFromWorkbook(wb));
+  let doc: XlsxWorkbookDocument | undefined;
+  const workerFactory = transport === 'worker' ? await xlsxWorkerFactory() : null;
+  const { container } = render(<XlsxWorkbookGrid blob={blob} streaming editable toolbar={false} height={400}
+    streamOptions={{ workerFactory }} onDocument={value => { doc = value; }} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Enable editing' }).hasAttribute('disabled')).toBe(false));
+  fireEvent.click(screen.getByRole('button', { name: 'Enable editing' }));
+  await waitFor(() => expect(doc).toBeDefined());
+  await waitFor(() => expect(container.querySelector('[inert]')).toBeNull());
+  const countCell = () => container.querySelector<HTMLElement>('tbody tr[data-row-id="0"] td[data-column-id="A"] [data-row-index]')!;
+  const edit = async (value: string) => {
+    fireEvent.pointerDown(countCell());
+    fireEvent.doubleClick(countCell());
+    const input = await waitFor(() => {
+      const editor = container.querySelector<HTMLInputElement>('[data-ogrid-cell-editor] input');
+      if (!editor) throw new Error('Count editor did not open');
+      return editor;
+    });
+    fireEvent.change(input, { target: { value } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+  };
+  await edit('11');
+  expect(await screen.findByRole('dialog')).toHaveTextContent('Choose a count within the limit.');
+  expect(doc!.sheet('Values')!.rows[0]!.A).toBe(2);
+  fireEvent.click(screen.getByRole('button', { name: 'OK' }));
+  await edit('5');
+  await waitFor(() => expect(doc!.sheet('Values')!.rows[0]!.A).toBe(5));
+  fireEvent.pointerDown(container.querySelector<HTMLElement>('tbody tr[data-row-id="0"] td[data-column-id="B"] [data-row-index]')!);
+  expect(container.querySelector('[aria-label="Show validation list"]')).not.toBeNull();
+  // The workbook's native export API must retain the serializer installed in
+  // the worker, as must the editable document's normal export after an edit.
+  for (const [saved, count] of [[new Blob([await doc!.workbook.xlsx.writeBuffer()]), 2], [await doc!.toBlob(), 5]] as const) {
+    const reread = await workbookFromBlob(await diskRoundTrip(saved));
+    expect(reread.getWorksheet('Values')!.getCell('A2').value).toBe(count);
+    expect(reread.getWorksheet('Values')!.getCell('A2').dataValidation).toMatchObject({ type: 'whole', formulae: [1, '$C$2'], error: 'Choose a count within the limit.' });
+    expect(reread.getWorksheet('Values')!.getCell('B2').dataValidation).toMatchObject({ type: 'list', formulae: ['"Open,Closed"'] });
+    expect(reread.getWorksheet('Values')!.getCell('D2').dataValidation).toMatchObject({ type: 'date', formulae: ['DATE(2026,1,1)'] });
+  }
+}, 20000);
 
 test('replacing the file during editable preparation discards the old request', async () => {
   const file = async (name: string) => {

@@ -1,0 +1,96 @@
+---
+sidebar_position: 11.8
+title: Data Validation
+description: Excel-style validation rules, per-cell dropdowns, input messages, error alerts, and a range editor
+---
+
+import DataValidationDemo from '@site/src/components/demos/DataValidationDemo';
+
+# Data Validation
+
+Use `dataValidations` to restrict values in selected columns and rows. Rules run before edits enter the undo history, on edit commits, every pasted, filled or dropped cell, range moves, Find & Replace, and `api.setCellValue`. The same props and behavior work in Radix and Fluent.
+
+<DataValidationDemo />
+
+```tsx
+import type { IDataValidationRule } from '@alaarab/ogrid-react-radix';
+
+const rules: IDataValidationRule<Order>[] = [
+  {
+    type: 'whole', columnIds: ['quantity'],
+    operator: 'between', value: 1, value2: 100, allowBlank: false,
+    inputMessage: { title: 'Quantity', text: 'Enter 1 to 100 units.' },
+    errorAlert: { style: 'stop', title: 'Invalid quantity', message: 'Choose a whole number from 1 to 100.' },
+  },
+  {
+    type: 'list', columnIds: ['status'], rows: { start: 0, end: 4 },
+    values: ['Open', 'Closed'],
+  },
+];
+
+<OGrid columns={columns} data={rows} getRowId={(r: Order) => r.id}
+  editable onCellValueChanged={applyEdit} dataValidations={rules}
+  circleInvalidData allowValidationEditing onDataValidationsChange={saveRules} />
+```
+
+## Rule types
+
+| Type | Settings |
+|---|---|
+| `list` | `values` (strings, numbers, or booleans), or `source` (range, named range, or formula returning a range) |
+| `whole` | Integer with `operator`, `value`, and optional `value2` |
+| `decimal` | Number, including fractions, with comparison bounds |
+| `date` | ISO date or Excel date serial with comparison bounds; cell values can also be `Date` objects |
+| `time` | `HH:mm[:ss]` or a fraction of a day with comparison bounds |
+| `textLength` | Length of the cell's text with comparison bounds |
+| `custom` | `formula`, requiring `formulas` |
+
+Comparison operators are `between`, `notBetween`, `equal`, `notEqual`, `greaterThan`, `lessThan`, `greaterThanOrEqual`, and `lessThanOrEqual`. Between bounds are inclusive. Bounds can be numbers, date/time strings, or formulas beginning with `=`. Formula bounds need `formulas`.
+
+`allowBlank: true` accepts null, undefined, and empty text. It defaults to false. Every rule is serializable except the optional `rowFilter(item, sheetRow)` callback. `columnIds` identifies columns; `rows: { start, end }` uses inclusive indexes into the full sheet data before sorting, filtering, or paging. Omit `rows` to cover every row. Later rules override earlier rules on overlapping cells.
+
+## Lists and formulas
+
+A list supplies a dropdown only in its target cells. The active cell has a small arrow; click it or begin editing to open the list. `inCellDropdown: false` hides this editor while retaining validation.
+
+```tsx
+{ type: 'list', columnIds: ['status'], source: '=$H$1:$H$5' }
+{ type: 'list', columnIds: ['status'], source: '=Statuses' }
+{ type: 'custom', columnIds: ['quantity'], formula: '=AND(B1>0,B1<=$C1)' }
+```
+
+Set `namedRanges={{ Statuses: '$H$1:$H$5' }}` for named sources. Custom formulas are written for the first target column and `rows.start` (or sheet row 0); relative references shift per cell and `$` references stay fixed. Set `anchor: { columnId, row }` to choose another origin. The formula sees the proposed cell value before that value is stored. Errors or missing formula support fail validation. Formula sources use the engine's supported functions; ranges read their current values.
+
+## Messages and alerts
+
+`inputMessage: { title, text }` shows a tooltip near the active cell. `show: false` suppresses it.
+
+- **Stop** rejects an invalid value and shows an alert.
+- **Warning** asks the user to accept or cancel an interactive write.
+- **Information** accepts the value and shows a notice.
+
+`errorAlert` accepts `style`, `title`, `message`, and `show`. Its default style is stop. `show: false` allows invalid writes without an alert, matching Excel's unchecked error-alert setting. Validation still identifies the cell as invalid for circling.
+
+Programmatic writes never open a dialog. They call `onValidationFail(failure)` with the rule, item, sheet `rowIndex`, column, value, style, and `source: 'api'`. Stop rejects even if the callback returns true; warning rejects unless the callback returns true; information accepts. Interactive failures also call this callback, then use the dialog.
+
+## Circle invalid data and edit rules
+
+`circleInvalidData` outlines existing invalid cells with red ellipses. It updates when data, formulas, or rules change; turning it off removes the circles.
+
+With `allowValidationEditing`, select cells and choose **Data validation…** from the context menu. The dialog has **Settings**, **Input message**, and **Error alert** tabs and applies to the selected cells. **Clear all** removes rules only from the selected range, preserving rules outside it. `onDataValidationsChange(rules)` can persist the result. Without the callback, edits remain in the grid's local state. The editor loads only when opened.
+
+## Excel files
+
+`XlsxGrid` imports ExcelJS list, whole, decimal, date, time, text-length, and custom validations at cell/range granularity, including messages and alert styles. It resolves list ranges and defined names against live workbook values. With `editable`, the validation editor is enabled, changes are undoable, and export writes edited or added rules back as Excel validations. Untouched source rules, header validations, and validations outside configured load limits remain in the workbook. Use serializable row ranges when persisting the rule model. XLSX export materializes row predicates into the cells that match the current sheet data.
+
+`circleInvalidData` also works on `XlsxGrid`, `XlsxWorkbookGrid`, and the browser `mount()` options.
+
+Import through `workbookFromBlob` or `XlsxWorkbookGrid` to preserve formula-valued whole-number, decimal, text-length, and date bounds with OGrid's OOXML adapter. Streaming carries mapped rules into **Enable editing**, including per-cell dropdowns and alert behavior. The handover restores validation serialization on the hydrated workbook, so formula date bounds survive both native workbook export and the document's edited export.
+
+Warning decisions for one paste or fill finish together before the accepted changes are applied. A cut clears only the source cells whose destinations were accepted, and one undo restores the operation. Range moves cancel the whole move when a destination fails validation. Spill children remain read-only; `circleInvalidData` also checks their computed values.
+
+Row and column insertion or deletion shifts validation targets, anchors and formula references, with undo restoring the previous rules. Candidate formulas are evaluated against a temporary overlay of the formula graph, so circular references are rejected before the write.
+
+XLSX import and export preserve formula bounds and each original relative anchor, including unloaded rule fragments. Date bounds use the core's 1900 date system internally and convert back to a workbook's 1904 system on export. Literal clock bounds export as fractions of a day. Lists containing commas, semicolons, quotes, newlines or more than 255 characters use a very hidden helper sheet and a defined name.
+
+Low-level `sheetToGridData()` consumers can pass `dataValidations={mapped.dataValidations}` for per-cell rules. Existing column dropdowns and `formatting.listValidations` remain available when one list covers every loaded data row in a column.

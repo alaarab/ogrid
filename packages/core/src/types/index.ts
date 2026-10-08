@@ -91,3 +91,5 @@ export type {
   ICellIcon,
   ICellConditionalFormat,
 } from './conditionalFormatTypes';
+
+export type * from './dataValidationTypes';

@@ -77,7 +77,7 @@ describe('import maps formatting into grid terms', () => {
     expect(formatting.styles.has('3:F')).toBe(false);
     expect(formatting.frozen).toEqual({ rows: 1, columns: 1 });
     expect(formatting.merges).toEqual([{ rowId: 3, columnId: 'A', colSpan: 3 }]);
-    expect(formatting.listValidations).toEqual({ E: ['Open', 'Closed'] });
+    expect(sheet.dataValidations).toEqual([expect.objectContaining({ type: 'list', columnIds: ['E'], rows: { start: 0, end: 3 }, values: ['Open', 'Closed'] })]);
     expect(formatting.rowHeights.get(1)).toBe(30);
     expect(formatting.tabColor).toBe('#FF0000');
 
@@ -87,7 +87,7 @@ describe('import maps formatting into grid terms', () => {
     expect(a?.defaultWidth).toBe(columnWidthToPx(20));
     // Columns without an explicit width get Excel's default 64px, not a fixed 120.
     expect(c?.defaultWidth).toBe(64);
-    expect(sheet.columns[4]).toMatchObject({ cellEditor: 'select', cellEditorParams: { values: ['Open', 'Closed'] } });
+    expect(sheet.columns[4]?.cellEditor).toBeUndefined();
     // The merged-away cells read as empty instead of repeating the master value.
     expect(sheet.rows[3]?.B).toBe('');
   });

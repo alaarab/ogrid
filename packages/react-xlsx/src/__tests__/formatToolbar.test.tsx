@@ -29,7 +29,9 @@ function cell(container: HTMLElement, rowId: number, columnId: string): HTMLElem
   return el;
 }
 
-function selectRange(container: HTMLElement, from: [number, string], to: [number, string]): void {
+async function selectRange(container: HTMLElement, from: [number, string], to: [number, string]): Promise<void> {
+  // Visible SSR/fallback rows accept input only after the lazy drag table mounts.
+  await waitFor(() => expect(container.querySelector('[inert]')).toBeNull(), { timeout: 20000 });
   const a = cell(container, from[0], from[1]);
   fireEvent.pointerDown(a);
   fireEvent.mouseDown(a, { button: 0 });
@@ -53,7 +55,7 @@ describe('react-xlsx formatting toolbar: borders and fonts', () => {
     );
     await waitFor(() => expect(screen.getByText('a1')).toBeInTheDocument());
     // A1:B2 (data rows 0-1, columns A-B).
-    selectRange(container, [0, 'A'], [1, 'B']);
+    await selectRange(container, [0, 'A'], [1, 'B']);
     await waitFor(() => expect(cell(container, 0, 'A')).toHaveAttribute('data-in-range', 'true'));
     await flush();
     fireEvent.click(screen.getByRole('button', { name: 'Borders' }));
@@ -78,7 +80,7 @@ describe('react-xlsx formatting toolbar: borders and fonts', () => {
     // No interior lines.
     expect(ws.getCell('A2').border?.bottom).toBeUndefined();
     expect(ws.getCell('A3').border?.right).toBeUndefined();
-  });
+  }, 30000);
 
   test('inside borders draw the shared interior lines per cell (document API)', async () => {
     const doc = new XlsxWorkbookDocument(await gridWorkbook());
@@ -127,7 +129,7 @@ describe('react-xlsx formatting toolbar: borders and fonts', () => {
     expect(screen.getByRole('button', { name: 'Font size' })).toHaveAttribute('title', 'Font size: 18');
 
     // Apply a different family and size to A1:B1.
-    selectRange(container, [0, 'A'], [0, 'B']);
+    await selectRange(container, [0, 'A'], [0, 'B']);
     await flush();
     fireEvent.click(screen.getByRole('button', { name: 'Font' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Times New Roman' }));
