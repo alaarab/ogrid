@@ -133,5 +133,6 @@ export function useDataGridTableOrchestration<T>(
     headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError,
     headerMenu: pinning.headerMenu,
     findReplace: state.findReplace,
+    recordAction: state.recordAction,
   };
 }

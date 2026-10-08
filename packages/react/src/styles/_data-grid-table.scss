@@ -845,3 +845,97 @@
 .dataTable tbody td.mergedCell {
   vertical-align: middle;
 }
+
+// ---- Cell notes ----
+
+// Red triangle in the top-right corner of a cell with a note (Excel's note marker).
+.cellNoteIndicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 var(--ogrid-note-indicator-size, 7px) var(--ogrid-note-indicator-size, 7px) 0;
+  border-color: transparent var(--ogrid-note-indicator-color, #d13438) transparent transparent;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cellNote {
+  box-sizing: border-box;
+  min-width: 180px;
+  max-width: 320px;
+  padding: 8px 10px;
+  background: var(--ogrid-note-bg, var(--ogrid-bg, #fff));
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  border-radius: var(--ogrid-radius-lg, 6px);
+  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.cellNoteAuthor {
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.cellNoteText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.cellNoteTextarea {
+  box-sizing: border-box;
+  display: block;
+  width: 260px;
+  max-width: 100%;
+  min-height: 80px;
+  padding: 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  border-radius: var(--ogrid-radius, 4px);
+  resize: vertical;
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-selection-color, #217346);
+    outline-offset: -1px;
+  }
+}
+
+.cellNoteActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.cellNoteButton {
+  padding: 4px 10px;
+  font: inherit;
+  color: inherit;
+  background: var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  border-radius: var(--ogrid-radius, 4px);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+  }
+}
+
+.cellNoteButtonPrimary {
+  color: #fff;
+  background: var(--ogrid-selection-color, #217346);
+  border-color: var(--ogrid-selection-color, #217346);
+
+  &:hover {
+    background: var(--ogrid-selection-color, #217346);
+    filter: brightness(1.08);
+  }
+}

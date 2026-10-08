@@ -216,6 +216,23 @@ export interface IMergedCell {
   colSpan?: number;
 }
 
+/**
+ * An Excel-style cell note (comment) on the cell at (`rowId`, `columnId`).
+ * Notes are keyed by row id and column id, so they follow their record
+ * through sort, filter and paging; a note whose row or column isn't displayed
+ * isn't shown.
+ */
+export interface ICellNote {
+  rowId: RowId;
+  columnId: string;
+  /** Note text (plain text; line breaks are kept). */
+  text: string;
+  /** Who wrote the note. */
+  author?: string;
+  /** When the note was created (ISO 8601 string). */
+  createdAt?: string;
+}
+
 // --- Cell range selection (spreadsheet-style) ---
 
 /** Rectangular cell range (inclusive). Column indices are data-column indices (0 = first data column). */

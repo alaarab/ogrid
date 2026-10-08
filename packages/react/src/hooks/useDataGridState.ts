@@ -226,6 +226,8 @@ export interface UseDataGridStateResult<T> {
   pinning: DataGridPinningState;
   /** Find & Replace panel state and the Ctrl+F / Ctrl+H handler. */
   findReplace: DataGridFindReplaceState;
+  /** Record an already-applied change in the grid's undo history (no-op when the host owns undo). */
+  recordAction: (action: import('./useUndoRedo').UndoableAction) => void;
 }
 
 /**
@@ -806,5 +808,6 @@ export function useDataGridState<T>(
     viewModels: viewModelsState,
     pinning: layoutResult.pinning,
     findReplace,
+    recordAction: interactionResult.recordAction,
   };
 }

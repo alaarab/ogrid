@@ -9,6 +9,7 @@ import type {
   DataGridContextMenuState,
   DataGridViewModelState,
   DataGridPinningState,
+  UseDataGridStateResult,
 } from './useDataGridState';
 import type { DataGridFindReplaceState } from './useDataGridFindReplace';
 import type { UseColumnResizeResult } from './useColumnResize';
@@ -38,6 +39,8 @@ export interface UseDataGridTableOrchestrationResult<T> {
   ctxMenu: DataGridContextMenuState;
   viewModels: DataGridViewModelState<T>;
   pinning: DataGridPinningState;
+  /** Record an already-applied change in the grid's undo history. */
+  recordAction: UseDataGridStateResult<T>['recordAction'];
 
   // Column resize
   handleResizeStart: UseColumnResizeResult<T>['handleResizeStart'];

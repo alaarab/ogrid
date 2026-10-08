@@ -40,6 +40,7 @@ export type {
   IActiveCell,
   ISelectionRange,
   IMergedCell,
+  ICellNote,
   SideBarPanelId,
   ISideBarDef,
   ISheetDef,
@@ -350,3 +351,6 @@ export type {
   IAuditEntry,
   IAuditTrail,
 } from './formula';
+
+// Utils  -  cellNotes
+export { cellNoteKey, indexCellNotes, upsertCellNote, removeCellNote, setCellNote, getCellNoteMenuItems } from './utils';

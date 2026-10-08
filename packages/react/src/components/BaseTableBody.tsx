@@ -4,7 +4,7 @@ import * as React from 'react';
 import { partitionColumnsForVirtualization } from '../utils';
 import { WindowedPlaceholderRow } from './WindowedPlaceholderRow';
 import { GridRow } from './BaseGridRow';
-import type { RowMergePlan, MergedCellRender } from './BaseGridRow';
+import type { RowMergePlan, MergedCellRender, BaseGridRowProps } from './BaseGridRow';
 import type { useColumnMeta } from '../hooks/useColumnMeta';
 import type { GridRowProps } from './createOGrid';
 import type { IColumnDef, WindowedDataState } from '../types';
@@ -64,6 +64,9 @@ export interface BaseTableBodyProps<T> {
   /** Where hidden rows sit (`allowHiding`); with `onUnhideRows`, row numbers show gap markers. */
   hiddenRowGaps?: IHiddenGaps<string | number> | null;
   onUnhideRows?: (rowIds: (string | number)[]) => void;
+  /** Cell notes lookup (see BaseGridRowProps.getCellNote). */
+  getCellNote?: (item: T, columnId: string) => import('../types').ICellNote | undefined;
+  noteIdPrefix?: string;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
 }
@@ -134,7 +137,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumberOf, ariaRowIndexBase,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
     editingCell, tabStopCell, registerTabStop, popoverAnchorEl, pendingEditorValue, formulaVersion,
-    pinnedColumns, rowNumWidth, mergeLayout, getRowHeight, onRowResizeStart, styles, primitives, onRowHeaderPointerDown,
+    pinnedColumns, rowNumWidth, mergeLayout, getRowHeight, onRowResizeStart, getCellNote, noteIdPrefix, styles, primitives, onRowHeaderPointerDown,
   } = props;
   // Hidden-row markers need a row-number gutter to sit in.
   const rowGaps = hasRowNumbersCol && props.onUnhideRows ? props.hiddenRowGaps : null;
@@ -246,6 +249,8 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         hiddenRowsBefore={rowGaps?.before.get(rowIdStr)}
         hiddenRowsAfter={rowGaps && rowGaps.lastShown === rowIdStr ? rowGaps.after : undefined}
         onUnhideRows={rowGaps ? props.onUnhideRows : undefined}
+        getCellNote={getCellNote as BaseGridRowProps['getCellNote']}
+        noteIdPrefix={noteIdPrefix}
         styles={styles}
         primitives={primitives}
       />

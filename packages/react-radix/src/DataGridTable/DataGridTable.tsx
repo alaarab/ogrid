@@ -16,7 +16,7 @@ import {
   POPOVER_ANCHOR_STYLE,
   usePortalTheme,
 } from '@alaarab/ogrid-react';
-import type { DataGridStyles, DataGridPrimitives, PopoverEditorRenderProps } from '@alaarab/ogrid-react';
+import type { DataGridStyles, DataGridPrimitives, PopoverEditorRenderProps, CellNotePopoverRenderProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
 // Radix binds native table elements + Radix Checkbox/Popover to the shared
@@ -81,7 +81,43 @@ const primitives: DataGridPrimitives = {
     </Checkbox.Root>
   ),
   renderPopoverEditor: (p) => <RadixPopoverEditor {...p} />,
+  renderCellNotePopover: (p) => <RadixCellNotePopover {...p} />,
 };
+
+/** Cell-note popover, anchored to the noted cell. The shared body owns open state and focus. */
+function RadixCellNotePopover({ anchorEl, mode, onDismiss, onEscape, content }: CellNotePopoverRenderProps) {
+  const anchorRef = React.useRef<HTMLElement>(anchorEl);
+  anchorRef.current = anchorEl;
+  return (
+    <Popover.Root open>
+      <Popover.Anchor virtualRef={anchorRef} />
+      <Popover.Portal>
+        <Popover.Content
+          side="right"
+          align="start"
+          sideOffset={4}
+          collisionPadding={8}
+          style={{ zIndex: 'var(--ogrid-z-popover, 10001)' as unknown as number }}
+          onOpenAutoFocus={(e: Event) => e.preventDefault()}
+          onCloseAutoFocus={(e: Event) => e.preventDefault()}
+          // Focus moving between grid cells is handled by the grid (it shows that cell's note).
+          onFocusOutside={(e: Event) => e.preventDefault()}
+          onEscapeKeyDown={(e: KeyboardEvent) => {
+            e.preventDefault();
+            onEscape();
+          }}
+          onPointerDownOutside={(e: Event) => {
+            // Pressing the viewed cell itself keeps its note open.
+            if (mode === 'view' && anchorEl.contains(e.target as Node)) return;
+            onDismiss();
+          }}
+        >
+          {content}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
 
 /** Popover cell editor; copies the grid's scoped theme tokens into the portal. */
 function RadixPopoverEditor({ open, onClose, setAnchorEl, anchorContent, editor }: PopoverEditorRenderProps) {

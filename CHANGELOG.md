@@ -68,6 +68,20 @@ All notable changes to OGrid will be documented in this file.
   one (`--ogrid-frozen-divider`). Works with pinned columns (sticky on both
   axes) and virtual scrolling (frozen rows are always rendered); keyboard
   navigation scrolls rows out from under them.
+- Cell notes (Excel-style comments): `cellNotes?: ICellNote[]`
+  (`{ rowId, columnId, text, author?, createdAt? }`), `defaultCellNotes`,
+  `onCellNotesChange`, `cellNotesEditable` and `cellNoteAuthor` on `OGrid`
+  (`DataGridTable` takes `cellNotes`, `onCellNotesChange`, `cellNotesEditable`,
+  `cellNoteAuthor`). Noted cells show a red corner triangle and open the note
+  on hover or keyboard focus, in a Radix or Fluent popover; the cell's
+  `aria-describedby` points at the note text. With editing on, the context
+  menu has New/Edit/Delete note and Shift+F2 opens the editor; each change is
+  one undo step. Notes follow their row through sort, filter and paging.
+  Uncontrolled when `cellNotes` is omitted. `@alaarab/ogrid-core` exports
+  `upsertCellNote`, `removeCellNote`, `setCellNote`, `indexCellNotes` and
+  `getCellNoteMenuItems`; adapters can supply `renderCellNotePopover`.
+- `@alaarab/ogrid-react-xlsx`: Excel notes load into the grid (`XlsxSheetState.notes`)
+  and note edits are undoable and written back on export (`XlsxWorkbookDocument.setNotes`).
 - 27 more formula functions, following Excel's argument coercion, criteria
   syntax and error values: `MAXIFS`, `MINIFS`, `SUBTOTAL`, `LOOKUP` (vector
   and array forms), `XMATCH`, `WEEKNUM`, `ISERR`, `LOG10`, `SIN`, `COS`,

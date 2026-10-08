@@ -271,3 +271,16 @@ export interface ColumnHeaderMenuHandlers {
   onUnhideColumns?: () => void;
   onClose: () => void;
 }
+
+/**
+ * Context menu items for cell notes (Excel's New Note / Edit Note / Delete
+ * Note) on the active cell. Ids: `newNote`, `editNote`, `deleteNote`.
+ */
+export function getCellNoteMenuItems(hasNote: boolean): GridContextMenuItem[] {
+  return hasNote
+    ? [
+      { id: 'editNote', label: 'Edit note', shortcut: 'Shift+F2', dividerBefore: true },
+      { id: 'deleteNote', label: 'Delete note' },
+    ]
+    : [{ id: 'newNote', label: 'New note', shortcut: 'Shift+F2', dividerBefore: true }];
+}

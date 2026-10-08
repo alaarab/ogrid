@@ -125,3 +125,4 @@ export type {
 } from './gridCellSurfaceState';
 export { handleBooleanCellPointerDown } from '@alaarab/ogrid-core';
 export type { BooleanCellSelectHandlers } from '@alaarab/ogrid-core';
+export { cellNoteKey, indexCellNotes, upsertCellNote, removeCellNote, setCellNote, getCellNoteMenuItems } from '@alaarab/ogrid-core';

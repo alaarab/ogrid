@@ -57,6 +57,7 @@ export type {
   IActiveCell,
   ISelectionRange,
   IMergedCell,
+  ICellNote,
   HeaderCell,
   HeaderRow,
   SideBarPanelId,
@@ -362,3 +363,6 @@ export type {
 } from '@alaarab/ogrid-react';
 export type { IColumnChooserProps as IColumnChooserBaseProps } from '@alaarab/ogrid-react';
 export type { IPaginationControlsProps as IPaginationControlsBaseProps } from '@alaarab/ogrid-react';
+
+// Cell notes
+export { upsertCellNote, removeCellNote, setCellNote } from '@alaarab/ogrid-react';

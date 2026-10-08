@@ -26,7 +26,7 @@ import {
   createDataGridTable,
   POPOVER_ANCHOR_STYLE,
 } from '@alaarab/ogrid-react';
-import type { DataGridStyles, DataGridPrimitives, PopoverEditorRenderProps } from '@alaarab/ogrid-react';
+import type { DataGridStyles, DataGridPrimitives, PopoverEditorRenderProps, CellNotePopoverRenderProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
 // Fluent binds @fluentui/react-components table elements + Checkbox/Popover to
@@ -101,7 +101,34 @@ const primitives: DataGridPrimitives = {
     />
   ),
   renderPopoverEditor: (p) => <FluentPopoverEditor {...p} />,
+  renderCellNotePopover: (p) => <FluentCellNotePopover {...p} />,
 };
+
+const NOTE_SURFACE_STYLE: React.CSSProperties = { padding: 0, border: 'none', background: 'transparent', boxShadow: 'none' };
+
+/** Cell-note popover, positioned at the noted cell. The shared body owns open state and focus. */
+function FluentCellNotePopover({ anchorEl, mode, onDismiss, onEscape, content }: CellNotePopoverRenderProps) {
+  return (
+    <Popover
+      open
+      positioning={{ target: anchorEl, position: 'after', align: 'top', offset: 4 }}
+      onOpenChange={(e: OpenPopoverEvents, data: OnOpenChangeData) => {
+        if (data.open) return;
+        if (e.type === 'keydown') {
+          onEscape();
+          return;
+        }
+        // Pressing the viewed cell itself keeps its note open.
+        if (mode === 'view' && e.target instanceof Node && anchorEl.contains(e.target)) return;
+        onDismiss();
+      }}
+    >
+      <PopoverSurface style={NOTE_SURFACE_STYLE}>
+        {content}
+      </PopoverSurface>
+    </Popover>
+  );
+}
 
 /**
  * Popover cell editor. The anchor element is kept in state (not read from the

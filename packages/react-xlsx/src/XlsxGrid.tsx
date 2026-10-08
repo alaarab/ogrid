@@ -7,7 +7,7 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import type ExcelJS from 'exceljs';
 import { OGrid, type IOGridProps, type ICellValueChangedEvent } from '@alaarab/ogrid-react-radix';
-import type { IColumnDef } from '@alaarab/ogrid-core';
+import type { ICellNote, IColumnDef } from '@alaarab/ogrid-core';
 import type { IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { styleToCss, themePaletteOf, type CssStyle, type ThemePalette, type XlsxCellStyle } from './cellStyles';
 import { FormatToolbar } from './FormatToolbar';
@@ -160,6 +160,7 @@ export function XlsxGrid({
   const onUndo = useCallback(() => doc.undo(sheetName), [doc, sheetName]);
   const onRedo = useCallback(() => doc.redo(sheetName), [doc, sheetName]);
   const onFormulaRecalc = useCallback((r: IRecalcResult) => doc.recordFormulaResults(sheetName, r), [doc, sheetName]);
+  const onCellNotesChange = useCallback((notes: ICellNote[]) => doc.setNotes(sheetName, notes), [doc, sheetName]);
   const onColumnResized = useCallback((columnId: string, width: number) => doc.setColumnWidth(sheetName, columnId, width), [doc, sheetName]);
   const getSelection = useCallback(
     () => readSelection(wrapperRef.current, (attr) => {
@@ -213,6 +214,9 @@ export function XlsxGrid({
     canUndo: doc.canUndo(sheetName),
     canRedo: doc.canRedo(sheetName),
     onColumnResized,
+    // Excel notes: shown read-only, editable (undoable, exported) with the grid.
+    cellNotes: state.notes,
+    ...(editable ? { onCellNotesChange } : {}),
     // Merged cells and frozen rows: passed through for the grid props landing upstream.
     ...gridLayoutProps({ mergedCells: state.merges, frozenRows: source.formatting.frozen.rows }),
     // Show the sheet in its real row order. OGrid otherwise defaults its
