@@ -10,7 +10,8 @@ export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
   outDir: 'dist/esm',
-  splitting: false,
+  // XLSX media display and OOXML passthrough load on demand.
+  splitting: true,
   treeshake: true,
   clean: false,
   dts: false,
