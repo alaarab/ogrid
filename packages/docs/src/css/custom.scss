@@ -89,15 +89,15 @@
   --ogrid-hero-bg: #0a0a0f;
 
   /* OGrid Component Theme — Dark */
-  --ogrid-bg: #1a1a24;
-  --ogrid-fg: #e0e0e0;
+  --ogrid-bg: #111118;
+  --ogrid-fg: #d8d8de;
   --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
   --ogrid-fg-muted: rgba(255, 255, 255, 0.3);
-  --ogrid-border: #333340;
+  --ogrid-border: rgba(255, 255, 255, 0.07);
   --ogrid-border-strong: #555;
   --ogrid-border-hover: #666;
-  --ogrid-header-bg: #22222e;
-  --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+  --ogrid-header-bg: #16161f;
+  --ogrid-hover-bg: rgba(255, 255, 255, 0.04);
   --ogrid-selected-row-bg: #1a2f45;
   --ogrid-bg-selected-hover: #1f3650;
   --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
@@ -114,12 +114,12 @@
   --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
   --ogrid-pinned-shadow: rgba(0, 0, 0, 0.4);
-  --ogrid-loading-overlay: rgba(26, 26, 36, 0.7);
+  --ogrid-loading-overlay: rgba(17, 17, 24, 0.7);
   /* Aliases */
   --ogrid-selection: #3ab876;
   --ogrid-bg-selected: #1a2f45;
   --ogrid-bg-range: rgba(58, 184, 118, 0.12);
-  --ogrid-loading-bg: rgba(26, 26, 36, 0.7);
+  --ogrid-loading-bg: rgba(17, 17, 24, 0.7);
 }
 
 /* ── Global ── */
@@ -238,7 +238,7 @@ table:not([class]) {
   }
 }
 
-.markdown table th,
+.markdown table:not([class]) th,
 table:not([class]) th {
   font-weight: 600;
   text-transform: uppercase;
@@ -246,9 +246,25 @@ table:not([class]) th {
   letter-spacing: 0.05em;
 }
 
-[data-theme='dark'] table {
+[data-theme='dark'] table:not([class]) {
   tr:nth-child(2n) {
     background: rgba(255, 255, 255, 0.02);
+  }
+}
+
+/* Infima styles every <table>: 1px borders on all sides, a border-top on
+   every <tr>, and zebra stripes. OGrid draws its own row lines, so strip
+   those inside OGrid tables. */
+table[class*='__dataTable'] {
+  tr {
+    background: none;
+    border-top: none;
+  }
+
+  th,
+  td {
+    border-top: none;
+    border-left: none;
   }
 }
 

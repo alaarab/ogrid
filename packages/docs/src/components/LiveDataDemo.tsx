@@ -72,30 +72,65 @@ export default function LiveDataDemo() {
   const [paused, setPaused] = useState(false);
   const [filters, setFilters] = useState<IFilters>({});
   const pausedRef = useRef(false);
+  const offscreenRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dataRef = useRef(data);
+  // Last price move per row, so changed cells can flash green/red.
+  const flashRef = useRef(new Map<number, { up: boolean; at: number }>());
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
+
+  // Only tick while the demo is on screen.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => { offscreenRef.current = !entry.isIntersecting; });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Live tick loop
   useEffect(() => {
     const interval = setInterval(() => {
-      if (pausedRef.current) return;
-      setData(prev => {
-        const next = [...prev];
-        const count = 4 + Math.floor(Math.random() * 6);
-        const indices = new Set<number>();
-        while (indices.size < Math.min(count, next.length)) {
-          indices.add(Math.floor(Math.random() * next.length));
+      if (pausedRef.current || offscreenRef.current) return;
+      const next = [...dataRef.current];
+      const count = 4 + Math.floor(Math.random() * 6);
+      const indices = new Set<number>();
+      while (indices.size < Math.min(count, next.length)) {
+        indices.add(Math.floor(Math.random() * next.length));
+      }
+      const now = Date.now();
+      indices.forEach(i => {
+        const ticked = tickStock(next[i]);
+        if (ticked.price !== next[i].price) {
+          flashRef.current.set(ticked.id, { up: ticked.price > next[i].price, at: now });
         }
-        indices.forEach(i => { next[i] = tickStock(next[i]); });
-        return next;
+        next[i] = ticked;
       });
+      dataRef.current = next;
+      setData(next);
     }, 250);
     return () => clearInterval(interval);
   }, []);
 
   const greenOrRed = useCallback((item: StockRow) => {
-    return { color: item.change >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 } as React.CSSProperties;
+    return { color: item.change >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600, fontVariantNumeric: 'tabular-nums' } as React.CSSProperties;
   }, []);
+
+  const priceStyle = useCallback((item: StockRow) => {
+    const flash = flashRef.current.get(item.id);
+    const fresh = flash && Date.now() - flash.at < 600;
+    return {
+      ...greenOrRed(item),
+      padding: '2px 6px',
+      margin: '-2px -6px',
+      borderRadius: 4,
+      transition: 'background-color 0.6s ease-out',
+      backgroundColor: fresh ? (flash.up ? 'rgba(22, 163, 74, 0.22)' : 'rgba(220, 38, 38, 0.22)') : 'transparent',
+    } as React.CSSProperties;
+  }, [greenOrRed]);
+
+  const tabular = useCallback(() => ({ fontVariantNumeric: 'tabular-nums' }) as React.CSSProperties, []);
 
   const columns = useMemo(() => [
     { columnId: 'ticker', name: 'Ticker', sortable: true, minWidth: 80, cellStyle: (_item: StockRow) => ({ fontWeight: 700 }) as React.CSSProperties },
@@ -103,7 +138,7 @@ export default function LiveDataDemo() {
     {
       columnId: 'price', name: 'Price', type: 'numeric' as const, sortable: true, minWidth: 100,
       valueFormatter: (v: unknown) => v != null ? `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '',
-      cellStyle: greenOrRed,
+      cellStyle: priceStyle,
     },
     {
       columnId: 'change', name: 'Change', type: 'numeric' as const, sortable: true, minWidth: 90,
@@ -124,6 +159,7 @@ export default function LiveDataDemo() {
         if (n >= 1_000)         return `${(n / 1_000).toFixed(0)}K`;
         return String(n);
       },
+      cellStyle: tabular,
     },
     {
       columnId: 'marketCap', name: 'Market Cap', type: 'numeric' as const, sortable: true, minWidth: 110,
@@ -133,12 +169,13 @@ export default function LiveDataDemo() {
         if (n >= 1_000_000_000)     return `$${(n / 1_000_000_000).toFixed(0)}B`;
         return `$${(n / 1_000_000).toFixed(0)}M`;
       },
+      cellStyle: tabular,
     },
     {
       columnId: 'sector', name: 'Sector', sortable: true, minWidth: 140, width: '100%',
       filterable: { type: 'multiSelect' as const },
     },
-  ], [greenOrRed]);
+  ], [greenOrRed, priceStyle, tabular]);
 
   const toolbar = useMemo(() => (
     <>
@@ -159,7 +196,7 @@ export default function LiveDataDemo() {
   ), [paused]);
 
   return (
-    <div className="live-data-demo" style={{ height: 520, borderRadius: 8, overflow: 'hidden' }}>
+    <div ref={containerRef} className="live-data-demo" style={{ height: 520, borderRadius: 8, overflow: 'hidden' }}>
       <OGrid
         columns={columns}
         data={data}

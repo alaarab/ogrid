@@ -351,8 +351,8 @@ function Hero() {
           </h1>
 
           <p className={styles.heroLead}>
-            Sorting, filtering, editing, formulas, clipboard, virtual scroll.
-            For React. MIT licensed.
+            Range selection, fill handle, clipboard, formulas, Excel import and export.
+            The spreadsheet features other grids sell as add-ons, MIT licensed.
           </p>
 
           <div className={styles.heroCta}>
