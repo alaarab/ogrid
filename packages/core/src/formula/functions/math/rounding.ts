@@ -164,4 +164,55 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
       return decimal(Math.round(decimal(num / multiple)) * multiple);
     },
   });
+
+  // EVEN/ODD round away from zero to the nearest even/odd integer (ODD(0) is 1).
+  registry.set('EVEN', parity(n => n % 2 === 0));
+  registry.set('ODD', parity(n => n % 2 === 1));
+
+  // CEILING.MATH / FLOOR.MATH(number, [significance=1], [mode=0]). The sign of
+  // significance is ignored. For negative numbers a non-zero mode rounds away
+  // from zero (CEILING.MATH) or toward zero (FLOOR.MATH) instead.
+  registry.set('CEILING.MATH', roundToMultiple(Math.ceil));
+  registry.set('FLOOR.MATH', roundToMultiple(Math.floor));
+}
+
+function parity(accept: (n: number) => boolean): IFormulaFunction {
+  return {
+    minArgs: 1,
+    maxArgs: 1,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const raw = evalArg(evaluator, args[0], context);
+      if (raw instanceof FormulaError) return raw;
+      const num = toNumber(raw);
+      if (num instanceof FormulaError) return num;
+      let magnitude = Math.ceil(decimal(Math.abs(num)));
+      if (!accept(magnitude)) magnitude++;
+      return num < 0 ? -magnitude : magnitude;
+    },
+  };
+}
+
+function roundToMultiple(round: (n: number) => number): IFormulaFunction {
+  return {
+    minArgs: 1,
+    maxArgs: 3,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const numbers: number[] = [];
+      for (let i = 0; i < args.length; i++) {
+        const raw = evalArg(evaluator, args[i], context);
+        if (raw instanceof FormulaError) return raw;
+        const n = toNumber(raw);
+        if (n instanceof FormulaError) return n;
+        numbers.push(n);
+      }
+      const [num = 0, rawSignificance = 1, mode = 0] = numbers;
+      const significance = Math.abs(rawSignificance);
+      if (significance === 0) return 0;
+      const result = num < 0 && mode !== 0
+        ? -decimal(round(decimal(-num / significance)) * significance)
+        : decimal(round(decimal(num / significance)) * significance);
+      return result || 0; // no negative zero
+
+    },
+  };
 }

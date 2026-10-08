@@ -92,7 +92,8 @@ export type ASTNode =
   | FunctionCallNode
   | BinaryOpNode
   | UnaryOpNode
-  | ErrorNode;
+  | ErrorNode
+  | NameNode;
 
 export interface NumberLiteral {
   kind: 'number';
@@ -148,6 +149,12 @@ export interface UnaryOpNode {
 export interface ErrorNode {
   kind: 'error';
   error: FormulaError;
+}
+
+/** A name bound by LET (uppercased). Only produced inside a LET call. */
+export interface NameNode {
+  kind: 'name';
+  name: string;
 }
 
 // --- Function Registry ---

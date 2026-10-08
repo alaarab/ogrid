@@ -31,6 +31,8 @@ import { parseCellRef, parseRange } from './cellAddressUtils';
 export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNode {
   let pos = 0;
   let depth = 0;
+  /** Names bound by enclosing LET calls; they shadow named ranges. */
+  const letScopes: Set<string>[] = [];
   // --- Token helpers ---
 
   function peek(): Token | undefined {
@@ -217,6 +219,11 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
 
     // Named range identifier
     if (t.type === 'IDENTIFIER') {
+      const name = t.value.toUpperCase();
+      if (letScopes.some(scope => scope.has(name))) {
+        advance();
+        return { kind: 'name', name };
+      }
       return namedRangeRef(t);
     }
 
@@ -286,6 +293,7 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     }
 
     const args: ASTNode[] = [];
+    if (name === 'LET') return letCall(args);
 
     // Parse comma-separated arguments (if any)
     const first = peek();
@@ -303,6 +311,34 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     }
 
     return { kind: 'functionCall', name, args };
+  }
+
+  /**
+   * LET(name1, value1, [name2, value2, ...], calculation). An identifier
+   * followed by a comma in a name position declares a name; it is in scope
+   * for later values and the calculation, not for its own value.
+   */
+  function letCall(args: ASTNode[]): ASTNode {
+    const scope = new Set<string>();
+    letScopes.push(scope);
+    try {
+      for (;;) {
+        const t = peek();
+        if (t?.type === 'IDENTIFIER' && tokens[pos + 1]?.type === 'COMMA') {
+          const name = t.value.toUpperCase();
+          advance(); // name
+          advance(); // ','
+          args.push({ kind: 'name', name }, expression());
+          scope.add(name);
+          if (peek()?.type === 'COMMA') { advance(); continue; }
+          break;
+        }
+        args.push(expression());
+        break;
+      }
+    } finally { letScopes.pop(); }
+    if (!expect('RPAREN')) return errorNode('Expected ")" after LET arguments');
+    return { kind: 'functionCall', name: 'LET', args };
   }
 
   function namedRangeRef(nameToken: Token): ASTNode {

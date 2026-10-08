@@ -58,7 +58,7 @@ All editors:
 
 ### Formula Engine
 
-Custom headless engine in `packages/core/src/formula/` with 93 functions:
+Custom headless engine in `packages/core/src/formula/` with 187 functions:
 
 **Categories:**
 - Math (30): `SUM`, `AVERAGE`, `MIN`, `MAX`, `ABS`, `ROUND`, `CEILING`, `FLOOR`, `POWER`, `SQRT`, etc.
