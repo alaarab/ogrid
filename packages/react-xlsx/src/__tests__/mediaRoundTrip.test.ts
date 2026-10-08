@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { posix } from 'node:path';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { SaxesParser } from 'saxes';
@@ -10,14 +13,15 @@ import { mediaWorkbookBlob, PNG } from './fixtures/mediaWorkbook';
 
 // happy-dom's DOMParser does not implement XML namespaces. Parse actual XML
 // with SAX, independently of the production tree/serializer and path helpers.
-interface Node { name: string; textContent: string; attributes: Array<{ namespaceURI: string; value: string }>; getAttribute: (name: string) => string | null }
+interface Node { name: string; textContent: string; children: Node[]; attributes: Array<{ namespaceURI: string; value: string }>; getAttribute: (name: string) => string | null }
 interface XmlDoc { documentElement: Node; all: Node[]; getElementsByTagName: (name: string) => Node[] }
 function xml(s: string): XmlDoc {
   const parser = new SaxesParser({ xmlns: true });
   const all: Node[] = [];
   const stack: Node[] = [];
   parser.on('opentag', (tag) => {
-    const node: Node = { name: tag.local, textContent: '', attributes: Object.values(tag.attributes).map((a) => ({ namespaceURI: a.uri, value: a.value })), getAttribute: (name) => tag.attributes[name]?.value ?? null };
+    const node: Node = { name: tag.local, textContent: '', children: [], attributes: Object.values(tag.attributes).map((a) => ({ namespaceURI: a.uri, value: a.value })), getAttribute: (name) => tag.attributes[name]?.value ?? null };
+    stack[stack.length - 1]?.children.push(node);
     all.push(node); stack.push(node);
   });
   parser.on('text', (s) => { for (const n of stack) n.textContent += s; });
@@ -56,9 +60,99 @@ async function assertValidPackage(zip: JSZip) {
       }
     }
   }
+  const styles = await part(zip, 'xl/styles.xml');
+  const formatIds = new Set(nodes(styles, 'numFmts').flatMap((n) => n.children.map((f) => f.getAttribute('numFmtId'))));
+  const dxfCount = nodes(styles, 'dxfs')[0]?.children.length ?? 0;
+  for (const path of Object.keys(zip.files).filter((p) => /^xl\/(pivotTables|pivotCache)\/[^/]+\.xml$/.test(p))) {
+    const pivot = await part(zip, path);
+    for (const node of pivot.all) {
+      const format = node.getAttribute('numFmtId');
+      if (format && Number(format) >= 164) expect(formatIds.has(format)).toBe(true);
+      const dxf = node.getAttribute('dxfId');
+      if (dxf !== null) expect(Number(dxf)).toBeLessThan(dxfCount);
+    }
+    for (const source of nodes(pivot, 'cacheSource').filter((n) => n.getAttribute('type') === 'external')) {
+      const rel = nodes(await part(zip, 'xl/_rels/workbook.xml.rels'), 'Relationship').find((n) => n.getAttribute('Type')?.endsWith('/connections'));
+      expect(rel).toBeDefined();
+      const connections = await part(zip, resolve('xl/workbook.xml', rel!.getAttribute('Target')!));
+      expect(nodes(connections, 'connection').some((n) => n.getAttribute('id') === source.getAttribute('connectionId'))).toBe(true);
+    }
+  }
 }
 
 describe('XLSX images, charts and pivots', () => {
+  async function roundTrips(blob: Blob, inspect: (zip: JSZip, workbook: ExcelJS.Workbook) => Promise<void>) {
+    const directory = await mkdtemp(join(tmpdir(), 'ogrid-media-'));
+    try {
+      for (let i = 0; i < 2; i++) {
+        const workbook = await workbookFromBlob(blob);
+        const document = new XlsxWorkbookDocument(workbook);
+        document.setCellValues('Sales', [{ rowId: 0, columnId: 'B', value: 99 + i }]);
+        // Competing formats/dxfs force remapping rather than copying old IDs.
+        for (let row = 2; row <= 8; row++) workbook.getWorksheet('Sales')!.getCell(`C${row}`).numFmt = '0.' + '0'.repeat(row + 3);
+        workbook.getWorksheet('Sales')!.addConditionalFormatting({ ref: 'B2:B4', rules: [{ type: 'cellIs', operator: 'greaterThan', formulae: [15], priority: 1, style: { font: { bold: true } } }] });
+        workbook.getWorksheet('Sales')!.addConditionalFormatting({ ref: 'B2:B4', rules: [{ type: 'cellIs', operator: 'lessThan', formulae: [15], priority: 2, style: { font: { italic: true } } }] });
+        const file = join(directory, `export-${i}.xlsx`);
+        await writeFile(file, new Uint8Array(await (await document.toBlob()).arrayBuffer()));
+        blob = new Blob([new Uint8Array(await readFile(file))]);
+        const reopened = await workbookFromBlob(blob);
+        expect(reopened.getWorksheet('Sales')!.getCell('B2').value).toBe(99 + i);
+        const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+        await inspect(zip, reopened);
+        await assertValidPackage(zip);
+      }
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  }
+
+  test('external pivot refresh connections and their dependency graph survive saved-file round trips', async () => {
+    await roundTrips(await mediaWorkbookBlob({ externalConnection: true }), async (zip) => {
+      const cache = await part(zip, 'xl/pivotCache/pivotCacheDefinition1.xml');
+      expect(cache.documentElement.getAttribute('refreshOnLoad')).toBe('1');
+      const source = nodes(cache, 'cacheSource')[0]!;
+      const relationship = nodes(await part(zip, 'xl/_rels/workbook.xml.rels'), 'Relationship').find((r) => r.getAttribute('Type')?.endsWith('/connections'));
+      expect(relationship).toBeDefined();
+      const path = resolve('xl/workbook.xml', relationship!.getAttribute('Target')!);
+      const connections = await part(zip, path);
+      expect(nodes(connections, 'connection').find((n) => n.getAttribute('id') === source.getAttribute('connectionId'))?.getAttribute('name')).toBe('Sales DB');
+      expect(nodes(connections, 'dbPr')[0]!.getAttribute('command')).toBe('SELECT Region, Sales FROM Sales');
+      const rels = await part(zip, posix.join(posix.dirname(path), '_rels', posix.basename(path) + '.rels'));
+      const dependency = nodes(rels, 'Relationship').find((r) => r.getAttribute('Id') === 'rIdSource')!;
+      expect((await part(zip, resolve(path, dependency.getAttribute('Target')!))).documentElement.textContent).toBe('Sales connection metadata');
+      expect(nodes(rels, 'Relationship').find((r) => r.getAttribute('TargetMode') === 'External')?.getAttribute('Target')).toBe('https://example.com/sales.odc');
+      expect(nodes(await part(zip, '[Content_Types].xml'), 'Override').find((n) => n.getAttribute('PartName') === '/' + path)?.getAttribute('ContentType')).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.connections+xml');
+    });
+  });
+
+  test('pivot data, field and cache custom formats resolve correctly after workbook styles are rebuilt', async () => {
+    await roundTrips(await mediaWorkbookBlob({ pivotStyles: true }), async (zip, workbook) => {
+      const styles = await part(zip, 'xl/styles.xml');
+      const formats = nodes(styles, 'numFmts')[0]!.children;
+      const codeFor = (node: Node) => formats.find((f) => f.getAttribute('numFmtId') === node.getAttribute('numFmtId'))?.getAttribute('formatCode');
+      const pivot = await part(zip, 'xl/pivotTables/pivotTable1.xml');
+      expect(codeFor(nodes(pivot, 'dataField')[0]!)).toBe('"$"#,##0.0000');
+      expect(codeFor(nodes(pivot, 'pivotField')[1]!)).toBe('yyyy-mm-dd" UTC"');
+      expect(codeFor(nodes(await part(zip, 'xl/pivotCache/pivotCacheDefinition1.xml'), 'cacheField')[1]!)).toBe('"$"#,##0.0000');
+      expect(workbook.getWorksheet('Sales')!.getCell('C2').numFmt).toBe('0.00000');
+      expect(new Set(formats.map((n) => n.getAttribute('numFmtId'))).size).toBe(formats.length);
+    });
+  });
+
+  test('pivot differential formatting resolves to its own style alongside worksheet conditional formatting', async () => {
+    await roundTrips(await mediaWorkbookBlob({ pivotStyles: true }), async (zip, workbook) => {
+      const styles = await part(zip, 'xl/styles.xml');
+      const pivot = await part(zip, 'xl/pivotTables/pivotTable1.xml');
+      const dxfs = nodes(styles, 'dxfs')[0]!.children;
+      const dxf = dxfs[Number(nodes(pivot, 'format')[0]!.getAttribute('dxfId'))];
+      expect(dxf).toBeDefined();
+      expect(dxf!.children.find((n) => n.name === 'font')!.children.find((n) => n.name === 'color')?.getAttribute('rgb')).toBe('FF009900');
+      const numFmt = dxf!.children.find((n) => n.name === 'numFmt')!;
+      expect(numFmt.getAttribute('formatCode')).toBe('"$"#,##0.0000');
+      expect(nodes(styles, 'numFmts')[0]!.children.find((n) => n.getAttribute('numFmtId') === numFmt.getAttribute('numFmtId'))?.getAttribute('formatCode')).toBe('"$"#,##0.0000');
+      expect(workbook.getWorksheet('Sales')!.conditionalFormattings[0]!.rules[0]!.style?.font?.bold).toBe(true);
+      expect(Number(nodes(styles, 'dxfs')[0]!.getAttribute('count'))).toBe(dxfs.length);
+    });
+  });
+
   test('edit and export preserves mixed drawings, chart-only sheets, pivot caches, notes and hyperlinks', async () => {
     const wb = await workbookFromBlob(await mediaWorkbookBlob());
     const doc = new XlsxWorkbookDocument(wb);
