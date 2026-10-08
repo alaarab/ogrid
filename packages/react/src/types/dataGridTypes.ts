@@ -509,6 +509,8 @@ export interface IOGridDataGridProps<T> {
   /** @internal Connects the table's scroll implementation to the grid API. */
   scrollToRowRef?: React.RefObject<((index: number, options?: { align?: 'start' | 'center' | 'end' }) => void) | null>;
   items: T[];
+  /** @internal Full client dataset for managed row reorder callbacks across pages/filters. */
+  rowOrderRows?: T[];
   /**
    * Windowed (lazy) row access. Set when the data source streams rows on
    * demand instead of holding them all in `items`. When present the grid

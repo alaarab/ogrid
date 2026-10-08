@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type * as React from 'react';
 import type { RowId } from '../types';
 import { useLatestRef } from './useLatestRef';
@@ -60,16 +60,15 @@ export interface CellDragSourceProps {
 export function useCellDragSource(params: UseCellDragSourceParams = {}): CellDragSourceProps {
   const { rowId, columnId, payload, effectAllowed = 'copyMove', handleSelector } = params;
   const payloadRef = useLatestRef(payload);
+  const pressedHandleRef = useRef(false);
 
   const onDragStart = useCallback(
     (e: React.DragEvent) => {
-      if (handleSelector) {
-        const target = e.target as Element | null;
-        if (target?.closest && !target.closest(handleSelector)) {
-          e.preventDefault();
-          return;
-        }
+      if (handleSelector && !pressedHandleRef.current) {
+        e.preventDefault();
+        return;
       }
+      pressedHandleRef.current = false;
       const dt = e.dataTransfer;
       if (!dt) return;
       dt.effectAllowed = effectAllowed;
@@ -84,9 +83,11 @@ export function useCellDragSource(params: UseCellDragSourceParams = {}): CellDra
   );
 
   const stop = useCallback((e: React.SyntheticEvent) => {
+    const handle = (e.target as Element | null)?.closest?.(handleSelector ?? '[data-ogrid-allow-drag]');
+    pressedHandleRef.current = !!handle && e.currentTarget.contains(handle);
     // Keep the grid's range selection / fill handle from starting on the grip.
     e.stopPropagation();
-  }, []);
+  }, [handleSelector]);
 
   return {
     draggable: true,

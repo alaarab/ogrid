@@ -56,8 +56,9 @@ export interface MoveCellRangeParams<T> {
 /**
  * The value events a range move/copy produces: paste events at the target,
  * plus clear events for source cells that were not overwritten (move only).
- * Returns an empty array when the range is empty or an unchanged move is a
- * no-op.
+ * Returns an empty array when the range is empty, an unchanged move is a
+ * no-op, or any destination cell rejects the write (bounds, editability,
+ * merges or parsing). Rejected moves leave source values and formulas intact.
  */
 export function moveCellRange<T>(params: MoveCellRangeParams<T>): ICellValueChangedEvent<T>[] {
   const {
@@ -84,6 +85,10 @@ export function moveCellRange<T>(params: MoveCellRangeParams<T>): ICellValueChan
   const parsed = parseTsvClipboard(text);
   if (parsed.length === 0) return [];
 
+  // Plan every destination write before touching formulas or source values.
+  // Formula writes produce no value event, so collect them separately when
+  // deciding whether the complete block fits and accepts its values.
+  const formulaWrites: { col: number; row: number; formula: string | null }[] = [];
   const pasteEvents = applyPastedValues(
     parsed,
     targetRow,
@@ -93,13 +98,22 @@ export function moveCellRange<T>(params: MoveCellRangeParams<T>): ICellValueChan
     formulaOptions && {
       colOffset: formulaOptions.colOffset,
       flatColumns: formulaOptions.flatColumns,
-      setFormula: formulaOptions.setFormula,
+      setFormula: formulaOptions.setFormula && ((col, row, formula) => {
+        if ((formulaOptions.formulaRow?.(row) ?? row) >= 0) {
+          formulaWrites.push({ col, row, formula });
+        }
+      }),
       source: formulaSource,
       formulaRow: formulaOptions.formulaRow,
     },
     isCoveredCell,
   );
 
+  const cellCount = parsed.reduce((count, row) => count + row.length, 0);
+  if (pasteEvents.length + formulaWrites.length !== cellCount) return [];
+  for (const write of formulaWrites) {
+    formulaOptions?.setFormula?.(write.col, write.row, write.formula);
+  }
   if (copy) return pasteEvents;
 
   const width = parsed.reduce((w, row) => Math.max(w, row.length), 0);

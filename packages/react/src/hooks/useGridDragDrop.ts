@@ -91,18 +91,10 @@ export interface UseGridDragDropResult<T> {
   };
 }
 
-/** Contiguous display indices covering every row in `rowIds`. */
+/** Only the selected display indices, in their current order. */
 function blockIndices<T>(items: T[], rowIds: Set<RowId>, getRowId: (item: T) => RowId): number[] {
-  let first = -1;
-  let last = -1;
-  items.forEach((item, i) => {
-    if (!rowIds.has(getRowId(item))) return;
-    if (first === -1) first = i;
-    last = i;
-  });
-  if (first === -1) return [];
   const out: number[] = [];
-  for (let i = first; i <= last; i++) out.push(i);
+  items.forEach((item, i) => { if (rowIds.has(getRowId(item))) out.push(i); });
   return out;
 }
 
@@ -164,19 +156,20 @@ export function useGridDragDrop<T>(params: UseGridDragDropParams<T>): UseGridDra
 
   // ── Uncontrolled order override ─────────────────────────────────────────
   const [orderOverride, setOrderOverride] = useState<RowId[] | null>(null);
-  const appliedDataRef = useRef<T[] | null>(null);
   const orderedItems = useMemo(
     () => (orderOverride ? applyRowOrder(items, orderOverride, getRowId) : items),
     [items, orderOverride, getRowId],
   );
   const orderedItemsRef = useLatestRef(orderedItems);
+  const itemsRef = useLatestRef(items);
+  const onRowOrderChangeRef = useLatestRef(onRowOrderChange);
   useEffect(() => {
-    // A host that applied the move (or any external data change) ends the override.
-    if (appliedDataRef.current !== null && items !== appliedDataRef.current) {
-      appliedDataRef.current = null;
-      setOrderOverride(null);
-    }
-  }, [items]);
+    setOrderOverride((previous) => {
+      if (!previous) return previous;
+      const ids = applyRowOrder(items, previous, getRowId).map(getRowId);
+      return ids.length === previous.length && ids.every((id, i) => id === previous[i]) ? previous : ids;
+    });
+  }, [items, getRowId]);
 
   // ── Drag state ──────────────────────────────────────────────────────────
   const [isDraggingRow, setIsDraggingRow] = useState(false);
@@ -211,25 +204,23 @@ export function useGridDragDrop<T>(params: UseGridDragDropParams<T>): UseGridDra
 
   const applyRowOrderChange = useCallback(
     (event: IRowOrderChange<T>) => {
-      const before = orderedItemsRef.current;
-      const beforeIds = before.map(getRowIdRef.current);
-      setOrderOverride(event.rowIds);
-      appliedDataRef.current = event.data;
-      onRowOrderChange?.(event);
+      const beforeIds = orderedItemsRef.current.map(getRowIdRef.current);
+      const afterIds = [...event.rowIds];
+      const { fromIndex, toIndex } = event;
+      const emit = (ids: RowId[], fromIndex: number, toIndex: number) => {
+        setOrderOverride(ids);
+        onRowOrderChangeRef.current?.({
+          rowIds: ids, fromIndex, toIndex,
+          data: applyRowOrder(itemsRef.current, ids, getRowIdRef.current),
+        });
+      };
+      emit(afterIds, fromIndex, toIndex);
       recordAction?.({
-        undo: () => {
-          setOrderOverride(beforeIds);
-          appliedDataRef.current = before;
-          onRowOrderChange?.({ rowIds: beforeIds, fromIndex: event.toIndex, toIndex: event.fromIndex, data: before });
-        },
-        redo: () => {
-          setOrderOverride(event.rowIds);
-          appliedDataRef.current = event.data;
-          onRowOrderChange?.(event);
-        },
+        undo: () => emit(beforeIds, toIndex, fromIndex),
+        redo: () => emit(afterIds, fromIndex, toIndex),
       });
     },
-    [onRowOrderChange, recordAction, getRowIdRef, orderedItemsRef],
+    [recordAction, getRowIdRef, orderedItemsRef, itemsRef, onRowOrderChangeRef],
   );
 
   const handleRowDragStart = useCallback(
@@ -285,14 +276,14 @@ export function useGridDragDrop<T>(params: UseGridDragDropParams<T>): UseGridDra
   const onDragOver = useCallback(
     (e: React.DragEvent) => {
       if (dragKindRef.current === 'row') {
-        const el = (e.target as Element | null)?.closest?.('[data-row-index]') as HTMLElement | null;
+        const el = (e.target as Element | null)?.closest?.('[data-row-index], [data-row-header-index]') as HTMLElement | null;
         if (!el) return;
-        e.preventDefault();
-        if (e.dataTransfer) e.dataTransfer.dropEffect = e.ctrlKey || e.metaKey ? 'copy' : 'move';
         const rowEl = (el.closest('tr') as HTMLElement | null) ?? el;
         const rect = rowEl.getBoundingClientRect();
-        const row = Number.parseInt(el.getAttribute('data-row-index') ?? '', 10);
-        if (Number.isNaN(row)) return;
+        const row = Number.parseInt(el.getAttribute('data-row-index') ?? el.getAttribute('data-row-header-index') ?? '', 10);
+        if (Number.isNaN(row) || !orderedItemsRef.current[row]) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
         const before = e.clientY < rect.top + rect.height / 2;
         const gap = before ? row : row + 1;
         const container = containerRef.current;
@@ -307,6 +298,14 @@ export function useGridDragDrop<T>(params: UseGridDragDropParams<T>): UseGridDra
             });
           }
         }
+        return;
+      }
+
+      if (dragKindRef.current === 'range') {
+        const target = cellFromEvent(e, wrapperRef.current, colOffsetRef.current);
+        if (!target || !orderedItemsRef.current[target.row] || !visibleColsRef.current[target.col]) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = e.ctrlKey || e.metaKey ? 'copy' : 'move';
         return;
       }
 
@@ -332,7 +331,7 @@ export function useGridDragDrop<T>(params: UseGridDragDropParams<T>): UseGridDra
         setIsExternalDragOver(true);
       }
     },
-    [wrapperRef, containerRef, colOffsetRef, onCellDrop, cellDrop],
+    [wrapperRef, containerRef, colOffsetRef, onCellDrop, cellDrop, orderedItemsRef, visibleColsRef],
   );
 
   const onDragLeave = useCallback(

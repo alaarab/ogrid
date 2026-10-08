@@ -44,6 +44,13 @@ describe('moveRows', () => {
     expect(data.map(getRowId)).toEqual([1, 2, 3, 4]);
   });
 
+  it('collects disjoint rows into an internal gap instead of treating it as a no-op', () => {
+    const result = moveRows(rows, [1, 3], 2);
+    expect(result.data.map(getRowId)).toEqual([1, 2, 4, 3]);
+    expect(result.changed).toBe(true);
+    expect(isRowMoveNoop([1, 3], 2)).toBe(false);
+  });
+
   it('does not mutate the input', () => {
     moveRows(rows, [0], 3);
     expect(rows.map(getRowId)).toEqual([1, 2, 3, 4]);

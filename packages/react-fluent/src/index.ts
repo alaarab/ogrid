@@ -393,3 +393,10 @@ export type {
   IConditionalFormatter,
   UseConditionalFormattingParams,
 } from '@alaarab/ogrid-react';
+
+// Drag and drop
+export { useCellDragSource, useGridDragDrop } from '@alaarab/ogrid-react';
+export type {
+  IRowOrderChange, ICellDropEvent, UseCellDragSourceParams, CellDragSourceProps,
+  CellDragPayload, UseGridDragDropParams, UseGridDragDropResult, CellDropEvent, RowDropLine,
+} from '@alaarab/ogrid-react';
