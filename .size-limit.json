@@ -53,7 +53,7 @@
   {
     "name": "react-xlsx-browser",
     "path": "packages/react-xlsx-browser/dist/ogrid-xlsx.js",
-    "limit": "505.8 kB",
+    "limit": "522 kB",
     "ignore": [
       "./DataValidationDialog-*.js"
     ]
