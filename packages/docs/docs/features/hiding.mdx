@@ -1,0 +1,108 @@
+---
+sidebar_position: 5.6
+title: Hiding Rows and Columns
+description: Hide and unhide rows and columns from the menus, with spreadsheet-style markers where hidden ones sit
+---
+
+# Hiding Rows and Columns
+
+Spreadsheet-style hide and unhide. Turn on `allowHiding` and users can hide
+columns from the column header menu and rows (or columns) from the cell context
+menu. A thin double line marks where hidden columns or rows sit; clicking it
+unhides them.
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+<OGrid
+  columns={columns}
+  data={data}
+  getRowId={(r) => r.id}
+  cellReferences
+  allowHiding
+/>;
+```
+
+## Hidden columns
+
+A hidden column is one missing from the grid's visible-column set, the same
+state the [column chooser](./column-chooser) edits. With `allowHiding`:
+
+- The column header menu has **Hide column**. It isn't offered for `required`
+  columns or the last visible column.
+- When hidden columns sit next to a column, its header menu has **Unhide columns**.
+- A double-line marker on the header edge where columns are hidden unhides them
+  when clicked (it's a button, so it's reachable with Tab and Enter).
+- In the cell context menu, a whole-column selection (every displayed row) or a
+  selection across two or more columns adds **Hide columns**, and **Unhide
+  columns** when the selection spans hidden ones (select across the gap, as in
+  Excel).
+
+Changes go through `visibleColumns` / `onVisibleColumnsChange`, so controlled
+and uncontrolled visibility both work:
+
+```tsx
+const [visible, setVisible] = useState(new Set(['name', 'qty', 'price']));
+
+<OGrid {...props} allowHiding visibleColumns={visible} onVisibleColumnsChange={setVisible} />;
+```
+
+## Hidden rows
+
+Hidden rows are a list of row ids. Pass `hiddenRowIds` to control it, or
+`defaultHiddenRowIds` to start with some rows hidden and let the grid keep the
+list. `onHiddenRowIdsChange` reports every change with the full new list.
+
+```tsx
+const [hidden, setHidden] = useState<RowId[]>([]);
+
+<OGrid
+  {...props}
+  allowHiding
+  hiddenRowIds={hidden}
+  onHiddenRowIdsChange={setHidden}
+/>;
+```
+
+With `allowHiding`, the cell context menu has **Hide row** / **Hide N rows**
+for the selected rows, and **Unhide rows** when the selection spans hidden rows.
+With row numbers on (`showRowNumbers` or `cellReferences`), a double line on the
+row number where rows are hidden unhides them when clicked.
+
+Hidden rows are hidden whether or not `allowHiding` is on. They are left out of:
+
+- the display, keyboard navigation and selection
+- copy, cut and paste ranges
+- status-bar counts and aggregations
+- pagination (pages and row counts exclude them) and virtual scrolling
+- `SUBTOTAL` with codes 101-111 when [formulas](./formulas) are on (1-11 still
+  count them, as in Excel)
+
+Hidden rows stay in your data and keep their formula row numbers, so formulas
+that reference them still work. [Merged cells](./merged-cells) over hidden rows
+behave like they do over filtered rows: spans count displayed rows, and a merge
+whose anchor row is hidden isn't drawn.
+
+### Server-side and windowed data
+
+With a page-based `dataSource`, hidden rows are dropped from each fetched page;
+the row count is the one your source reports. A windowed data source
+(`getRowCount` + `getRows`) can't hide rows, and the row items are left out of
+the menu.
+
+## Props
+
+| Name | Type | Description |
+|------|------|-------------|
+| `allowHiding` | `boolean` | Hide/unhide menu items and gap markers. Default `false`. |
+| `hiddenRowIds` | `RowId[]` | Hidden rows (controlled). |
+| `defaultHiddenRowIds` | `RowId[]` | Initially hidden rows (uncontrolled). |
+| `onHiddenRowIdsChange` | `(rowIds: RowId[]) => void` | Called when the user hides or unhides rows. |
+| `visibleColumns` | `Set<string>` | Visible columns (controlled); hidden columns are the rest. |
+| `onVisibleColumnsChange` | `(cols: Set<string>) => void` | Called when columns are hidden or unhidden. |
+
+Uncontrolled hidden rows are part of the per-sheet state on a
+[multi-sheet](./multi-sheet) grid, like selection and filters.
+
+The marker color is `--ogrid-hidden-marker-color` (defaults to the secondary
+text color).

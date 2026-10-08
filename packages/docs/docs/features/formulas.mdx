@@ -317,7 +317,7 @@ Criteria use Excel syntax in all of these: `">5"`, `"<>done"`, `"=apple"`, and t
 
 - **No spilling.** A formula cell holds one value, so array functions return their first element: `SEQUENCE` gives its start value and `TEXTSPLIT` gives the first piece (first column of the first row). Where Excel returns `#CALC!` for an empty `TEXTSPLIT` result, OGrid returns `#VALUE!`.
 - **No array constants or empty arguments.** `{1,2,3}` and skipped arguments like `TEXTSPLIT(A1,,";")` aren't supported, so pass every argument up to the last one you need.
-- **`SUBTOTAL` can't see hidden rows.** The grid doesn't pass row visibility to the engine, so codes 101-111 work like 1-11. Like Excel, `SUBTOTAL` skips cells that contain their own `SUBTOTAL`, so nested subtotals aren't counted twice.
+- **`SUBTOTAL` 101-111 skip hidden rows** (rows in [`hiddenRowIds`](./hiding#hidden-rows)), and 1-11 count them, as in Excel. Rows removed by a filter are still counted by both. Like Excel, `SUBTOTAL` skips cells that contain their own `SUBTOTAL`, so nested subtotals aren't counted twice.
 - **`XMATCH` binary search.** Search modes `2` and `-2` are accepted but run as a normal first-to-last search, which returns the same position on sorted data.
 - **`LET`** binds names to values for the rest of the call: `=LET(rate, B1, qty, C1, rate * qty)`. A name bound to a range stays a range, so `=LET(r, A1:A10, SUM(r) / COUNT(r))` works. A `LET` name takes priority over a named range with the same name, and it can't look like a cell reference (`x1` is cell X1).
 

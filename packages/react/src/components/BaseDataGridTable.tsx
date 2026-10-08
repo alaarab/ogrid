@@ -8,6 +8,7 @@ import { usePortalTheme } from '../hooks/usePortalTheme';
 import { useGridCellFocus } from '../hooks/useGridCellFocus';
 import { useFrozenRowOffsets } from '../hooks/useFrozenRowOffsets';
 import { useStructureContextMenu } from '../hooks/useStructureContextMenu';
+import { useHidingContextMenu } from '../hooks/useHidingContextMenu';
 import { useRowResize } from '../hooks/useRowResize';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
 import {
@@ -161,6 +162,22 @@ export function BaseDataGridTableInner<T>(
       interaction.setActiveCell(null);
     },
   });
+  // Hide/unhide rows and columns (allowHiding), acting on the selected cells.
+  const hidingMenu = useHidingContextMenu({
+    actions: gridProps.hidingActions,
+    open: menuPosition != null,
+    items,
+    visibleCols,
+    columnGaps: o.layout.hiddenColumnGaps,
+    selectionRange,
+    activeCell: interaction.activeCell,
+    colOffset,
+    getRowId,
+    clearSelection: () => {
+      interaction.setSelectionRange(null);
+      interaction.setActiveCell(null);
+    },
+  });
   // Theme tokens for the portaled context menu (it renders outside the grid).
   const contextMenuTheme = usePortalTheme(wrapperRef, menuPosition != null);
   // Roving tabindex: one body cell is the tab stop and holds DOM focus; the
@@ -259,6 +276,7 @@ export function BaseDataGridTableInner<T>(
                   sortDirection={gridProps.sortDirection}
                   styles={styles}
                   primitives={primitives}
+                  onUnhideColumns={gridProps.hidingActions?.unhideColumns}
                 />
                 {!showEmptyInGrid && (
                   <BaseTableBody
@@ -299,6 +317,8 @@ export function BaseDataGridTableInner<T>(
                     frozenRows={frozenRows}
                     getRowHeight={rowResizeEnabled ? rowResize.getRowHeight : undefined}
                     onRowResizeStart={rowResize.onRowResizeStart}
+                    hiddenRowGaps={gridProps.hidingActions?.hiddenRowGaps}
+                    onUnhideRows={gridProps.hidingActions?.unhideRows}
                     styles={styles}
                     primitives={primitives}
                   />
@@ -357,6 +377,7 @@ export function BaseDataGridTableInner<T>(
               onSelectAll={o.interaction.handleSelectAllCells}
               onClose={closeContextMenu}
               structure={structureMenu}
+              hiding={hidingMenu}
             />
             </div>,
             getContextMenuPortalTarget ? getContextMenuPortalTarget(wrapperRef.current) : document.body

@@ -170,6 +170,8 @@ export interface IFormulaContext {
   consumeWork?(steps: number): void;
   /** Optional: return the formula string for a cell, or undefined if not a formula cell. */
   getCellFormula?(address: ICellAddress): string | undefined;
+  /** Optional: whether a row is hidden (SUBTOTAL 101-111 skip hidden rows). `sheet` names another sheet. */
+  isRowHidden?(row: number, sheet?: string): boolean;
 }
 
 /** A registered formula function. */
@@ -238,6 +240,8 @@ export interface IGridDataAccessor {
   getCellValue(col: number, row: number): unknown;
   getRowCount(): number;
   getColumnCount(): number;
+  /** Optional: whether a sheet row is hidden. SUBTOTAL 101-111 leave hidden rows out. */
+  isRowHidden?(row: number): boolean;
 }
 
 // --- Named Ranges ---

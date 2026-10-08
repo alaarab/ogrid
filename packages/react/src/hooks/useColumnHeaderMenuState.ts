@@ -16,6 +16,14 @@ export interface UseColumnHeaderMenuStateParams {
   onInsertColumn?: (columnId: string, side: 'left' | 'right') => void;
   /** Delete a column. */
   onDeleteColumn?: (columnId: string) => void;
+  /** Hide a column (`allowHiding`). Set to show "Hide column". */
+  onHideColumn?: (columnId: string) => void;
+  /** Whether a column may be hidden (not required, not the last visible one). */
+  canHideColumn?: (columnId: string) => boolean;
+  /** Hidden columns next to a column; a non-empty list shows "Unhide columns". */
+  getHiddenColumnsAround?: (columnId: string) => string[];
+  /** Show hidden columns again. */
+  onUnhideColumns?: (columnIds: string[]) => void;
 }
 
 export interface UseColumnHeaderMenuStateResult {
@@ -39,6 +47,12 @@ export interface UseColumnHeaderMenuStateResult {
   handleDeleteColumn: () => void;
   /** Whether the insert/delete column items show. */
   canEditStructure: boolean;
+  handleHideColumn: () => void;
+  handleUnhideColumns: () => void;
+  /** Whether "Hide column" shows. */
+  canHide: boolean;
+  /** Whether "Unhide columns" shows (hidden columns sit next to this one). */
+  canUnhide: boolean;
   canPinLeft: boolean;
   canPinRight: boolean;
   canUnpin: boolean;
@@ -67,6 +81,10 @@ export function useColumnHeaderMenuState(
     columns,
     onInsertColumn,
     onDeleteColumn,
+    onHideColumn,
+    canHideColumn,
+    getHiddenColumnsAround,
+    onUnhideColumns,
   } = params;
 
   const [isOpen, setIsOpen] = useState(false);
@@ -173,6 +191,22 @@ export function useColumnHeaderMenuState(
     close();
   }, [openForColumn, onDeleteColumn, close]);
 
+  const canHide = !!(openForColumn && onHideColumn && (canHideColumn?.(openForColumn) ?? true));
+  const hiddenAround = openForColumn && onUnhideColumns && getHiddenColumnsAround ? getHiddenColumnsAround(openForColumn) : [];
+  const canUnhide = hiddenAround.length > 0;
+
+  const handleHideColumn = useCallback(() => {
+    if (openForColumn && canHide) onHideColumn?.(openForColumn);
+    close();
+  }, [openForColumn, canHide, onHideColumn, close]);
+
+  const hiddenAroundKey = hiddenAround.join('\u0000');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hiddenAroundKey stands in for the hiddenAround array, which is rebuilt every render
+  const handleUnhideColumns = useCallback(() => {
+    if (hiddenAround.length > 0) onUnhideColumns?.(hiddenAround);
+    close();
+  }, [hiddenAroundKey, onUnhideColumns, close]);
+
   return {
     isOpen,
     openForColumn,
@@ -192,6 +226,10 @@ export function useColumnHeaderMenuState(
     handleInsertColumnRight,
     handleDeleteColumn,
     canEditStructure: onInsertColumn != null && onDeleteColumn != null,
+    handleHideColumn,
+    handleUnhideColumns,
+    canHide,
+    canUnhide,
     canPinLeft,
     canPinRight,
     canUnpin,
@@ -223,6 +261,10 @@ export function getColumnHeaderMenuProps(headerMenu: UseColumnHeaderMenuStateRes
     onInsertColumnRight: headerMenu.handleInsertColumnRight,
     onDeleteColumn: headerMenu.handleDeleteColumn,
     canEditStructure: headerMenu.canEditStructure,
+    onHideColumn: headerMenu.handleHideColumn,
+    onUnhideColumns: headerMenu.handleUnhideColumns,
+    canHide: headerMenu.canHide,
+    canUnhide: headerMenu.canUnhide,
     canPinLeft: headerMenu.canPinLeft,
     canPinRight: headerMenu.canPinRight,
     canUnpin: headerMenu.canUnpin,

@@ -54,6 +54,12 @@ export interface UseFormulaEngineParams<T> {
    * writing their text back into the data.
    */
   formulasFromData?: boolean;
+  /**
+   * Whether a sheet row is hidden; SUBTOTAL 101-111 leave hidden rows out.
+   * A new function recalculates every formula, so pass a stable one that
+   * changes only when the hidden rows (or `items`) do.
+   */
+  isRowHidden?: (row: number) => boolean;
 }
 
 export interface UseFormulaEngineResult {
@@ -193,12 +199,14 @@ export function useFormulaEngine<T>(
     formulaLimits,
     sheets,
     formulasFromData = false,
+    isRowHidden,
   } = params;
 
   // Refs for stable access in callbacks
   const itemsRef = useLatestRef(items);
   const flatColumnsRef = useLatestRef(flatColumns);
   const onFormulaRecalcRef = useLatestRef(onFormulaRecalc);
+  const isRowHiddenRef = useLatestRef(isRowHidden);
 
   // Lazy engine instance  -  persists across renders, created once when formulas is enabled
   const engineRef = useRef<FormulaEngine | null>(null);
@@ -224,8 +232,12 @@ export function useFormulaEngine<T>(
 
   // Create a data accessor that bridges grid data  to  formula coordinates
   const createAccessor = useCallback(
-    (): IGridDataAccessor => createGridDataAccessor(itemsRef.current, flatColumnsRef.current),
-    [itemsRef, flatColumnsRef],
+    (): IGridDataAccessor => {
+      const accessor = createGridDataAccessor(itemsRef.current, flatColumnsRef.current);
+      const hidden = isRowHiddenRef.current;
+      return hidden ? { ...accessor, isRowHidden: hidden } : accessor;
+    },
+    [itemsRef, flatColumnsRef, isRowHiddenRef],
   );
 
   const report = useCallback((result: IRecalcResult): void => {
@@ -306,15 +318,19 @@ export function useFormulaEngine<T>(
   const [pendingTick, setPendingTick] = useState(0);
   const syncedItemsRef = useRef(items);
   const syncedColumnsRef = useRef(flatColumns);
+  const syncedHiddenRef = useRef(isRowHidden);
   // Engine whose formulas were last brought in line with the data (formulasFromData).
   const dataFormulasEngineRef = useRef<FormulaEngine | null>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: pendingTick is the deliberate trigger that flushes queued notifications; engine re-runs it when formulas are switched on so formulasFromData loads the data's formulas
   useLayoutEffect(() => {
     const prevItems = syncedItemsRef.current;
     const columnsChanged = syncedColumnsRef.current !== flatColumns;
-    const dataChanged = prevItems !== items || columnsChanged;
+    // Hidden rows changing re-evaluates SUBTOTAL 101-111 like a data change.
+    const hiddenChanged = syncedHiddenRef.current !== isRowHidden;
+    const dataChanged = prevItems !== items || columnsChanged || hiddenChanged;
     syncedItemsRef.current = items;
     syncedColumnsRef.current = flatColumns;
+    syncedHiddenRef.current = isRowHidden;
     const pending = pendingCellsRef.current;
     pendingCellsRef.current = [];
     const current = engineRef.current;
@@ -337,7 +353,7 @@ export function useFormulaEngine<T>(
     } else if (pending.length > 0) {
       report(current.onCellsChanged(pending, createAccessor()));
     }
-  }, [items, flatColumns, pendingTick, createAccessor, report, formulasFromData, engine]);
+  }, [items, flatColumns, pendingTick, createAccessor, report, formulasFromData, engine, isRowHidden]);
 
   const getFormulaValue = useCallback((col: number, row: number): unknown => {
     return engineRef.current?.getValue(col, row);

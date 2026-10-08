@@ -28,6 +28,7 @@ export function useOGridChrome<T>(
   props: Pick<
     IOGridProps<T>,
     'toolbar' | 'toolbarBelow' | 'className' | 'emptyState' | 'fullScreen' | 'sheetDefs' | 'activeSheet' | 'onSheetChange' | 'onSheetAdd'
+    | 'onSheetRename' | 'onSheetReorder' | 'onSheetDelete' | 'onSheetColorChange'
   >,
   showNameBox: boolean,
   activeCellRef: string | null,
@@ -36,6 +37,7 @@ export function useOGridChrome<T>(
   nameBox?: Pick<UseOGridNameBoxResult, 'navigate' | 'returnFocus'>,
 ): UseOGridLayout {
   const { toolbar, toolbarBelow, className, emptyState, fullScreen, sheetDefs, activeSheet, onSheetChange, onSheetAdd } = props;
+  const { onSheetRename, onSheetReorder, onSheetDelete, onSheetColorChange } = props;
 
   const navigate = nameBox?.navigate;
   const returnFocus = nameBox?.returnFocus;
@@ -58,8 +60,12 @@ export function useOGridChrome<T>(
       activeSheet,
       onSheetChange,
       onSheetAdd,
+      onSheetRename,
+      onSheetReorder,
+      onSheetDelete,
+      onSheetColorChange,
     });
-  }, [sheetDefs, activeSheet, onSheetChange, onSheetAdd]);
+  }, [sheetDefs, activeSheet, onSheetChange, onSheetAdd, onSheetRename, onSheetReorder, onSheetDelete, onSheetColorChange]);
 
   return useMemo<UseOGridLayout>(() => ({
     toolbar: resolvedToolbar,

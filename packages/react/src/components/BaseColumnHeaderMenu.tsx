@@ -34,6 +34,12 @@ export interface BaseColumnHeaderMenuProps {
   onInsertColumnLeft?: () => void;
   onInsertColumnRight?: () => void;
   onDeleteColumn?: () => void;
+  /** Show "Hide column" (`allowHiding`). */
+  canHide?: boolean;
+  /** Show "Unhide columns" (hidden columns sit next to this one). */
+  canUnhide?: boolean;
+  onHideColumn?: () => void;
+  onUnhideColumns?: () => void;
   classNames?: ColumnHeaderMenuClassNames;
   /** Column name, used for the menu's accessible name. */
   columnName?: string;
@@ -69,6 +75,10 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     onInsertColumnLeft,
     onInsertColumnRight,
     onDeleteColumn,
+    canHide = false,
+    canUnhide = false,
+    onHideColumn,
+    onUnhideColumns,
     classNames,
     columnName,
     getPortalTarget,
@@ -155,8 +165,10 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       isSortable,
       isResizable,
       canEditStructure,
+      canHide,
+      canUnhide,
     }),
-    [canPinLeft, canPinRight, canUnpin, currentSort, isSortable, isResizable, canEditStructure]
+    [canPinLeft, canPinRight, canUnpin, currentSort, isSortable, isResizable, canEditStructure, canHide, canUnhide]
   );
 
   const items = React.useMemo(() => getColumnHeaderMenuItems(menuInput), [menuInput]);
@@ -174,8 +186,10 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       insertColumnLeft: onInsertColumnLeft,
       insertColumnRight: onInsertColumnRight,
       deleteColumn: onDeleteColumn,
+      hideColumn: onHideColumn,
+      unhideColumns: onUnhideColumns,
     }),
-    [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAutosizeThis, onAutosizeAll, onInsertColumnLeft, onInsertColumnRight, onDeleteColumn]
+    [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAutosizeThis, onAutosizeAll, onInsertColumnLeft, onInsertColumnRight, onDeleteColumn, onHideColumn, onUnhideColumns]
   );
 
   const getRestoreTarget = React.useCallback(() => anchorElement, [anchorElement]);

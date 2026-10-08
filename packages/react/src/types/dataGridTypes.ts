@@ -1,7 +1,7 @@
 import type { FilterOption } from '@alaarab/ogrid-core';
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
-import type { IFormulaFunction, IFormulaLimits, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap, ISheetReferenceRange } from '@alaarab/ogrid-core';
+import type { IFormulaFunction, IFormulaLimits, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap, ISheetReferenceRange, IHiddenGaps } from '@alaarab/ogrid-core';
 
 // Re-export all shared types and functions from core (no React-specific changes)
 export type {
@@ -92,6 +92,23 @@ export interface IGridStructureActions<T> {
   insertColumnsNear: (columnId: string, side: 'left' | 'right', count: number) => void;
   /** Delete these columns (one undo step). */
   deleteColumns: (columnIds: string[]) => void;
+}
+
+/**
+ * Hide/unhide actions the table's menus and gap markers call (OGrid builds
+ * these when `allowHiding` is on).
+ */
+export interface IGridHidingActions {
+  /** Hide these columns (at least one column always stays visible). */
+  hideColumns: (columnIds: string[]) => void;
+  /** Show these columns again. */
+  unhideColumns: (columnIds: string[]) => void;
+  /** Hide these rows. Absent when rows can't be hidden (a windowed data source). */
+  hideRows?: (rowIds: RowId[]) => void;
+  /** Show these rows again. */
+  unhideRows?: (rowIds: RowId[]) => void;
+  /** Hidden rows around the displayed rows, keyed by the displayed row's id. */
+  hiddenRowGaps?: IHiddenGaps<RowId>;
 }
 
 /** @internal The grid's edit path and undo history, handed to OGrid's imperative API. */
@@ -307,6 +324,28 @@ interface IOGridBaseProps<T> {
   /** Called when the user finishes resizing a row. */
   onRowResized?: (rowId: RowId, height: number) => void;
 
+  /**
+   * Spreadsheet-style hiding from the UI: "Hide column" / "Unhide columns" in
+   * the column header menu, "Hide row(s)" / "Unhide rows" (and "Hide columns"
+   * for a whole-column or multi-column selection) in the cell context menu,
+   * and a double-line marker where hidden columns or rows sit (click it to
+   * unhide them). Hidden columns are the columns missing from `visibleColumns`;
+   * hidden rows are `hiddenRowIds`. Default: false.
+   */
+  allowHiding?: boolean;
+  /**
+   * Hidden rows by id (controlled). Hidden rows are left out of the display,
+   * keyboard navigation, copy, status-bar aggregations, row counts and paging,
+   * and SUBTOTAL 101-111. They are hidden whether or not `allowHiding` is on.
+   * Server-side, rows are hidden within each loaded page (the source's total
+   * count is shown as-is); a windowed data source can't hide rows.
+   */
+  hiddenRowIds?: RowId[];
+  /** Initially hidden rows when `hiddenRowIds` is not controlled. */
+  defaultHiddenRowIds?: RowId[];
+  /** Called when the user hides or unhides rows, with the complete new list. */
+  onHiddenRowIdsChange?: (rowIds: RowId[]) => void;
+
   /** Sheet definitions for bottom tab bar. When set, renders Excel-style sheet tabs. */
   sheetDefs?: ISheetDef[];
   /** Currently active sheet id. */
@@ -315,6 +354,14 @@ interface IOGridBaseProps<T> {
   onSheetChange?: (sheetId: string) => void;
   /** Called when the user clicks the add-sheet button. */
   onSheetAdd?: () => void;
+  /** Rename a sheet: double-click its tab (or F2, or "Rename" in the tab menu) to edit the name inline. */
+  onSheetRename?: (sheetId: string, name: string) => void;
+  /** Reorder sheets by dragging tabs (or "Move left/right" in the tab menu). Receives every sheet id in the new order. */
+  onSheetReorder?: (sheetIds: string[]) => void;
+  /** Delete a sheet from the tab menu (right-click a tab, or Shift+F10). Not offered for the last sheet. */
+  onSheetDelete?: (sheetId: string) => void;
+  /** Set or clear (`undefined`) a sheet's tab color from the tab menu. */
+  onSheetColorChange?: (sheetId: string, color: string | undefined) => void;
 
   'aria-label'?: string;
   'aria-labelledby'?: string;
@@ -491,6 +538,8 @@ export interface IOGridDataGridProps<T> {
   onRowResized?: (rowId: RowId, height: number) => void;
   /** Structure-edit actions for the context and column header menus. Omit to hide those menu items. */
   structureActions?: IGridStructureActions<T>;
+  /** Hide/unhide actions for the menus and hidden-gap markers. Omit to hide those menu items and markers. */
+  hidingActions?: IGridHidingActions;
   /** @internal Filled by the grid with its edit path and undo history (OGrid's cell API uses it). */
   gridEditBridgeRef?: React.MutableRefObject<IGridEditBridge<T> | null>;
   /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */

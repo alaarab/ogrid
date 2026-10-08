@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
 import { getDataGridStatusBarConfig, computeAggregations, getCellValue, parseValue, resolveMergedCells } from '../utils';
-import type { IMergeLayout } from '../utils';
+import type { IMergeLayout, IHiddenGaps } from '../utils';
 import { isColumnEditable, computeRangeCycleStep, isCoveredCell, isSingleMergeRange } from '@alaarab/ogrid-core';
 import type { ICellEditCommitOptions } from '@alaarab/ogrid-core';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
@@ -49,6 +49,8 @@ export interface DataGridLayoutState<T> {
   containerWidth: number;
   minTableWidth: number;
   desiredTableWidth: number;
+  /** Where hidden columns sit among the visible ones (`allowHiding`; null when none or off). */
+  hiddenColumnGaps: IHiddenGaps<string> | null;
   columnSizingOverrides: Record<string, { widthPx: number }>;
   setColumnSizingOverrides: React.Dispatch<
     React.SetStateAction<Record<string, { widthPx: number }>>
@@ -200,6 +202,10 @@ export interface DataGridPinningState {
     handleInsertColumnRight: () => void;
     handleDeleteColumn: () => void;
     canEditStructure: boolean;
+    handleHideColumn: () => void;
+    handleUnhideColumns: () => void;
+    canHide: boolean;
+    canUnhide: boolean;
     canPinLeft: boolean;
     canPinRight: boolean;
     canUnpin: boolean;
@@ -297,10 +303,25 @@ export function useDataGridState<T>(
     [canEditColumnStructure, structureActionsRef]
   );
 
+  // --- Hide/unhide columns from the header menu (allowHiding) ---
+  const { hidingActions } = props;
+  const hidingActionsRef = useLatestRef(hidingActions);
+  const hidingOn = hidingActions != null;
+  const onHideColumns = useMemo(
+    () => hidingOn ? (columnIds: string[]) => hidingActionsRef.current?.hideColumns(columnIds) : undefined,
+    [hidingOn, hidingActionsRef]
+  );
+  const onUnhideColumns = useMemo(
+    () => hidingOn ? (columnIds: string[]) => hidingActionsRef.current?.unhideColumns(columnIds) : undefined,
+    [hidingOn, hidingActionsRef]
+  );
+
   // --- 1. Layout, pinning, header menu ---
   const layoutResult = useDataGridLayout<T>({
     onInsertColumn,
     onDeleteColumn,
+    onHideColumns,
+    onUnhideColumns,
     columns,
     items,
     getRowId,

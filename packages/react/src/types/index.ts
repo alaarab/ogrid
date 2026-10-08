@@ -52,6 +52,7 @@ export type {
   IRowsChangeEvent,
   IColumnsChangeEvent,
   IGridStructureActions,
+  IGridHidingActions,
   IGridEditBridge,
   IGridCellNavigator,
 } from './dataGridTypes';

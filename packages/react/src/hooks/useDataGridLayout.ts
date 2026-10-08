@@ -1,6 +1,6 @@
 import { useMemo, useState, useLayoutEffect, useCallback } from 'react';
 import type { RefObject } from 'react';
-import { flattenColumns } from '../utils';
+import { flattenColumns, computeHiddenGaps, hiddenKeysAround } from '../utils';
 import type { RowId, IColumnDef } from '../types';
 import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, resolveResponsiveConfig, applyResponsiveHiding } from '@alaarab/ogrid-core';
 import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
@@ -31,6 +31,27 @@ export interface UseDataGridLayoutParams<T> {
   /** Column structure edits for the header menu (omit to hide those items). */
   onInsertColumn?: (columnId: string, side: 'left' | 'right') => void;
   onDeleteColumn?: (columnId: string) => void;
+  /** Hide/unhide columns from the header menu (omit to hide those items and the gap markers). */
+  onHideColumns?: (columnIds: string[]) => void;
+  onUnhideColumns?: (columnIds: string[]) => void;
+}
+
+/** Columns in display order: `columnOrder` first, then the rest in definition order. */
+function orderColumns<C extends { columnId: string }>(cols: C[], columnOrder: string[] | undefined): C[] {
+  if (!columnOrder?.length) return cols;
+  const orderMap = new Map<string, number>();
+  for (let i = 0; i < columnOrder.length; i++) {
+    const id = columnOrder[i];
+    if (id !== undefined) orderMap.set(id, i);
+  }
+  return [...cols].sort((a, b) => {
+    const ia = orderMap.get(a.columnId) ?? -1;
+    const ib = orderMap.get(b.columnId) ?? -1;
+    if (ia === -1 && ib === -1) return 0;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
 }
 
 export interface UseDataGridLayoutResult<T> {
@@ -103,21 +124,32 @@ export function useDataGridLayout<T>(
     const filtered = visibleColumns
       ? flatColumns.filter((c) => visibleColumns.has(c.columnId))
       : flatColumns;
-    if (!columnOrder?.length) return filtered;
-    const orderMap = new Map<string, number>();
-    for (let i = 0; i < columnOrder.length; i++) {
-      const id = columnOrder[i];
-      if (id !== undefined) orderMap.set(id, i);
-    }
-    return [...filtered].sort((a, b) => {
-      const ia = orderMap.get(a.columnId) ?? -1;
-      const ib = orderMap.get(b.columnId) ?? -1;
-      if (ia === -1 && ib === -1) return 0;
-      if (ia === -1) return 1;
-      if (ib === -1) return -1;
-      return ia - ib;
-    });
+    return orderColumns(filtered, columnOrder);
   }, [flatColumns, visibleColumns, columnOrder]);
+
+  // Where user-hidden columns sit among the visible ones (allowHiding): gap
+  // markers in the header and "Unhide columns" read this.
+  const { onHideColumns, onUnhideColumns } = params;
+  const hidingColumns = onUnhideColumns != null;
+  const hiddenColumnGaps = useMemo(() => {
+    if (!hidingColumns || !visibleColumns) return null;
+    const ordered = orderColumns(flatColumns, columnOrder).map((c) => c.columnId);
+    const gaps = computeHiddenGaps(ordered, (id) => !visibleColumns.has(id));
+    return gaps.before.size > 0 || gaps.after.length > 0 ? gaps : null;
+  }, [hidingColumns, flatColumns, visibleColumns, columnOrder]);
+  const userVisibleIds = useMemo(() => userVisibleCols.map((c) => c.columnId), [userVisibleCols]);
+  const getHiddenColumnsAround = useCallback(
+    (columnId: string) => (hiddenColumnGaps ? hiddenKeysAround(hiddenColumnGaps, userVisibleIds, columnId) : []),
+    [hiddenColumnGaps, userVisibleIds]
+  );
+  const onHideColumn = useMemo(
+    () => onHideColumns ? (columnId: string) => onHideColumns([columnId]) : undefined,
+    [onHideColumns]
+  );
+  const canHideColumn = useCallback(
+    (columnId: string) => userVisibleCols.length > 1 && flatColumns.find((c) => c.columnId === columnId)?.required !== true,
+    [userVisibleCols.length, flatColumns]
+  );
 
   const hasCheckboxCol = rowSelection === 'multiple';
   const hasRowNumbersCol = !!showRowNumbers;
@@ -275,6 +307,10 @@ export function useDataGridLayout<T>(
     columns: flatColumns,
     onInsertColumn: params.onInsertColumn,
     onDeleteColumn: params.onDeleteColumn,
+    onHideColumn,
+    canHideColumn,
+    getHiddenColumnsAround: hidingColumns ? getHiddenColumnsAround : undefined,
+    onUnhideColumns,
   });
 
   // Memoize layout sub-object
@@ -282,12 +318,12 @@ export function useDataGridLayout<T>(
     flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
     hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
     desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
-    measuredColumnWidths,
+    measuredColumnWidths, hiddenColumnGaps,
   }), [
     flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
     hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
     desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
-    measuredColumnWidths,
+    measuredColumnWidths, hiddenColumnGaps,
   ]);
 
   // Memoize pinning sub-object

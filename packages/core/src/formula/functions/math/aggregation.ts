@@ -27,6 +27,21 @@ function withoutSubtotalCells(context: IFormulaContext): IFormulaContext {
   };
 }
 
+/** A context whose reads treat cells in hidden rows as blank (SUBTOTAL 101-111). */
+function withoutHiddenRows(context: IFormulaContext): IFormulaContext {
+  const isRowHidden = context.isRowHidden?.bind(context);
+  if (!isRowHidden) return context;
+  return {
+    ...context,
+    getCellValue: address => isRowHidden(address.row, address.sheet) ? null : context.getCellValue(address),
+    getRangeValues: range => {
+      const data = context.getRangeValues(range);
+      const top = Math.min(range.start.row, range.end.row);
+      return data.map((row, r) => isRowHidden(top + r, range.start.sheet) ? row.map(() => null) : row);
+    },
+  };
+}
+
 /**
  * Aggregation and ranking over value lists/ranges: SUM, AVERAGE, MIN, MAX,
  * COUNT, COUNTA, PRODUCT, SUMPRODUCT, SUMSQ, SUBTOTAL, MEDIAN, LARGE, SMALL, RANK.
@@ -312,8 +327,8 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
   // SUBTOTAL(function_num, ref1, ...): 1-11 and 101-111 map to AVERAGE, COUNT,
   // COUNTA, MAX, MIN, PRODUCT, STDEV, STDEVP, SUM, VAR, VARP. Cells holding
   // their own SUBTOTAL formula are skipped so nested subtotals don't double
-  // count. The engine has no row-visibility information, so 101-111 (Excel's
-  // "ignore hidden rows" variants) behave like 1-11.
+  // count. 101-111 also skip rows the data accessor reports hidden
+  // (`isRowHidden`); without that information they behave like 1-11.
   registry.set('SUBTOTAL', {
     minArgs: 2,
     maxArgs: -1,
@@ -331,7 +346,8 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
         const isReference = ref.kind === 'range' || ref.kind === 'cellRef' || ref.kind === 'functionCall' && (ref.name === 'OFFSET' || ref.name === 'INDIRECT');
         if (!isReference) return new FormulaError('#VALUE!', 'SUBTOTAL arguments must be references');
       }
-      return fn.evaluate(refs, withoutSubtotalCells(context), evaluator);
+      const visible = n >= 101 ? withoutHiddenRows(context) : context;
+      return fn.evaluate(refs, withoutSubtotalCells(visible), evaluator);
     },
   });
 
