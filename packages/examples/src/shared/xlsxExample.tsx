@@ -4,7 +4,7 @@
 
 import React from 'react';
 import ExcelJS from 'exceljs';
-import { XlsxWorkbookGrid } from '@alaarab/ogrid-react-xlsx';
+import { XlsxWorkbookGrid, xlsxBlobFromWorkbook } from '@alaarab/ogrid-react-xlsx';
 
 function buildDemoWorkbook(): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();
@@ -27,6 +27,9 @@ function buildDemoWorkbook(): ExcelJS.Workbook {
 
 export function XlsxExample() {
   const workbook = React.useMemo(buildDemoWorkbook, []);
+  const streaming = new URLSearchParams(window.location.search).has('streaming');
+  const [blob, setBlob] = React.useState<Blob | null>(null);
+  React.useEffect(() => { if (streaming) void xlsxBlobFromWorkbook(workbook).then(setBlob); }, [streaming, workbook]);
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }} data-testid="xlsx-example">
       <h1>OGrid - XLSX Example</h1>
@@ -34,7 +37,7 @@ export function XlsxExample() {
         A two-sheet workbook rendered with <code>XlsxWorkbookGrid</code> from{' '}
         <code>@alaarab/ogrid-react-xlsx</code>.
       </p>
-      <XlsxWorkbookGrid workbook={workbook} height={560} />
+      {streaming ? blob && <XlsxWorkbookGrid blob={blob} streaming editable height={560} /> : <XlsxWorkbookGrid workbook={workbook} editable height={560} />}
     </div>
   );
 }

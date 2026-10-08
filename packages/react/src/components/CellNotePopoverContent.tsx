@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { usePortalTheme } from '../hooks/usePortalTheme';
 import type { UseCellNotesResult } from '../hooks/useCellNotes';
 import type { CellNotePopoverRenderProps, DataGridPrimitives, DataGridStyles } from './BaseDataGridTable.types';
+import type { ValidationInputMessageProps } from './ValidationInputMessage';
 
 export interface CellNotePopoverProps {
   notes: UseCellNotesResult<unknown>;
@@ -23,6 +24,27 @@ function FallbackNotePopover({ anchorEl, content }: CellNotePopoverRenderProps):
     </div>,
     document.body
   );
+}
+
+const ignoreDismiss = () => {};
+
+/** Validation prompts share the kits' collision-aware note portal. They sit
+ * beside the cell, outside table paint and scroll containment.
+ */
+export function ValidationInputMessage({ message, styles, primitives }: ValidationInputMessageProps): React.ReactElement {
+  const marker = React.useRef<HTMLSpanElement>(null);
+  const [anchor, setAnchor] = React.useState<HTMLElement | null>(null);
+  const theme = usePortalTheme(marker, true);
+  React.useLayoutEffect(() => { setAnchor(marker.current?.closest('td') ?? null); }, []);
+  const content = <div role="tooltip" className={styles.cellNote} style={{ ...theme, textAlign: 'left', pointerEvents: 'none' }}>
+    {message.title && <div className={styles.cellNoteAuthor}>{message.title}</div>}
+    <div className={styles.cellNoteText}>{message.text}</div>
+  </div>;
+  const render = primitives.renderCellNotePopover ?? FallbackNotePopover;
+  return <>
+    <span ref={marker} hidden />
+    {anchor && render({ open: true, anchorEl: anchor, mode: 'view', content, onDismiss: ignoreDismiss, onEscape: ignoreDismiss })}
+  </>;
 }
 
 function NoteEditor({

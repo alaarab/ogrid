@@ -14,6 +14,7 @@
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
     },
+    "./index.css": "./dist/esm/index.css",
     "./styles/*": "./dist/esm/*"
   },
   "scripts": {

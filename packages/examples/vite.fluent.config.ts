@@ -14,6 +14,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./src/fluent/index.html', import.meta.url)),
         filterOptions: fileURLToPath(new URL('./src/fluent/filter-options.html', import.meta.url)),
+        lazyUi: fileURLToPath(new URL('./src/fluent/lazy-ui.html', import.meta.url)),
       },
     },
   },

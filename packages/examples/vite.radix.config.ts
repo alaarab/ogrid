@@ -14,6 +14,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./src/radix/index.html', import.meta.url)),
         filterOptions: fileURLToPath(new URL('./src/radix/filter-options.html', import.meta.url)),
+        lazyUi: fileURLToPath(new URL('./src/radix/lazy-ui.html', import.meta.url)),
       },
     },
   },

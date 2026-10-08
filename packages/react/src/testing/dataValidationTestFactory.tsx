@@ -232,11 +232,13 @@ export function createDataValidationTests(OGrid: React.ComponentType<IOGridProps
       act(() => g.api().setCellValue('r1', 'status', 2));
       expect(g.api().getCellValue('r1', 'status')).toBe(2);
     });
-    it('input message follows the active cell and is absent outside its range', () => {
+    it('input message follows the active cell and is absent outside its range', async () => {
       const g = setup({ dataValidations: [{ ...whole, rows: { start: 0, end: 0 }, inputMessage: { title: 'Order quantity', text: 'Enter a whole number from 1 to 10.' } }] });
-      g.select('r0'); expect(screen.getByRole('tooltip')).toHaveTextContent('Order quantity');
-      expect(screen.getByRole('tooltip')).toHaveTextContent('Enter a whole number');
-      g.select('r1'); expect(screen.queryByRole('tooltip')).toBeNull();
+      g.select('r0');
+      const message = await screen.findByRole('tooltip');
+      expect(message).toHaveTextContent('Order quantity');
+      expect(message).toHaveTextContent('Enter a whole number');
+      g.select('r1'); await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     });
     it('circle invalid data highlights existing invalid values and updates after correction', () => {
       const g = setup({ circleInvalidData: true });

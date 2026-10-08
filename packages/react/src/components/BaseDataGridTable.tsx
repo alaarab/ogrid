@@ -599,12 +599,13 @@ export function BaseDataGridTableContent<T>(
       {ValidationDialog && (validationEditor || o.validation.alert) && (
         <React.Suspense fallback={createPortal(
           <dialog aria-label="Data validation" aria-busy ref={el => { if (el && !el.open) el.showModal(); }} onCancel={e => { e.preventDefault(); closeValidation(); }}
-            style={{ background: 'var(--ogrid-bg)', color: 'var(--ogrid-fg)', ...contextMenuTheme }}>
+            className={styles.cellNote} style={contextMenuTheme}>
             Loading…{' '}
-            <button type="button" onClick={closeValidation}>Cancel</button>
+            <button type="button" className={styles.cellNoteButton} onClick={closeValidation}>Cancel</button>
           </dialog>, document.body,
         )}>
           <ValidationDialog
+            theme={contextMenuTheme}
             rule={validationEditor?.rule}
             formulaOffset={validationEditor?.formulaOffset}
             alert={o.validation.alert as import('@alaarab/ogrid-core').IDataValidationFailure | null}
