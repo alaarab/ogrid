@@ -31,7 +31,7 @@ const sheets = [
 
 export default function MultiSheetDemo() {
   return (
-    <LiveDemo height={360} title="Switch sheets with the tab bar along the bottom">
+    <LiveDemo height={338} title="Switch sheets with the tab bar along the bottom">
       {() => {
         const { OGrid } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
         const columns = [

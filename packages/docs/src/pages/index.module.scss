@@ -1424,9 +1424,8 @@
   color: #162019;
 }
 
-/* Light mode: keep readable */
-:global(:root) .ctaTitle {
-  color: #162019;
+[data-theme='dark'] .ctaTitle {
+  color: #f2f5f3;
 }
 
 .ctaSub {
@@ -1496,6 +1495,52 @@
 [data-theme='dark'] .ctaFrameworkCardActive {
   border-color: rgba(58, 184, 118, 0.5);
   background: rgba(58, 184, 118, 0.1);
+}
+
+[data-theme='dark'] .ctaFrameworkName {
+  color: #f2f5f3;
+}
+
+[data-theme='dark'] .ctaFrameworkDetail {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+[data-theme='dark'] .ctaUiKitBtn {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+[data-theme='dark'] .ctaUiKitBtnActive {
+  color: #a3e4c1;
+  background: rgba(58, 184, 118, 0.12);
+  border-color: rgba(58, 184, 118, 0.4);
+}
+
+[data-theme='dark'] .ctaActions .btnGhost {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.16);
+
+  &:hover {
+    color: #fff;
+    border-color: rgba(58, 184, 118, 0.5);
+    background: rgba(58, 184, 118, 0.08);
+  }
+}
+
+[data-theme='dark'] .ctaInstallPulse {
+  .heroInstall {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .heroInstallText {
+    color: rgba(255, 255, 255, 0.88);
+  }
 }
 
 .ctaUiKitPicker {
