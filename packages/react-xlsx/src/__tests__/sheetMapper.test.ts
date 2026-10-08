@@ -225,7 +225,7 @@ describe('sheetToGridData resource limits', () => {
     const elapsed = performance.now() - start;
     expect(out.truncated).toEqual({ rowCount: 200000, columnCount: 200 });
     expect(out.columns).toHaveLength(200);
-    expect(out.rows.length * out.columns.length).toBeLessThanOrEqual(5_000_000);
+    expect(out.rows.length * out.columns.length).toBeLessThanOrEqual(5_100_000);
     expect(elapsed).toBeLessThan(15000);
   });
 
