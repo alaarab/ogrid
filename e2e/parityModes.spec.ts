@@ -17,7 +17,8 @@ import {
 } from './helpers';
 
 async function startFormulaBarEdit(page: Page) {
-  const input = page.getByRole('textbox', { name: /formula input/i }).first();
+  // Editing turns the input into a combobox (formula autocomplete), so match by label, not role.
+  const input = page.getByLabel(/formula input/i).first();
   await input.click();
   await expect.poll(async () =>
     input.evaluate((el) => !(el as HTMLInputElement).readOnly)
