@@ -10,6 +10,8 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- The XLSX formatting toolbar fits a 790px container in one row. Compact font controls and tighter group spacing preserve button sizes; borders and merge/unmerge move into a keyboard-accessible More menu below 900px.
+
 - Column filter popovers stay within a 12px viewport margin while opening on small screens. Radix reserves space for entrance motion; Fluent caps the surface to available space and scrolls overflowing filter content.
 
 - Mouse-opened cell, column and sheet menus use a subtle active-item highlight while keyboard navigation retains a visible focus ring. Condition filters place each operator beside its value with And/Or between the two rows, hiding the second value for `(none)`. The validation docs snippet matches the demo's 1–10 quantity rule and messages.

@@ -33,8 +33,23 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
   const [live, setLive] = useState<XlsxSelection | null>(getSelection);
   const captured = useRef<XlsxSelection | null>(live);
   const [menu, setMenu] = useState<Menu | null>(null);
+  const [compact, setCompact] = useState(false);
   const [exporting, setExporting] = useState(false);
   const palette = useMemo(() => themePaletteOf(doc.workbook), [doc]);
+
+  // Respond to the host's width, including a sidebar or a resized demo.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const resize = () => {
+      const width = root.getBoundingClientRect().width;
+      if (width > 0) setCompact(width < 900);
+    };
+    resize();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize);
+    observer?.observe(root);
+    return () => observer?.disconnect();
+  }, []);
 
   const capture = () => {
     const sel = getSelection();
@@ -126,6 +141,13 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
     onOpenChange: (open: boolean) => setMenu(open ? id : null),
     disabled: noSelection,
   });
+  const borders = <BorderMenu {...menuProps('borders')} onPick={applyBorder} />;
+  const merges = (
+    <div className="ogrid-xtb-group">
+      {iconButton('Merge cells', <MergeIcon />, () => { const s = selection(); if (s) doc.mergeCells(sheetName, s); }, { disabled: noSelection })}
+      {iconButton('Unmerge cells', <UnmergeIcon />, () => { const s = selection(); if (s) doc.unmergeCells(sheetName, s); }, { disabled: noSelection })}
+    </div>
+  );
 
   return (
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: arrow keys move between controls (ARIA toolbar pattern)
@@ -190,8 +212,7 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
         {align('right', 'Align right', <AlignIcon lines={[[3, 21], [9, 21], [7, 21]]} />)}
       </div>
       <span className="ogrid-xtb-sep" aria-hidden />
-      <BorderMenu {...menuProps('borders')} onPick={applyBorder} />
-      <span className="ogrid-xtb-sep" aria-hidden />
+      {!compact && <>{borders}<span className="ogrid-xtb-sep" aria-hidden /></>}
       <NumberFormatMenu
         {...menuProps('numFmt')}
         current={preset?.id}
@@ -199,10 +220,9 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
         onPick={(value) => style({ kind: 'numFmt', value })}
       />
       <span className="ogrid-xtb-sep" aria-hidden />
-      <div className="ogrid-xtb-group">
-        {iconButton('Merge cells', <MergeIcon />, () => { const s = selection(); if (s) doc.mergeCells(sheetName, s); }, { disabled: noSelection })}
-        {iconButton('Unmerge cells', <UnmergeIcon />, () => { const s = selection(); if (s) doc.unmergeCells(sheetName, s); }, { disabled: noSelection })}
-      </div>
+      {compact ? (
+        <MoreMenu disabled={noSelection} onOpen={() => setMenu(null)}>{borders}{merges}</MoreMenu>
+      ) : merges}
       {exportFileName && (
         <>
           <span className="ogrid-xtb-spacer" />
@@ -237,7 +257,7 @@ interface MenuBaseProps {
 }
 
 /** Trigger + anchored popover. Closes on outside pointer, Escape, or a pick. */
-function useMenu({ open, onOpenChange }: MenuBaseProps) {
+function useMenu({ open, onOpenChange }: MenuBaseProps, selector = '[data-xtb-nav]') {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
@@ -253,6 +273,8 @@ function useMenu({ open, onOpenChange }: MenuBaseProps) {
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      // A nested picker owns its Escape; leave the More surface open.
+      if (document.activeElement?.closest('.ogrid-xtb-pop') !== popRef.current && popRef.current?.contains(document.activeElement)) return;
       e.stopPropagation();
       e.preventDefault();
       close();
@@ -261,14 +283,14 @@ function useMenu({ open, onOpenChange }: MenuBaseProps) {
     document.addEventListener('pointerdown', onPointer, true);
     document.addEventListener('keydown', onKey, true);
     if (focusInside.current) {
-      const items = navItems(popRef.current);
+      const items = navItems(popRef.current, selector);
       (items.find((el) => el.getAttribute('aria-pressed') === 'true' || el.getAttribute('aria-checked') === 'true') ?? items[0])?.focus();
     }
     return () => {
       document.removeEventListener('pointerdown', onPointer, true);
       document.removeEventListener('keydown', onKey, true);
     };
-  }, [open]);
+  }, [open, selector]);
 
   const trigger = {
     ref: triggerRef,
@@ -301,10 +323,24 @@ function useMenu({ open, onOpenChange }: MenuBaseProps) {
         onOpenChange(false);
         return;
       }
-      if (moveFocus(popRef.current, e.key, true)) e.preventDefault();
+      if (moveFocus(popRef.current, e.key, true, selector)) e.preventDefault();
     },
   };
   return { anchorRef, trigger, popover, pick };
+}
+
+/** Keep secondary controls at their normal size in a keyboard-accessible surface. */
+function MoreMenu({ children, disabled, onOpen }: { children: React.ReactNode; disabled: boolean; onOpen: () => void }) {
+  const [open, setOpen] = useState(false);
+  const { anchorRef, trigger, popover } = useMenu({ open, onOpenChange: (next) => { if (next) onOpen(); setOpen(next); } }, '[data-xtb-item]');
+  return (
+    <span className="ogrid-xtb-anchor" ref={anchorRef}>
+      <button type="button" className="ogrid-xtb-btn" aria-label="More" title="More formatting options" aria-haspopup="dialog" data-xtb-item="" disabled={disabled} {...trigger}>
+        More<ChevronIcon />
+      </button>
+      {open && <div role="dialog" aria-label="More formatting options" className="ogrid-xtb-pop ogrid-xtb-more" {...popover}>{children}</div>}
+    </span>
+  );
 }
 
 /** Office theme colors, a light tint row, and Excel's standard colors. */
