@@ -25,7 +25,7 @@ Cells show the workbook's styles and number formats, and column widths come from
 // later: const blob = await docRef.current.toBlob();
 ```
 
-`editable` turns on value/formula editing and a formatting toolbar (bold, italic, underline, colors, alignment, number format, merge/unmerge) with undo. Export keeps every sheet and writes back only what changed, so styles, validations, frozen panes, merges, hyperlinks and the rest of the file survive. The docs page lists exactly what round-trips.
+`editable` turns on value/formula editing and a formatting toolbar (bold, italic, underline, strikethrough, colors, alignment, number format, merge/unmerge) with undo. Export keeps every sheet and writes back only what changed, so styles, validations, frozen panes, merges, hyperlinks and the rest of the file survive. The docs page lists exactly what round-trips.
 
 Other entry points:
 

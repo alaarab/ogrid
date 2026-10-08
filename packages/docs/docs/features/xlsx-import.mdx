@@ -99,7 +99,7 @@ function Editor({ file }: { file: Blob }) {
 }
 ```
 
-With `editable`, cells take values and formulas (`=SUM(B1:B3)`; typed numbers become numbers, as in Excel). The toolbar applies to the selected range: bold, italic, underline, fill color, font color, left/center/right alignment, a number format menu (General, Number, Currency, Percent, Date), and merge/unmerge. Edits and formatting share one undo history per sheet (Ctrl+Z / Ctrl+Y or the toolbar buttons); edits made in one go, like a paste, undo as one step. Switching sheet tabs keeps each sheet's edits.
+With `editable`, cells take values and formulas (`=SUM(B1:B3)`; typed numbers become numbers, as in Excel). The toolbar applies to the selected range: bold, italic, underline, strikethrough, fill color, font color, left/center/right alignment, a number format menu (General, Number, Currency, Percent, Date), and merge/unmerge. Edits and formatting share one undo history per sheet (Ctrl+Z / Ctrl+Y or the toolbar buttons); edits made in one go, like a paste, undo as one step. Switching sheet tabs keeps each sheet's edits.
 
 `XlsxWorkbookDocument` is the editable model behind the grid. Build one yourself (`new XlsxWorkbookDocument(workbook, { headerRow })`) to drive edits from code: `setCellValues`, `applyStyle`, `mergeCells`, `unmergeCells`, `undo`, `redo`, then `toWorkbook()` / `toBlob()` / `download()`.
 
