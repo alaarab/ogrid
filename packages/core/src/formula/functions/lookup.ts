@@ -1,9 +1,126 @@
-import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
+import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode, ICellAddress } from '../types';
 import { FormulaError } from '../types';
 import { wildcard } from '../wildcard';
-import { toNumber, compareValues } from '../evaluator';
+import { toNumber, compareValues, evalArg } from '../evaluator';
+
+/** A reference argument's bounds, or undefined when the argument isn't a reference. */
+function referenceBounds(arg: ASTNode | undefined): { start: ICellAddress; end: ICellAddress; rows: number; cols: number } | undefined {
+  if (arg?.kind === 'cellRef') return { start: arg.address, end: arg.address, rows: 1, cols: 1 };
+  if (arg?.kind !== 'range') return undefined;
+  const start = { ...arg.start, row: Math.min(arg.start.row, arg.end.row), col: Math.min(arg.start.col, arg.end.col) };
+  const end = { ...arg.end, row: Math.max(arg.start.row, arg.end.row), col: Math.max(arg.start.col, arg.end.col) };
+  return { start, end, rows: end.row - start.row + 1, cols: end.col - start.col + 1 };
+}
+
+/** Lookup comparisons: dates as serials, blanks as unmatched, and type-ranked like Excel. */
+function lookupKey(value: unknown): unknown {
+  if (value instanceof Date) return toNumber(value);
+  return value;
+}
+
+function sameKind(a: unknown, b: unknown): boolean {
+  return a !== null && a !== undefined && typeof a === typeof b;
+}
 
 export function registerLookupFunctions(registry: Map<string, IFormulaFunction>): void {
+  // LOOKUP(lookup_value, lookup_vector, [result_vector]) and the array form
+  // LOOKUP(lookup_value, array). Approximate match: the last value of the same
+  // type that is <= lookup_value (data is expected to be sorted ascending), so
+  // LOOKUP(9.99E+307, A:A) finds the last number as in Excel. With a 2D array
+  // and no result_vector, a wider-than-tall array searches its first row and
+  // returns from the last row; otherwise the first column and the last column.
+  registry.set('LOOKUP', {
+    minArgs: 2,
+    maxArgs: 3,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const rawLookup = evalArg(evaluator, args[0], context);
+      if (rawLookup instanceof FormulaError) return rawLookup;
+      const lookupValue = lookupKey(rawLookup ?? 0);
+      if (lookupValue instanceof FormulaError) return lookupValue;
+      const source = referenceBounds(args[1]);
+      if (!source) return new FormulaError('#VALUE!', 'LOOKUP lookup_vector must be a reference');
+      const resultRef = args.length >= 3 ? referenceBounds(args[2]) : undefined;
+      if (args.length >= 3 && !resultRef) return new FormulaError('#VALUE!', 'LOOKUP result_vector must be a reference');
+      if (resultRef && resultRef.rows > 1 && resultRef.cols > 1) return new FormulaError('#N/A', 'LOOKUP result_vector must be one row or column');
+
+      const horizontal = source.cols > source.rows;
+      const length = horizontal ? source.cols : source.rows;
+      const data = context.getRangeValues({ start: source.start, end: source.end });
+      let found = -1;
+      for (let i = 0; i < length; i++) {
+        const cell = lookupKey(horizontal ? data[0]?.[i] : data[i]?.[0]);
+        if (!sameKind(cell, lookupValue)) continue;
+        if (compareValues(cell, lookupValue) <= 0) found = i;
+      }
+      if (found < 0) return new FormulaError('#N/A', 'LOOKUP no match found');
+
+      // Read through getCellValue so a short result_vector extends, as Excel's does.
+      const target = resultRef ?? source;
+      const resultHorizontal = resultRef ? resultRef.rows === 1 && (resultRef.cols > 1 || horizontal) : horizontal;
+      const address = resultRef
+        ? resultHorizontal ? { ...target.start, col: target.start.col + found } : { ...target.start, row: target.start.row + found }
+        : horizontal ? { ...target.start, col: target.start.col + found, row: target.end.row } : { ...target.start, row: target.start.row + found, col: target.end.col };
+      return context.getCellValue(address) ?? null;
+    },
+  });
+
+  // XMATCH(lookup_value, lookup_array, [match_mode=0], [search_mode=1]).
+  // match_mode: 0 exact, -1 exact or next smaller, 1 exact or next larger,
+  // 2 wildcard (* ? ~). search_mode: 1 first-to-last, -1 last-to-first; the
+  // binary modes 2/-2 are accepted and run as a linear first-to-last search,
+  // which gives the same answer on sorted data.
+  registry.set('XMATCH', {
+    minArgs: 2,
+    maxArgs: 4,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const rawLookup = evalArg(evaluator, args[0], context);
+      if (rawLookup instanceof FormulaError) return rawLookup;
+      const lookupValue = lookupKey(rawLookup ?? 0);
+      if (lookupValue instanceof FormulaError) return lookupValue;
+      const source = referenceBounds(args[1]);
+      if (!source) return new FormulaError('#VALUE!', 'XMATCH lookup_array must be a reference');
+      if (source.rows > 1 && source.cols > 1) return new FormulaError('#VALUE!', 'XMATCH lookup_array must be one row or column');
+      const modes: number[] = [];
+      for (const index of [2, 3]) {
+        if (args.length <= index) { modes.push(index === 2 ? 0 : 1); continue; }
+        const raw = evalArg(evaluator, args[index], context);
+        if (raw instanceof FormulaError) return raw;
+        const n = toNumber(raw);
+        if (n instanceof FormulaError) return n;
+        modes.push(Math.trunc(n));
+      }
+      const [matchMode = 0, searchMode = 1] = modes;
+      if (![0, -1, 1, 2].includes(matchMode)) return new FormulaError('#VALUE!', 'XMATCH match_mode must be 0, -1, 1 or 2');
+      if (![1, -1, 2, -2].includes(searchMode)) return new FormulaError('#VALUE!', 'XMATCH search_mode must be 1, -1, 2 or -2');
+
+      const horizontal = source.rows === 1;
+      const length = horizontal ? source.cols : source.rows;
+      const data = context.getRangeValues({ start: source.start, end: source.end });
+      const valueAt = (i: number) => lookupKey(horizontal ? data[0]?.[i] : data[i]?.[0]);
+      const pattern = matchMode === 2 && typeof lookupValue === 'string' ? wildcard(lookupValue) : undefined;
+      const equals = (cell: unknown): boolean => {
+        if (!sameKind(cell, lookupValue)) return false;
+        if (pattern) return pattern(cell as string, false, context.consumeWork) >= 0;
+        return compareValues(cell, lookupValue) === 0;
+      };
+
+      let best = -1;
+      let bestValue: unknown;
+      const reverse = searchMode === -1;
+      for (let step = 0; step < length; step++) {
+        const i = reverse ? length - 1 - step : step;
+        const cell = valueAt(i);
+        if (equals(cell)) return i + 1;
+        if ((matchMode !== -1 && matchMode !== 1) || !sameKind(cell, lookupValue)) continue;
+        const cmp = compareValues(cell, lookupValue);
+        if (cmp * matchMode <= 0) continue; // wrong side of lookup_value
+        if (best < 0 || compareValues(cell, bestValue) * matchMode < 0) { best = i; bestValue = cell; }
+      }
+      return best >= 0 ? best + 1 : new FormulaError('#N/A', 'XMATCH no match found');
+    },
+  });
+
+
   registry.set('VLOOKUP', {
     minArgs: 3,
     maxArgs: 4,

@@ -21,6 +21,7 @@ export type {
   BinaryOpNode,
   UnaryOpNode,
   ErrorNode,
+  NameNode,
   IFormulaContext,
   IFormulaFunction,
   IEvaluator,

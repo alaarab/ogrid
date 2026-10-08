@@ -55,6 +55,16 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     },
   });
 
+  // ISERR: any error except #N/A.
+  registry.set('ISERR', {
+    minArgs: 1,
+    maxArgs: 1,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const val = evalArg(evaluator, args[0], context);
+      return val instanceof FormulaError && val.type !== '#N/A';
+    },
+  });
+
   registry.set('ISNA', {
     minArgs: 1,
     maxArgs: 1,

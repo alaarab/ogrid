@@ -125,6 +125,47 @@ export function evalArg(
   return evaluator.evaluate(node, context);
 }
 
+/** A literal node for a scalar result, or undefined when there is none. */
+function literalNode(value: unknown): ASTNode | undefined {
+  if (typeof value === 'number') return { kind: 'number', value };
+  if (typeof value === 'string') return { kind: 'string', value };
+  if (typeof value === 'boolean') return { kind: 'boolean', value };
+  if (value instanceof FormulaError) return { kind: 'error', error: value };
+  return undefined;
+}
+
+/** Replace LET-bound names in `node`, respecting shadowing by nested LETs. */
+function substituteNames(node: ASTNode, bindings: ReadonlyMap<string, ASTNode>): ASTNode {
+  if (bindings.size === 0) return node;
+  switch (node.kind) {
+    case 'name':
+      return bindings.get(node.name) ?? node;
+    case 'binaryOp':
+      return { ...node, left: substituteNames(node.left, bindings), right: substituteNames(node.right, bindings) };
+    case 'unaryOp':
+      return { ...node, operand: substituteNames(node.operand, bindings) };
+    case 'functionCall': {
+      if (node.name !== 'LET') return { ...node, args: node.args.map(arg => substituteNames(arg, bindings)) };
+      // A nested LET's own name shadows the outer binding after its value.
+      const scope = new Map(bindings);
+      const args: ASTNode[] = [];
+      for (let i = 0; i < node.args.length; i++) {
+        const arg = node.args[i];
+        if (arg === undefined) continue;
+        const next = node.args[i + 1];
+        if (arg.kind === 'name' && i % 2 === 0 && next !== undefined && i < node.args.length - 1) {
+          args.push(arg, substituteNames(next, scope));
+          scope.delete(arg.name);
+          i++;
+        } else args.push(substituteNames(arg, scope));
+      }
+      return { ...node, args };
+    }
+    default:
+      return node;
+  }
+}
+
 export class FormulaEvaluator implements IEvaluator {
   private depth = 0;
   private steps = 0;
@@ -217,7 +258,37 @@ export class FormulaEvaluator implements IEvaluator {
 
       case 'unaryOp':
         return this.evaluateUnaryOp(node.op, node.operand, context);
+
+      case 'name':
+        // LET substitutes bound names before evaluating; one left here is unbound.
+        return new FormulaError('#NAME?', `Unknown name: ${node.name}`);
     }
+  }
+
+  /**
+   * LET(name1, value1, ..., calculation). Each value is evaluated once, in
+   * order, and its name is substituted into the later arguments: references
+   * (cells, ranges) stay references so SUM(r) and friends still see a range;
+   * scalar results become literals; anything else (arrays, blanks) substitutes
+   * the value expression itself.
+   */
+  private evaluateLet(args: ASTNode[], context: IFormulaContext): unknown {
+    if (args.length < 3 || args.length % 2 === 0) return new FormulaError('#VALUE!', 'LET requires name/value pairs and a calculation');
+    const bindings = new Map<string, ASTNode>();
+    for (let i = 0; i < args.length - 1; i += 2) {
+      const nameNode = args[i];
+      const valueArg = args[i + 1];
+      if (nameNode?.kind !== 'name' || valueArg === undefined) return new FormulaError('#VALUE!', 'LET names must be identifiers');
+      const valueNode = substituteNames(valueArg, bindings);
+      let bound = valueNode;
+      if (valueNode.kind !== 'range' && valueNode.kind !== 'cellRef') {
+        bound = literalNode(this.evaluate(valueNode, context)) ?? valueNode;
+      }
+      bindings.set(nameNode.name, bound);
+    }
+    const calculation = args[args.length - 1];
+    if (calculation === undefined) return new FormulaError('#VALUE!', 'LET requires a calculation');
+    return this.evaluate(substituteNames(calculation, bindings), context);
   }
 
   private evaluateFunction(
@@ -228,6 +299,8 @@ export class FormulaEvaluator implements IEvaluator {
     // Function names are already uppercased at parse time (tokenizer preserves source case,
     // but the parser stores them uppercase via FunctionCallNode). For safety, uppercase here
     // but cache the result to avoid repeated allocations.
+    // LET binds names at parse time, so it is part of the evaluator, not the registry.
+    if (name === 'LET') return this.evaluateLet(args, context);
     const fn = this.functions.get(name);
     if (!fn) {
       return new FormulaError('#NAME?', `Unknown function: ${name}`);

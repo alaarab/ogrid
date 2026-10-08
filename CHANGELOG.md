@@ -23,6 +23,19 @@ All notable changes to OGrid will be documented in this file.
   one (`--ogrid-frozen-divider`). Works with pinned columns (sticky on both
   axes) and virtual scrolling (frozen rows are always rendered); keyboard
   navigation scrolls rows out from under them.
+- 27 more formula functions, following Excel's argument coercion, criteria
+  syntax and error values: `MAXIFS`, `MINIFS`, `SUBTOTAL`, `LOOKUP` (vector
+  and array forms), `XMATCH`, `WEEKNUM`, `ISERR`, `LOG10`, `SIN`, `COS`,
+  `TAN`, `ASIN`, `ACOS`, `ATAN`, `ATAN2`, `RADIANS`, `DEGREES`, `TEXTSPLIT`,
+  `TEXTBEFORE`, `TEXTAFTER`, `SUMSQ`, `EVEN`, `ODD`, `NETWORKDAYS.INTL`,
+  `CEILING.MATH`, `FLOOR.MATH` and `LET`. `LET` names bound to a range stay
+  ranges, so `=LET(r, A1:A10, SUM(r))` works. Some behavior differs from
+  Excel: `TEXTSPLIT` returns its first piece because formula cells don't spill,
+  `SUBTOTAL` codes 101-111 work like 1-11 because the engine can't see hidden
+  rows, and `XMATCH`'s binary search modes run as a linear search. The
+  formulas page lists the details.
+- The formula AST has a new `NameNode` (`kind: 'name'`) for `LET` names.
+  Exhaustive `switch` statements over `ASTNode` need a case for it.
 
 ### Fixed
 
