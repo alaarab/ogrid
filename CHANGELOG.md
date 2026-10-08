@@ -111,6 +111,20 @@ All notable changes to OGrid will be documented in this file.
 - `remapMergedCells(merges, axis, beforeIds, afterIds)` carries `mergedCells`
   through row/column inserts and deletes (grow, shrink, move the anchor, drop
   single-cell merges). Row resize works with `frozenRows`.
+- Find & Replace: `findReplace?: boolean` on `OGrid` and `DataGridTable`.
+  Ctrl+F opens Find and Ctrl+H opens Replace while the grid has focus (the
+  browser's find is untouched otherwise) in a compact panel at the grid's
+  top-right, built from each kit's own controls. Options: match case, match
+  entire cell, within selection, by rows / by columns, look in values
+  (displayed text) or formulas (raw content). Enter / Shift+Enter step through
+  matches with wrapping; the current match becomes the active cell, on its page
+  and scrolled into view under virtual scrolling; all matches are highlighted
+  (`--ogrid-find-match-bg`) and the "3 of 12" count is announced. Replace runs
+  through `valueParser` and `onCellValueChanged`, skips read-only cells and
+  reports how many, and Replace all is one undo step. Escape closes and returns
+  focus to the grid. Headless: `useFindReplace` in `@alaarab/ogrid-react`, and
+  `findMatches`, `findNextMatchIndex`, `planReplace` and `replaceInCellText` in
+  `@alaarab/ogrid-core`.
 
 ### Changed
 

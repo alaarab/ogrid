@@ -1,0 +1,47 @@
+// OGrid Fluent – Find & Replace panel (floats at the grid's top-right)
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 400px;
+  max-width: 100%;
+  padding: 6px;
+  color: var(--ogrid-fg, #242424);
+  background: var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border-radius: var(--ogrid-radius-xl, 8px);
+  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.indent {
+  flex: 0 0 24px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+}
+
+.status {
+  flex-shrink: 0;
+  min-width: 56px;
+  color: var(--ogrid-muted, #616161);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+}

@@ -14,6 +14,8 @@ import { useDataGridLayout } from './useDataGridLayout';
 import { useDataGridEditing } from './useDataGridEditing';
 import { useDataGridInteraction } from './useDataGridInteraction';
 import { useDataGridContextMenu } from './useDataGridContextMenu';
+import { useDataGridFindReplace } from './useDataGridFindReplace';
+import type { DataGridFindReplaceState } from './useDataGridFindReplace';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
 
 /** `frozenRows` clamped to a whole number of displayed rows. */
@@ -215,6 +217,8 @@ export interface UseDataGridStateResult<T> {
   contextMenu: DataGridContextMenuState;
   viewModels: DataGridViewModelState<T>;
   pinning: DataGridPinningState;
+  /** Find & Replace panel state and the Ctrl+F / Ctrl+H handler. */
+  findReplace: DataGridFindReplaceState;
 }
 
 /**
@@ -497,6 +501,35 @@ export function useDataGridState<T>(
     rowBelow,
   });
 
+  // --- Find & Replace (Ctrl+F / Ctrl+H) ---
+  const findReplace = useDataGridFindReplace<T>({
+    enabled: !!props.findReplace && cellSelection,
+    items: rowItems,
+    findRows: props.findRows,
+    onFindPageChange: props.onFindPageChange,
+    currentPage: props.currentPage ?? 1,
+    pageSize: props.pageSize,
+    visibleCols,
+    colOffset,
+    getRowId,
+    activeCell,
+    setActiveCell,
+    selectionRange,
+    setSelectionRange,
+    editingCell,
+    editable,
+    onCellValueChanged,
+    beginBatch: interactionResult.beginBatch,
+    endBatch: interactionResult.endBatch,
+    getFormula: interactionResult.getFormula,
+    setFormula: interactionResult.setFormula,
+    getFormulaValue: props.getFormulaValue,
+    formulaCol,
+    formulaRow,
+    mergeLayout,
+    wrapperRef,
+  });
+
   // --- Formula bar writer: sheet cell -> the grid's normal edit path ---
   const { formulaCellWriterRef, editable: editableProp } = props;
   const writerStateRef = useLatestRef({
@@ -727,5 +760,6 @@ export function useDataGridState<T>(
     contextMenu: contextMenuResult.contextMenu,
     viewModels: viewModelsState,
     pinning: layoutResult.pinning,
+    findReplace,
   };
 }

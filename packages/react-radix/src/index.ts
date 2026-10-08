@@ -5,6 +5,7 @@ export { ColumnChooser, type IColumnChooserProps } from './ColumnChooser/ColumnC
 export { ColumnHeaderFilter, type IColumnHeaderFilterProps } from './ColumnHeaderFilter/ColumnHeaderFilter';
 export { ColumnHeaderMenu, type ColumnHeaderMenuProps } from './ColumnHeaderMenu/ColumnHeaderMenu';
 export { PaginationControls, type IPaginationControlsProps } from './PaginationControls/PaginationControls';
+export { FindReplacePanel } from './FindReplacePanel/FindReplacePanel';
 
 // Re-exports from @alaarab/ogrid-react
 
@@ -73,6 +74,7 @@ export {
   useInlineEdit,
   useRangeSelection,
   useCellClipboard,
+  useFindReplace,
   useGridFocus,
   useActiveCell,
   useCellEditing,
@@ -130,6 +132,13 @@ export type {
   UseCellClipboardResult,
   CellClipboardCopyEvent,
   CellClipboardPasteEvent,
+  UseFindReplaceParams,
+  UseFindReplaceResult,
+  FindReplaceMode,
+  FindReplaceResult,
+  IFindOptions,
+  IFindMatch,
+  IFindFormulaEdit,
   UseGridFocusParams,
   UseGridFocusResult,
   GridFocusCellProps,

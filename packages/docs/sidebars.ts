@@ -46,6 +46,7 @@ const sidebars: SidebarsConfig = {
         'features/column-pinning',
         'features/merged-cells',
         'features/frozen-rows',
+        'features/find-replace',
         'features/column-reordering',
         'features/column-chooser',
         'features/column-types',

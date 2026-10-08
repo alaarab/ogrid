@@ -234,6 +234,29 @@ export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, computeAut
 export { resolveMergedCells, isCoveredCell, expandRangeToMerges, isSingleMergeRange } from './utils';
 export type { IResolvedMerge, IMergeLayout, ResolveMergedCellsParams } from './utils';
 
+// Utils  -  find & replace
+export {
+  DEFAULT_FIND_OPTIONS,
+  getFindCellText,
+  cellTextMatches,
+  replaceInCellText,
+  findMatches,
+  findNextMatchIndex,
+  planReplace,
+  formatFindStatus,
+} from './utils';
+export type {
+  FindLookIn,
+  FindSearchOrder,
+  FindScope,
+  IFindOptions,
+  IFindMatch,
+  IFindSource,
+  IFindFormulaEdit,
+  IReplacePlan,
+  IPlanReplaceParams,
+} from './utils';
+
 // Utils  -  clipboardHelpers
 export {
   formatCellValueForTsv,

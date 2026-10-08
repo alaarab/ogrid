@@ -80,6 +80,16 @@ export interface PopoverEditorRenderProps {
   editor: React.ReactNode;
 }
 
+/** Props passed to an adapter's Find & Replace panel. */
+export interface FindReplacePanelProps {
+  /** Headless find state (query, options, matches, next/prev, replace). */
+  find: import('../hooks/useFindReplace').UseFindReplaceResult;
+  /** Close the panel and return focus to the grid. */
+  onClose: () => void;
+  /** Bumped on every Ctrl+F / Ctrl+H; focus and select the find input when it changes. */
+  focusRequest: number;
+}
+
 /**
  * UI primitives an adapter (Radix / Fluent) injects to bind its component
  * library to the shared data-grid body. Element wrappers (`TableEl`, `Tr`,
@@ -135,6 +145,8 @@ export interface DataGridPrimitives {
   LoadingOverlay: React.ComponentType<{ message: string }>;
   /** Drop indicator overlay component. */
   DropIndicator: React.ComponentType<{ dropIndicatorX: number; wrapperLeft: number }>;
+  /** Find & Replace panel (rendered at the grid's top-right when `findReplace` is on). */
+  FindReplacePanel?: React.ComponentType<FindReplacePanelProps>;
   /** Status bar component. */
   StatusBar: React.ComponentType<{
     totalCount: number; filteredCount?: number; selectedCount?: number;
