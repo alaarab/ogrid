@@ -209,4 +209,27 @@ describe('XLSX images, charts and pivots', () => {
     expect(Object.keys(zip.files).filter((p) => /^xl\/charts\/[^/]+\.xml$/.test(p))).toHaveLength(1);
     expect(Object.keys(zip.files).filter((p) => /^xl\/pivotTables\/[^/]+\.xml$/.test(p))).toHaveLength(1);
   });
+
+  test('structure edits and undo preserve media parts at their documented original anchors and ranges', async () => {
+    const wb = await workbookFromBlob(await mediaWorkbookBlob());
+    const doc = new XlsxWorkbookDocument(wb);
+    doc.insertRows('Sales', 0);
+    doc.insertColumns('Sales', 0);
+    const blob = await doc.toBlob();
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    await assertValidPackage(zip);
+    const out = await workbookFromBlob(blob);
+    expect(out.getWorksheet('Sales')!.getCell('C3').value).toBe(10);
+    const image = out.getWorksheet('Sales')!.getImages()[0]!;
+    expect(image.range.tl.nativeCol).toBe(0);
+    expect(image.range.tl.nativeRow).toBe(1);
+    expect(Buffer.from(out.getImage(Number(image.imageId)).buffer!).toString('base64')).toBe(PNG);
+    expect(nodes(await part(zip, 'xl/charts/chart1.xml'), 'f').map(n => n.textContent)).toEqual(['Sales!$A$2:$A$4', 'Sales!$B$2:$B$4']);
+    expect(nodes(await part(zip, 'xl/pivotTables/pivotTable1.xml'), 'location')[0]!.getAttribute('ref')).toBe('D8:E11');
+    doc.undo('Sales');
+    doc.undo('Sales');
+    const restoredBlob = await doc.toBlob();
+    await assertValidPackage(await JSZip.loadAsync(await restoredBlob.arrayBuffer()));
+    expect((await workbookFromBlob(restoredBlob)).getWorksheet('Sales')!.getCell('B2').value).toBe(10);
+  });
 });
