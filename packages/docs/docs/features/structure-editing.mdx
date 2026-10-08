@@ -107,6 +107,10 @@ Structure edits join the grid's internal undo history together with cell edits.
 When you pass `onUndo`, you own the history: record the `onRowsChange` /
 `onColumnsChange` events in it yourself.
 
+Bulk column menu actions emit one `onColumnsChange` event. Its `changes` array
+contains every column and index in operation order, and `columns` contains the
+final column tree. Record the complete event as one undo step.
+
 ## Row resize
 
 `rowResize` adds a drag handle to the bottom edge of every row number (needs

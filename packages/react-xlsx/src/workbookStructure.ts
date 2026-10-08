@@ -43,14 +43,14 @@ function span(a: number, b: number, at: number, count: number): [number, number]
 }
 
 /** A1 references, whole rows/columns, and sheet qualifiers; skip Excel strings and structured/external refs. */
-const REFERENCES = /"(?:[^"]|"")*"|[\p{L}_][\p{L}\p{N}_.]*:[\p{L}_][\p{L}\p{N}_.]*![\w$]+(?::[\w$]+)?|(?:'[^']*(?:''[^']*)*'|\[[^\]]+\][\w.]+)![\w$]+(?::[\w$]+)?|\[[^\]]*\]|(?<![\w.])((?:'(?:[^']|'')+'|[\p{L}_\\][\p{L}\p{N}_.\\]*)!)?(\$?[A-Za-z]{1,3}\$?\d+(?::\$?[A-Za-z]{1,3}\$?\d+)?|\$?[A-Za-z]{1,3}:\$?[A-Za-z]{1,3}|\$?\d+:\$?\d+)(?![\w.(])/gu;
+const REFERENCES = /"(?:[^"]|"")*"|[\p{L}_][\p{L}\p{N}_.]*:[\p{L}_][\p{L}\p{N}_.]*![\w$]+(?:\s*:\s*[\w$]+)?|(?:'[^']*(?:''[^']*)*'|\[[^\]]+\][\w.]+)![\w$]+(?:\s*:\s*[\w$]+)?|\[[^\]]*\]|(?<![\w.])((?:'(?:[^']|'')+'|[\p{L}_\\][\p{L}\p{N}_.\\]*)!)?(\$?[A-Za-z]{1,3}\$?\d+(?:\s*:\s*\$?[A-Za-z]{1,3}\$?\d+)?|\$?[A-Za-z]{1,3}\s*:\s*\$?[A-Za-z]{1,3}|\$?\d+\s*:\s*\$?\d+)(?![\w.(]|\s*\()/gu;
 
 /** Shift references to the edited sheet, including those in other sheets. `at` is 1-based. */
 export function shiftWorkbookReferences(formula: string, owner: string, target: string, axis: StructureAxis, at: number, count: number): string {
   return formula.replace(REFERENCES, (match, qualifier: string | undefined, ref: string | undefined) => {
     // Quoted qualifiers are handled below too; external workbook qualifiers stay opaque.
     if (ref === undefined) {
-      const quoted = /^('(?:[^']|'')+')!([\w$]+(?::[\w$]+)?)$/.exec(match);
+      const quoted = /^('(?:[^']|'')+')!([\w$]+(?:\s*:\s*[\w$]+)?)$/.exec(match);
       if (!quoted || quoted[1]?.includes('[')) return match;
       qualifier = `${quoted[1]}!`;
       ref = quoted[2];
@@ -58,7 +58,7 @@ export function shiftWorkbookReferences(formula: string, owner: string, target: 
     if (!ref) return match;
     const name = qualifier ? qualifier.slice(0, -1).replace(/^'|'$/g, '').replace(/''/g, "'") : owner;
     if (name.toLowerCase() !== target.toLowerCase()) return match;
-    const whole = /^(\$?[A-Za-z]+|\$?\d+):(\$?[A-Za-z]+|\$?\d+)$/.exec(ref);
+    const whole = /^(\$?[A-Za-z]+|\$?\d+)\s*:\s*(\$?[A-Za-z]+|\$?\d+)$/.exec(ref);
     if (whole) {
       const isCol = /[A-Za-z]/.test(whole[1] as string);
       if ((axis === 'col') !== isCol) return match;
@@ -70,13 +70,13 @@ export function shiftWorkbookReferences(formula: string, owner: string, target: 
       return `${qualifier ?? ''}${format(next[a <= b ? 0 : 1], whole[1] as string)}:${format(next[a <= b ? 1 : 0], whole[2] as string)}`;
     }
     // A name like LOG10 is only an address inside Excel's actual column range.
-    if (ref.split(':').some((s) => columnNumber(s.replace(/\$?\d+$/, '')) > 16384)) return match;
+    if (ref.split(':').some((s) => columnNumber(s.trim().replace(/\$?\d+$/, '')) > 16384)) return match;
     return `${qualifier ?? ''}${shiftFormulaReferences(ref, axis, at - 1, count)}`;
   });
 }
 
 interface SheetModel extends ExcelJS.WorksheetModel {
-  rows: Array<Omit<ExcelJS.RowModel, 'cells'> & { cells: Array<Omit<ExcelJS.CellModel, 'address'> & { address: string }> }>;
+  rows: Array<Omit<ExcelJS.RowModel, 'cells'> & { cells: Array<Omit<ExcelJS.CellModel, 'address'> & { address: string; shareType?: 'shared' | 'array'; ref?: string }> }>;
   cols?: Array<{ min: number; max: number }>;
   dataValidations: Record<string, ExcelJS.DataValidation>;
   conditionalFormattings: ExcelJS.ConditionalFormattingOptions[];
@@ -84,6 +84,45 @@ interface SheetModel extends ExcelJS.WorksheetModel {
 }
 
 type WorkbookModel = Omit<ExcelJS.WorkbookModel, 'worksheets'> & { worksheets: SheetModel[] };
+
+function forEachAddress(ref: string, visit: (address: string) => void): void {
+  for (const range of ref.split(/\s+/)) {
+    const [a, b = a] = range.split(':');
+    const start = parseCellRef(a ?? '');
+    const end = parseCellRef(b ?? '');
+    if (!start || !end) continue;
+    for (let row = start.row; row <= end.row; row++) {
+      for (let col = start.col; col <= end.col; col++) visit(`${indexToColumnLetter(col)}${row + 1}`);
+    }
+  }
+}
+
+/** Recover the rectangles ExcelJS serializes, whose anchor is lost when it reads sqref. */
+function validationRanges(model: SheetModel['dataValidations']): Array<[string, ExcelJS.DataValidation]> {
+  const marked = new Set<string>();
+  const signatures = new Map(Object.entries(model).map(([address, rule]) => [address, JSON.stringify(rule)]));
+  const ranges: Array<[string, ExcelJS.DataValidation]> = [];
+  for (const address of Object.keys(model).sort()) {
+    if (marked.has(address)) continue;
+    const rule = model[address] as ExcelJS.DataValidation;
+    const start = parseCellRef(address);
+    if (!start) { ranges.push([address, rule]); continue; }
+    const same = (col: number, row: number) => signatures.get(`${indexToColumnLetter(col)}${row + 1}`) === signatures.get(address);
+    let bottom = start.row;
+    while (same(start.col, bottom + 1)) bottom++;
+    let right = start.col;
+    const matchesColumn = (col: number) => {
+      for (let row = start.row; row <= bottom; row++) if (!same(col, row)) return false;
+      return true;
+    };
+    while (matchesColumn(right + 1)) right++;
+    const end = `${indexToColumnLetter(right)}${bottom + 1}`;
+    const ref = end === address ? address : `${address}:${end}`;
+    forEachAddress(ref, (cell) => marked.add(cell));
+    ranges.push([ref, rule]);
+  }
+  return ranges;
+}
 
 /** Rebuild sparse cell models instead of relying on ExcelJS's incomplete splices. */
 export function editWorkbookStructure(workbook: ExcelJS.Workbook, target: string, axis: StructureAxis, at: number, count: number): ExcelJS.Workbook {
@@ -93,14 +132,17 @@ export function editWorkbookStructure(workbook: ExcelJS.Workbook, target: string
     const formulas: Array<[ExcelJS.Cell, ExcelJS.CellFormulaValue]> = [];
     sheet.eachRow((row) => row.eachCell((cell) => {
       const v = cell.value;
-      if (v && typeof v === 'object' && ('formula' in v || 'sharedFormula' in v)) {
+      if (v && typeof v === 'object' && (('formula' in v && 'shareType' in v && v.shareType === 'shared') || 'sharedFormula' in v)) {
         let formula = 'formula' in v ? v.formula : undefined;
         if ('sharedFormula' in v) {
           const master = sheet.getCell(v.sharedFormula);
           const origin = parseCellRef(v.sharedFormula);
           const position = parseCellRef(cell.address);
-          if (origin && position && master.formula) {
-            formula = adjustFormulaReferences(master.formula, position.col - origin.col, position.row - origin.row);
+          try {
+            if (!origin || !position || !master.formula) throw new Error('Missing master');
+            formula = adjustFormulaReferences(master.formula, position.col - origin.col, position.row - origin.row, true);
+          } catch (error) {
+            throw new Error(`Cannot translate shared formula at ${sheet.name}!${cell.address}: ${error instanceof Error ? error.message : String(error)}`);
           }
         }
         formulas.push([cell, { formula: formula ?? cell.formula, result: v.result } as ExcelJS.CellFormulaValue]);
@@ -123,6 +165,7 @@ export function editWorkbookStructure(workbook: ExcelJS.Workbook, target: string
         if (col === null) return [];
         cell.address = `${indexToColumnLetter(col - 1)}${r}`;
         if (cell.formula) cell.formula = shift(cell.formula);
+        if (edited && cell.shareType === 'array' && cell.ref) cell.ref = shift(cell.ref);
         if (edited && cell.type === ExcelJS.ValueType.Merge) {
           cell.type = ExcelJS.ValueType.Null;
           (cell as { master?: string }).master = undefined;
@@ -132,29 +175,25 @@ export function editWorkbookStructure(workbook: ExcelJS.Workbook, target: string
       });
       return [row];
     });
+    // Rule formulas are relative to sqref's first cell. If that cell is deleted,
+    // copy the formula to the first survivor in its old position before shifting.
+    const ruleFormula = (formula: string, ref: string, next: string) => {
+      if (!edited || count > 0) return shift(formula);
+      const origin = parseCellRef(ref.split(/[ :]/)[0] ?? '');
+      const survivor = parseCellRef(next.split(/[ :]/)[0] ?? '');
+      if (!origin || !survivor) return shift(formula);
+      const key = axis === 'row' ? 'row' : 'col';
+      if (survivor[key] >= at - 1) survivor[key] -= count;
+      return shift(adjustFormulaReferences(formula, survivor.col - origin.col, survivor.row - origin.row, true));
+    };
     const validations: SheetModel['dataValidations'] = {};
-    for (const [ref, rule] of Object.entries(sheet.dataValidations ?? {})) {
+    for (const [ref, rule] of validationRanges(sheet.dataValidations ?? {})) {
       const next = edited ? area(ref) : ref;
-      if (next) validations[next] = { ...rule, formulae: rule.formulae?.map((f: unknown) => typeof f === 'string' ? shift(f) : f) };
+      if (!next) continue;
+      const rebased = { ...rule, formulae: rule.formulae?.map((f: unknown) => typeof f === 'string' ? ruleFormula(f, ref, next) : f) };
+      forEachAddress(next, (address) => { validations[address] = rebased; });
     }
     sheet.dataValidations = validations;
-    // ExcelJS expands validation sqref ranges into individual addresses on read.
-    // Restore coverage of inserted cells when the rule is identical on both sides.
-    if (edited && count > 0) {
-      for (const [address, rule] of Object.entries(validations)) {
-        const parts = /^([A-Za-z]+)(\d+)$/.exec(address);
-        if (!parts) continue;
-        const col = columnNumber(parts[1] as string);
-        const row = Number(parts[2]);
-        if ((axis === 'row' ? row : col) !== at - 1) continue;
-        const neighbor = axis === 'row' ? `${parts[1]}${at + count}` : `${indexToColumnLetter(at + count - 1)}${row}`;
-        if (JSON.stringify(rule) !== JSON.stringify(validations[neighbor])) continue;
-        for (let n = at; n < at + count; n++) {
-          const inserted = axis === 'row' ? `${parts[1]}${n}` : `${indexToColumnLetter(n - 1)}${row}`;
-          validations[inserted] = rule;
-        }
-      }
-    }
     sheet.conditionalFormattings = (sheet.conditionalFormattings ?? []).flatMap((cf) => {
       const ref = edited ? area(cf.ref) : cf.ref;
       if (!ref) return [];
@@ -162,9 +201,9 @@ export function editWorkbookStructure(workbook: ExcelJS.Workbook, target: string
         const withFormula = rule as ExcelJS.ConditionalFormattingRule & { formulae?: unknown[]; cfvo?: Array<{ type: string; value?: string | number }> };
         return {
           ...rule,
-          ...(withFormula.formulae ? { formulae: withFormula.formulae.map((f) => typeof f === 'string' ? shift(f) : f) } : {}),
+          ...(withFormula.formulae ? { formulae: withFormula.formulae.map((f) => typeof f === 'string' ? ruleFormula(f, cf.ref, ref) : f) } : {}),
           ...(withFormula.cfvo ? { cfvo: withFormula.cfvo.map((value) => ({
-            ...value, value: value.type === 'formula' && typeof value.value === 'string' ? shift(value.value) : value.value,
+            ...value, value: value.type === 'formula' && typeof value.value === 'string' ? ruleFormula(value.value, cf.ref, ref) : value.value,
           })) } : {}),
         } as unknown as ExcelJS.ConditionalFormattingRule; // ExcelJS typings omit string-valued formula cfvo entries.
       }) }];
