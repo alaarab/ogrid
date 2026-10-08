@@ -75,6 +75,20 @@ export type BaseDataGridTableProps<T> = IOGridDataGridProps<T> & {
 
 const LazyDragDataGridTable = React.lazy(() => import('./DragDataGridTable.js'));
 
+function makeDragFallbackInert(element: HTMLDivElement | null): void {
+  // Set the DOM attribute directly: React 17/18 do not support the inert prop.
+  element?.setAttribute('inert', '');
+}
+
+/** Keep SSR rows visible, but accept input only after the drag-enabled table mounts. */
+function DragTableFallback<T>(props: BaseDataGridTableProps<T>): React.ReactElement {
+  return (
+    <div ref={makeDragFallbackInert} aria-busy="true" style={{ display: 'contents' }}>
+      <BaseDataGridTableContent {...props} isLoading />
+    </div>
+  );
+}
+
 /** Mount the optional drag hooks only for opted-in grids. */
 export function BaseDataGridTableInner<T>(props: BaseDataGridTableProps<T>): React.ReactElement {
   const [mounted, setMounted] = React.useState(false);
@@ -82,9 +96,9 @@ export function BaseDataGridTableInner<T>(props: BaseDataGridTableProps<T>): Rea
   React.useEffect(() => { if (enabled) setMounted(true); }, [enabled]);
   if (mounted && enabled) {
     const DragTable = LazyDragDataGridTable as React.ComponentType<BaseDataGridTableProps<T> & { renderTable: typeof BaseDataGridTableContent<T> }>;
-    return <React.Suspense fallback={<BaseDataGridTableContent {...props} />}><DragTable {...props} renderTable={BaseDataGridTableContent} /></React.Suspense>;
+    return <React.Suspense fallback={<DragTableFallback {...props} />}><DragTable {...props} renderTable={BaseDataGridTableContent} /></React.Suspense>;
   }
-  return <BaseDataGridTableContent {...props} />;
+  return enabled ? <DragTableFallback {...props} /> : <BaseDataGridTableContent {...props} />;
 }
 
 const IGNORE_DRAG = () => {};
