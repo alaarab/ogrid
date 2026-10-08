@@ -80,9 +80,10 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 - Cell editing: inline text, select, checkbox, rich select, and custom popup editors
 - Clipboard: Ctrl+C / X / V with multi-cell copy/paste, respects `valueFormatter` / `valueParser`
 - Fill handle: drag to fill cells (Excel-style)
+- Drag and drop: opt-in row reorder, range move/copy and external cell drops; protects spill children and batches undo
 - Undo / redo: full edit history with Ctrl+Z / Ctrl+Y, batch operation support
 - Premium inputs: optional calendar date picker and more via `@alaarab/ogrid-react-inputs`
-- Optional XLSX editor: import/export workbooks, insert/delete rows and columns with shifted formulas and metadata, and virtualize large sheets with visible load limits (`@alaarab/ogrid-react-xlsx`)
+- Optional XLSX editor: import/export workbooks, borders and font formatting, freeze commands, row/column insert/delete with shifted formulas and metadata, images and chart/pivot preservation, and large-sheet virtualization with visible load limits (`@alaarab/ogrid-react-xlsx`)
 
 **Selection & Navigation**
 - Spreadsheet selection: click-and-drag range selection with active cell highlight
@@ -93,6 +94,7 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 **Columns**
 - Column groups: multi-row grouped headers with arbitrary nesting
 - Column pinning: sticky left/right columns
+- Freeze panes: freeze top row, first column or at the selection; unfreeze from the cell menu
 - Column resize: drag column borders to resize
 - Column chooser: show/hide columns via toolbar dropdown or sidebar panel
 - Column state persistence: save/restore visibility, sort, order, widths, filters
@@ -123,16 +125,28 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 
 Core owns types and pure TypeScript utilities with zero dependencies. The React adapter (hooks + headless components) is the actively maintained surface. Frozen variants (Material UI, vanilla JS, Angular, Vue) live on the `legacy/multiframework` branch.
 
-### Installed sizes (gzip)
+### Bundle sizes (gzip)
 
 | Setup | Gzip |
 |-------|------|
-| React + Radix | 207 KB |
-| React + Fluent | 252 KB |
-| Self-contained XLSX browser bundle (includes React and ExcelJS) | 554 KB |
+| React + Radix | 211 KB |
+| React + Fluent | 260 KB |
+| Self-contained XLSX browser module graph (includes React and ExcelJS) | 615 KB |
 | AG Grid Community (comparison) | ~339 KB |
 
-OGrid measurements bundle each package's full entry point with its dependencies using esbuild minification and gzip level 9. `npm run size` tracks Brotli budgets separately.
+OGrid measurements bundle each package's full entry point with its dependencies using esbuild minification and gzip level 9, including deferred chunks. `npm run size` tracks Brotli budgets separately:
+
+| Package | Brotli | Budget |
+|---------|--------|--------|
+| core | 28.65 kB | 29 kB |
+| formula assist (lazy) | 5.34 kB | 5.4 kB |
+| react | 140.43 kB | 146.1 kB |
+| react-radix | 177.66 kB | 184.8 kB |
+| react-fluent | 217.40 kB | 226.1 kB |
+| react-xlsx | 490.06 kB | 509.7 kB |
+| react-xlsx-browser | 486.30 kB | 505.8 kB |
+
+Find/Replace panels, note popovers, XLSX formatting controls, drag behavior and XLSX media are loaded on demand. The browser package ships an entry plus sibling chunks; copy its complete `dist/` directory.
 
 Load the XLSX editor route lazily to keep it out of an app's initial bundle. See [XLSX limits and measurements](packages/docs/docs/features/xlsx-import.mdx#large-sheets) for the memory cost of large workbooks.
 

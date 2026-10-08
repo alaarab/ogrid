@@ -315,6 +315,10 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- Find/Replace panels, cell-note popovers and XLSX formatting controls load
+  when opened. The no-bundler XLSX package preserves local lazy chunks for
+  optional UI, drag behavior and media; copy its complete `dist/` directory.
+
 - `@alaarab/ogrid-react-xlsx`: edits use one chronological workbook undo
   history to preserve cross-sheet consistency. The default cell cap is
   5,100,000 (100k data rows × 50 columns plus a header), with direct row

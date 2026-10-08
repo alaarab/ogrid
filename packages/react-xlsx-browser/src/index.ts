@@ -1,7 +1,7 @@
 // Re-export everything from the regular React package. tsup with
 // `noExternal: [/.*/]` then inlines @alaarab/ogrid-react-xlsx and every
 // dep behind it (React, ReactDOM, ExcelJS, ogrid-core/react/react-radix)
-// into a single browser-ready ESM file at dist/ogrid-xlsx.js.
+// into a browser-ready ESM entry and its local lazy chunks in dist/.
 //
 // WARNING: this bundle contains its own copy of React. The re-exported
 // components (XlsxGrid, XlsxWorkbookGrid) are only safe when rendered by

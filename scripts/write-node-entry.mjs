@@ -23,8 +23,17 @@ if (!existsSync(sourcePath)) {
 const code = readFileSync(sourcePath, 'utf8');
 const cssImport = /import\s*['"]\.\/index\.css['"];?/;
 if (!cssImport.test(code)) {
-  console.error(`write-node-entry: ${source} has no "import './index.css'" to strip`);
-  process.exit(1);
+  // Split chunks stay stylesheet-free for Node. Only the browser entry
+  // imports the combined CSS, after its React Server Component directive.
+  if (!existsSync(resolve(sourcePath, '../index.css'))) {
+    console.error(`write-node-entry: ${source} has no sibling index.css`);
+    process.exit(1);
+  }
+  const directive = /^\s*["']use client["'];?/;
+  const styled = directive.test(code)
+    ? code.replace(directive, match => `${match}\nimport './index.css';`)
+    : `import './index.css';\n${code}`;
+  writeFileSync(sourcePath, styled);
 }
 writeFileSync(resolve(process.cwd(), target), code.replace(cssImport, ''));
 console.log(`write-node-entry: wrote ${target}`);

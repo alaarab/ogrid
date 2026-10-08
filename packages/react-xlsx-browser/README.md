@@ -1,6 +1,6 @@
 # @alaarab/ogrid-react-xlsx-browser
 
-A single self-contained ES module of `@alaarab/ogrid-react-xlsx`, with React, ReactDOM, ExcelJS and every OGrid package inlined. It's for apps without a bundler: copy the files into a static `vendor/` directory and `import()` them.
+A self-contained ES module graph of `@alaarab/ogrid-react-xlsx`, with React, ReactDOM, ExcelJS and every OGrid dependency included. It's for apps without a bundler: copy the files into a static `vendor/` directory and `import()` them.
 
 ## Install
 
@@ -8,7 +8,7 @@ A single self-contained ES module of `@alaarab/ogrid-react-xlsx`, with React, Re
 npm install @alaarab/ogrid-react-xlsx-browser
 ```
 
-Copy `dist/ogrid-xlsx.js` and `dist/ogrid-xlsx.css` from the package into your static assets.
+Copy every `.js` and `.css` file from `dist/` into the same static directory. Import `ogrid-xlsx.js` and link `ogrid-xlsx.css` as below. Keep the sibling chunks beside the entry: optional UI, drag behavior and media load them on demand.
 
 ## Usage
 
@@ -23,9 +23,7 @@ Copy `dist/ogrid-xlsx.js` and `dist/ogrid-xlsx.css` from the package into your s
 </script>
 ```
 
-The bundle is about 1.62 MB raw (about 472 KB gzipped); the Size Limit check
-measures about 389 KB after minification and Brotli compression, within its
-400 KB budget. If you have a bundler, use `@alaarab/ogrid-react-xlsx` instead so React and ExcelJS aren't duplicated. See its README for the API and the load limits for untrusted files.
+The complete module graph measures about 615 kB with gzip, or 486.30 kB after minification and Brotli compression (the size gate), within its 505.8 kB budget. These totals include deferred chunks; the initial entry does not load optional UI or media. If you have a bundler, use `@alaarab/ogrid-react-xlsx` instead so React and ExcelJS aren't duplicated. See its README for the API and the load limits for untrusted files.
 
 ## Rendering the exported components
 
