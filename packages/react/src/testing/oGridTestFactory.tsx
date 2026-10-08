@@ -187,8 +187,9 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     // Name box should render with aria-label
     const nameBox = container.querySelector('[aria-label="Active cell reference"]');
     expect(nameBox).toBeInTheDocument();
-    // Name box should show em dash when no cell is active
-    expect(nameBox?.textContent).toBe('\u2014');
+    // Name box is an empty input showing an em dash placeholder when no cell is active
+    expect((nameBox as HTMLInputElement).value).toBe('');
+    expect(nameBox?.getAttribute('placeholder')).toBe('\u2014');
   });
 
   it('cellReferences=false (default) does not render column letters or name box', () => {

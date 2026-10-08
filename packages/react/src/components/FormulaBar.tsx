@@ -9,6 +9,8 @@
 import * as React from 'react';
 import { useRef, useEffect } from 'react';
 import { FORMULA_BAR_STYLES, handleFormulaBarKeyDown } from '@alaarab/ogrid-core/formula';
+import { cycleReferenceAtCaret } from '@alaarab/ogrid-core';
+import { NameBox } from './NameBox';
 
 export interface FormulaBarProps {
   /** Active cell reference (e.g. "A1"). */
@@ -33,6 +35,8 @@ export interface FormulaBarProps {
    * any other way (a click elsewhere keeps its focus).
    */
   onReturnFocus?: () => void;
+  /** Jump to a reference typed into the name box (see NameBox). Read-only without it. */
+  onNameBoxNavigate?: (text: string) => boolean;
 }
 
 export function FormulaBar({
@@ -45,6 +49,7 @@ export function FormulaBar({
   startEditing,
   inputRef: externalInputRef,
   onReturnFocus,
+  onNameBoxNavigate,
 }: FormulaBarProps): React.ReactElement {
   const internalInputRef = useRef<HTMLInputElement>(null);
   const inputRef = externalInputRef ?? internalInputRef;
@@ -58,9 +63,12 @@ export function FormulaBar({
 
   return (
     <div style={FORMULA_BAR_STYLES.bar as React.CSSProperties} role="toolbar" aria-label="Formula bar">
-      <output style={FORMULA_BAR_STYLES.nameBox as React.CSSProperties} aria-live="off" aria-label="Active cell reference">
-        {cellRef ?? '\u2014'}
-      </output>
+      <NameBox
+        cellRef={cellRef}
+        onNavigate={onNameBoxNavigate}
+        onCancel={onReturnFocus}
+        style={FORMULA_BAR_STYLES.nameBox as React.CSSProperties}
+      />
       <div style={FORMULA_BAR_STYLES.fxLabel as React.CSSProperties} aria-hidden="true">fx</div>
       <input
         ref={inputRef}
@@ -70,7 +78,18 @@ export function FormulaBar({
         readOnly={!isEditing}
         onChange={(e) => onInputChange(e.target.value)}
         onKeyDown={(e) => {
-          if (isEditing) {
+          if (isEditing && e.key === 'F4' && formulaText.startsWith('=')) {
+            // F4 cycles the reference at the caret: A1 -> $A$1 -> A$1 -> $A1 (Excel).
+            e.preventDefault();
+            const input = e.currentTarget;
+            const next = cycleReferenceAtCaret(formulaText, input.selectionStart ?? formulaText.length);
+            if (next) {
+              // Write the DOM first so React sees an unchanged value and keeps the caret.
+              input.value = next.text;
+              input.setSelectionRange(next.end, next.end);
+              onInputChange(next.text);
+            }
+          } else if (isEditing) {
             handleFormulaBarKeyDown(e.key, () => e.preventDefault(), onCommit, onCancel);
             if (e.key === 'Enter' || e.key === 'Escape') onReturnFocus?.();
           } else if (e.key === 'F2' || e.key === 'Enter') {

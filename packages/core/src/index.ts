@@ -207,6 +207,7 @@ export type {
   HeaderFilterConfigInput,
   HeaderFilterConfig,
   CellRenderDescriptorInput,
+  ICellEditCommitOptions,
   CellRenderDescriptor,
   CellRenderMode,
 } from './utils';
@@ -224,8 +225,12 @@ export type { ISortState } from './utils';
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './utils';
 
 // Utils  -  keyboardNavigation
-export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner } from './utils';
-export type { ArrowNavigationContext, ArrowNavigationResult } from './utils';
+export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner, computeRangeCycleStep } from './utils';
+export type { ArrowNavigationContext, ArrowNavigationResult, RangeCycleDirection } from './utils';
+
+// Utils  -  sheetReferences (name box input, F4 reference cycling)
+export { cycleReferenceAtCaret, parseSheetReference } from './utils';
+export type { ISheetReferenceRange, ICycledReference } from './utils';
 
 // Utils  -  selectionHelpers
 export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, computeAutoScrollDelta, getSelectAllRange, applyRangeRowSelection, computeRowSelectionState } from './utils';

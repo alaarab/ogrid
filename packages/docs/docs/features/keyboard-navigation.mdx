@@ -62,6 +62,7 @@ The active cell holds real keyboard focus (a roving tabindex): it is the grid's 
 | Ctrl+Arrow | Jump to the edge of the current data region (Excel-style) |
 | Tab | Move to the next cell (left to right, then next row). From the last cell, Tab moves focus out of the grid |
 | Shift+Tab | Move to the previous cell. From the first cell, Shift+Tab moves focus out of the grid |
+| Shift+Enter | Move up one cell (Enter on a single cell starts editing) |
 | Home | Move to the first column in the current row |
 | End | Move to the last column in the current row |
 | Ctrl+Home | Move to the first cell in the grid (top-left) |
@@ -76,8 +77,13 @@ The active cell holds real keyboard focus (a roving tabindex): it is the grid's 
 | Click | Set active cell |
 | Shift+Arrow | Extend selection range from the active cell (the active cell stays put as the anchor) |
 | Ctrl+Shift+Arrow | Extend selection to the edge of the current data region |
+| Shift+Home / Shift+End | Extend selection from the active cell to the first / last column of the row |
+| Ctrl+Shift+Home / Ctrl+Shift+End | Extend selection from the active cell to the first / last cell of the grid |
 | Shift+Click | Select range from active cell to clicked cell |
-| Shift+Space | Toggle selection of the active cell's row (when row selection is enabled) |
+| Ctrl+Space | Select the whole column(s) the selection covers |
+| Shift+Space | Without row selection: select the whole row(s) the selection covers. With `rowSelection`: toggle the active cell's row (unchanged) |
+| Ctrl+Shift+Space | Select all cells |
+| Click a column letter / row number | Select the whole column / row (with `cellReferences`); Shift+click or drag across headers extends |
 | ← from the first column | Move to the row's checkbox cell (`rowSelection="multiple"`) |
 | Space on the checkbox cell | Toggle that row |
 | Shift+Space on the checkbox cell | Select the rows from the last toggled row to this one |
@@ -85,6 +91,12 @@ The active cell holds real keyboard focus (a roving tabindex): it is the grid's 
 | Ctrl+A | Select all **cells** in the grid (for copy/paste/fill operations, not row selection) |
 
 The selection range is highlighted with a green border. The active cell remains visually distinct within the range.
+
+Whole-row and whole-column selections are ordinary cell ranges: copy, Delete, fill (Ctrl+D / Ctrl+R) and the status bar aggregates all work on them. When the selection touches a merged cell it grows to include the whole merge, and the active cell always sits on a merge's top-left (anchor) cell.
+
+### Moving inside a selection
+
+With more than one cell selected, Enter and Tab move the active cell through the selection instead of collapsing it, like Excel. Enter goes down a column and on to the top of the next one; Tab goes across a row and on to the start of the next one. Both wrap from the last cell back to the first, Shift reverses them, and cells covered by a merge are skipped. This also applies when you commit an edit with Enter or Tab, so you can select a block and type values into it one after another.
 
 :::info Cell Selection vs Row Selection
 Ctrl+A selects all **cells** in the grid for spreadsheet operations (copy/paste/fill). This is different from row selection, where the header checkbox selects all **rows** for bulk operations. See [Row Selection](./row-selection) and [Spreadsheet Selection](./spreadsheet-selection) for details.
@@ -109,12 +121,35 @@ Combine with **Shift** to extend the selection range to the same target.
 | Escape | Cancel editing and revert to the original value |
 | Delete / Backspace | Clear the contents of selected cells |
 | Any printable character | Start editing and replace cell content with the typed character |
+| Ctrl+D | Fill down: copy the top row of the selection into the rows below |
+| Ctrl+R | Fill right: copy the left column of the selection into the columns to its right |
+| Ctrl+; | Enter today's date into the active cell |
+| Ctrl+Shift+; | Enter the current time (HH:mm, 24-hour) into the active cell |
 
 When a cell is in edit mode:
-- **Enter** commits the value and moves the active cell down.
+- **Enter** commits the value and moves the active cell down; **Shift+Enter** commits and moves up.
 - **Tab** commits the value and moves the active cell right.
+- **F4** in a formula (text starting with `=`) cycles the reference at or just before the caret: `A1` → `$A$1` → `A$1` → `$A1` → `A1`. Both ends of a range (`A1:B2`) change together. F4 works the same way in the formula bar.
 - **Escape** discards the edit and returns to navigation mode.
 - Arrow keys move the cursor within the editor (they do not navigate between cells while editing).
+
+### Typing over a cell
+
+Typing a character on a selected cell opens its editor with that character in place of the old value, as in Excel. It works for text, number and date cells, and through the column's `valueParser` on commit. Keys held with Ctrl, Cmd or Alt are shortcuts and never start an edit (AltGr characters still type). Space keeps its own bindings (toggling a boolean cell or the row selection), and Enter/F2 open the editor with the existing value.
+
+| Cell editor | Typing a character |
+|---|---|
+| Text, date (and untyped columns) | Opens with the character replacing the value |
+| `richSelect` | Opens with the character as the search text |
+| `select` | Opens the dropdown |
+| `checkbox` / `type: 'boolean'` | Nothing (Space toggles it) |
+| Custom popover editor (`cellEditor` component) | Opens with the current value (the editor's value type may not be text) |
+
+With an input method editor (IME) active, the first keystroke opens an empty editor and composition continues in it.
+
+### Dates and times
+
+Ctrl+; writes today's date (from the local clock) into the active cell without opening the editor. Date columns (`type: 'date'` or the `date` editor) get `YYYY-MM-DD`, which is what the date editor stores; other columns get the date in the column's `dateFormat` (`YYYY-MM-DD` by default). Ctrl+Shift+; writes the time as `HH:mm`. The value goes through the column's `valueParser`, so a column that rejects it (a number column, for example) is left unchanged. Each is one undo step.
 
 ## Clipboard
 

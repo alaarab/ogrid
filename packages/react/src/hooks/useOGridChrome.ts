@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { useMemo } from 'react';
 import { SheetTabs } from '../components/SheetTabs';
+import { NameBox } from '../components/NameBox';
+import type { UseOGridNameBoxResult } from './useOGridNameBox';
 import type { SideBarProps } from '../components/SideBar';
 import type { IOGridProps } from '../types';
 import type { UseOGridLayout } from './useOGrid.types';
@@ -18,7 +20,6 @@ const NAME_BOX_STYLE: React.CSSProperties = {
   minWidth: 48,
   textAlign: 'center',
   lineHeight: '20px',
-  userSelect: 'none',
   display: 'block',
 };
 
@@ -32,13 +33,18 @@ export function useOGridChrome<T>(
   activeCellRef: string | null,
   sideBarProps: SideBarProps | null,
   formulaBar: React.ReactNode,
+  nameBox?: Pick<UseOGridNameBoxResult, 'navigate' | 'returnFocus'>,
 ): UseOGridLayout {
   const { toolbar, toolbarBelow, className, emptyState, fullScreen, sheetDefs, activeSheet, onSheetChange, onSheetAdd } = props;
 
-  const nameBoxEl = useMemo(() => showNameBox ? React.createElement('output', {
+  const navigate = nameBox?.navigate;
+  const returnFocus = nameBox?.returnFocus;
+  const nameBoxEl = useMemo(() => showNameBox ? React.createElement(NameBox, {
     style: NAME_BOX_STYLE,
-    'aria-label': 'Active cell reference',
-  }, activeCellRef ?? '—') : null, [showNameBox, activeCellRef]);
+    cellRef: activeCellRef,
+    onNavigate: navigate,
+    onCancel: returnFocus,
+  }) : null, [showNameBox, activeCellRef, navigate, returnFocus]);
 
   const resolvedToolbar = useMemo(() => showNameBox
     ? React.createElement(React.Fragment, null, nameBoxEl, toolbar)

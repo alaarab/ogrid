@@ -56,9 +56,11 @@ export function useRenderCellContent<T>(
 
       if (descriptor.mode === 'editing-inline') {
         const editorProps = buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>;
+        // Type-to-replace: the keyboard layer seeds the editor through the pending value.
+        const seed = pendingEditorValueRef.current;
         content = (
           <div className={styles.editingCellContent} {...EDITOR_MARKER_PROPS}>
-            <InlineCellEditor<T> {...editorProps} />
+            <InlineCellEditor<T> {...editorProps} initialText={typeof seed === 'string' ? seed : undefined} />
           </div>
         );
       } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {

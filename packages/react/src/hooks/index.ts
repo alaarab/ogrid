@@ -154,6 +154,7 @@ export type {
   UseInlineCellEditorStateParams,
   UseInlineCellEditorStateResult,
   InlineCellEditorType,
+  InlineCellEditorCommitOptions,
 } from './useInlineCellEditorState';
 export { useColumnResize } from './useColumnResize';
 export type {

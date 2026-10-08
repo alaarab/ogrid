@@ -2,7 +2,8 @@ import { useMemo, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
 import { getDataGridStatusBarConfig, computeAggregations, getCellValue, parseValue, resolveMergedCells } from '../utils';
 import type { IMergeLayout } from '../utils';
-import { isColumnEditable } from '@alaarab/ogrid-core';
+import { isColumnEditable, computeRangeCycleStep, isCoveredCell, isSingleMergeRange } from '@alaarab/ogrid-core';
+import type { ICellEditCommitOptions } from '@alaarab/ogrid-core';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef, IFormulaCellWriter, IGridEditBridge } from '../types';
 import type { UseUndoRedoFormulaCells } from './useUndoRedo';
@@ -87,7 +88,7 @@ export interface DataGridEditingState<T> {
     newValue: unknown,
     rowIndex: number,
     globalColIndex: number,
-    options?: { skipAdvance?: boolean }
+    options?: ICellEditCommitOptions
   ) => void;
   cancelPopoverEdit: () => void;
   popoverAnchorEl: HTMLElement | null;
@@ -449,6 +450,7 @@ export function useDataGridState<T>(
     selectedRowIds,
     editingCell,
     setEditingCell,
+    setPendingEditorValue,
     activeCell,
     setActiveCell,
     handleRowCheckboxChange,
@@ -479,6 +481,26 @@ export function useDataGridState<T>(
     onCellValueChanged,
   } = interactionResult;
 
+  // Shift+Enter-commit moves above the whole merged block.
+  const rowAbove = useCallback((rowIndex: number, dataCol: number) => {
+    const m = mergeLayoutRef.current?.mergeAt(rowIndex, dataCol);
+    return (m ? m.startRow : rowIndex) - 1;
+  }, [mergeLayoutRef]);
+  // Enter-commit inside a multi-cell selection steps through it (Excel) and keeps it.
+  const selectionRangeRef = useLatestRef(selectionRange);
+  const stepInSelection = useCallback((rowIndex: number, dataCol: number, move: 'down' | 'up') => {
+    const range = selectionRangeRef.current;
+    const layout = mergeLayoutRef.current;
+    if (!range) return null;
+    const single = (range.startRow === range.endRow && range.startCol === range.endCol) || isSingleMergeRange(range, layout);
+    const r0 = Math.min(range.startRow, range.endRow);
+    const r1 = Math.max(range.startRow, range.endRow);
+    const c0 = Math.min(range.startCol, range.endCol);
+    const c1 = Math.max(range.startCol, range.endCol);
+    if (single || rowIndex < r0 || rowIndex > r1 || dataCol < c0 || dataCol > c1) return null;
+    return computeRangeCycleStep(range, rowIndex, dataCol, move, (r, c) => isCoveredCell(layout, r, c));
+  }, [selectionRangeRef, mergeLayoutRef]);
+
   // --- 5. Editing (commit/cancel logic) ---
   const editingResult = useDataGridEditing<T>({
     editingCell,
@@ -499,6 +521,8 @@ export function useDataGridState<T>(
     formulas: props.formulas,
     flatColumns,
     rowBelow,
+    rowAbove,
+    stepInSelection,
   });
 
   // --- Find & Replace (Ctrl+F / Ctrl+H) ---

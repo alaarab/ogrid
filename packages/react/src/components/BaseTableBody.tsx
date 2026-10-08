@@ -59,6 +59,8 @@ export interface BaseTableBodyProps<T> {
   getRowHeight?: (rowId: string | number) => number | undefined;
   /** Row-number resize handle pointer-down; omit to hide the handles. */
   onRowResizeStart?: (e: React.PointerEvent, rowId: string | number) => void;
+  /** Pointer down on a row number cell: select the whole row. */
+  onRowHeaderPointerDown?: (e: React.PointerEvent, rowIndex: number) => void;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
 }
@@ -129,7 +131,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumberOf, ariaRowIndexBase,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
     editingCell, tabStopCell, registerTabStop, popoverAnchorEl, pendingEditorValue, formulaVersion,
-    pinnedColumns, rowNumWidth, mergeLayout, getRowHeight, onRowResizeStart, styles, primitives,
+    pinnedColumns, rowNumWidth, mergeLayout, getRowHeight, onRowResizeStart, styles, primitives, onRowHeaderPointerDown,
   } = props;
   const { Tbody } = primitives;
   const rowCount = windowed ? windowed.rowCount : items.length;
@@ -235,6 +237,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         rowNumWidth={rowNumWidth}
         customRowHeight={getRowHeight?.(rowIdStr)}
         onRowResizeStart={onRowResizeStart}
+        onRowHeaderPointerDown={onRowHeaderPointerDown}
         styles={styles}
         primitives={primitives}
       />

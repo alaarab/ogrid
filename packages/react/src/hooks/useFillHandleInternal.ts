@@ -39,6 +39,8 @@ export interface UseFillHandleInternalResult {
   handleFillHandleDoubleClick: (e: React.MouseEvent) => void;
   /** Fill the current selection down from the top row (Ctrl+D). No-op if no selection or editable=false. */
   fillDown: () => void;
+  /** Fill the current selection right from the left column (Ctrl+R). No-op if no selection or editable=false. */
+  fillRight: () => void;
 }
 
 /**
@@ -291,5 +293,27 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     }
   }, [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef, formulaOptionsRef]);
 
-  return { fillDrag, setFillDrag, handleFillHandleMouseDown, handleFillHandleDoubleClick, fillDown };
+  const fillRight = useCallback(() => {
+    const range = selectionRangeRef.current;
+    if (!range || editable === false || !onCellValueChangedRef.current) return;
+    const norm = normalizeSelectionRange(range);
+    // Ctrl+R copies each row's leftmost cell across that row (Ctrl+D turned sideways).
+    beginBatch?.();
+    try {
+      const fillEvents = applyFillValues(
+        norm,
+        norm.startRow,
+        norm.startCol,
+        itemsRef.current,
+        visibleColsRef.current,
+        formulaOptionsRef.current,
+        { ...norm, endCol: norm.startCol }
+      );
+      for (const evt of fillEvents) onCellValueChangedRef.current(evt);
+    } finally {
+      endBatch?.();
+    }
+  }, [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef, formulaOptionsRef]);
+
+  return { fillDrag, setFillDrag, handleFillHandleMouseDown, handleFillHandleDoubleClick, fillDown, fillRight };
 }

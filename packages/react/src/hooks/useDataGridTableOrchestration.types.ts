@@ -94,6 +94,10 @@ export interface UseDataGridTableOrchestrationResult<T> {
   showNameBox: boolean;
   /** Header letter per visible column: the letter of its formula (flat) column. */
   columnLetters: string[];
+  /** Pointer down on a column letter header: select the whole column (Shift/drag extend). */
+  handleColumnHeaderPointerDown: (e: React.PointerEvent, dataColIndex: number) => void;
+  /** Pointer down on a row number cell: select the whole row (Shift/drag extend). */
+  handleRowHeaderPointerDown: (e: React.PointerEvent, rowIndex: number) => void;
   /** Row-number label per displayed row (its sheet row), when the grid maps rows to sheet rows. */
   rowNumberOf?: (rowIndex: number) => number;
   /** `formulaReferences` translated to visible columns and displayed rows, for the overlay. */

@@ -138,7 +138,7 @@ describe('useInlineCellEditorState — Enter commits and parses date (text edito
     );
     act(() => { result.current.setLocalValue('2024-06-01'); });
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
-    expect(onCommit).toHaveBeenCalledWith('2024-06-01');
+    expect(onCommit).toHaveBeenCalledWith('2024-06-01', { move: 'down' });
   });
 
   it('commits parsed YYYY-MM-DD on Enter for MM/DD/YYYY format', () => {
@@ -150,7 +150,7 @@ describe('useInlineCellEditorState — Enter commits and parses date (text edito
     );
     act(() => { result.current.setLocalValue('06/01/2024'); });
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
-    expect(onCommit).toHaveBeenCalledWith('2024-06-01');
+    expect(onCommit).toHaveBeenCalledWith('2024-06-01', { move: 'down' });
   });
 
   it('commits parsed YYYY-MM-DD on Enter for DD/MM/YYYY format', () => {
@@ -162,7 +162,7 @@ describe('useInlineCellEditorState — Enter commits and parses date (text edito
     );
     act(() => { result.current.setLocalValue('01/06/2024'); });
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
-    expect(onCommit).toHaveBeenCalledWith('2024-06-01');
+    expect(onCommit).toHaveBeenCalledWith('2024-06-01', { move: 'down' });
   });
 
   it('commits empty string on Enter when field is empty', () => {
@@ -173,7 +173,7 @@ describe('useInlineCellEditorState — Enter commits and parses date (text edito
       )
     );
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
-    expect(onCommit).toHaveBeenCalledWith('');
+    expect(onCommit).toHaveBeenCalledWith('', { move: 'down' });
   });
 
   it('commits raw string on Enter for invalid input', () => {
@@ -186,7 +186,7 @@ describe('useInlineCellEditorState — Enter commits and parses date (text edito
     act(() => { result.current.setLocalValue('not-a-date'); });
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
     // Invalid dates pass through as raw strings
-    expect(onCommit).toHaveBeenCalledWith('not-a-date');
+    expect(onCommit).toHaveBeenCalledWith('not-a-date', { move: 'down' });
   });
 });
 
@@ -204,7 +204,7 @@ describe('useInlineCellEditorState — Enter commits raw value (native editor)',
     );
     act(() => { result.current.setLocalValue('2024-06-01'); });
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
-    expect(onCommit).toHaveBeenCalledWith('2024-06-01');
+    expect(onCommit).toHaveBeenCalledWith('2024-06-01', { move: 'down' });
   });
 });
 
@@ -330,7 +330,7 @@ describe('useInlineCellEditorState — date edge cases', () => {
     );
     act(() => { result.current.setLocalValue('02/29/2024'); }); // 2024 is a leap year
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
-    expect(onCommit).toHaveBeenCalledWith('2024-02-29');
+    expect(onCommit).toHaveBeenCalledWith('2024-02-29', { move: 'down' });
   });
 
   it('passes through invalid date Feb 29 in non-leap year', () => {
@@ -343,7 +343,7 @@ describe('useInlineCellEditorState — date edge cases', () => {
     act(() => { result.current.setLocalValue('02/29/2023'); }); // 2023 is NOT a leap year
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
     // parseUserInputDate returns null for invalid dates; commitDateValue returns raw string
-    expect(onCommit).toHaveBeenCalledWith('02/29/2023');
+    expect(onCommit).toHaveBeenCalledWith('02/29/2023', { move: 'down' });
   });
 
   it('handles year-end date Dec 31', () => {
@@ -355,7 +355,7 @@ describe('useInlineCellEditorState — date edge cases', () => {
     );
     act(() => { result.current.setLocalValue('12/31/2024'); });
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
-    expect(onCommit).toHaveBeenCalledWith('2024-12-31');
+    expect(onCommit).toHaveBeenCalledWith('2024-12-31', { move: 'down' });
   });
 
   it('handles year-start date Jan 01', () => {
@@ -367,7 +367,7 @@ describe('useInlineCellEditorState — date edge cases', () => {
     );
     act(() => { result.current.setLocalValue('2025-01-01'); });
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
-    expect(onCommit).toHaveBeenCalledWith('2025-01-01');
+    expect(onCommit).toHaveBeenCalledWith('2025-01-01', { move: 'down' });
   });
 
   it('does not commit on unrecognized key', () => {
@@ -400,7 +400,7 @@ describe('useInlineCellEditorState — text editor unaffected by dateFormat', ()
     );
     act(() => { result.current.setLocalValue('world'); });
     act(() => { result.current.handleKeyDown(keyEvent('Enter')); });
-    expect(onCommit).toHaveBeenCalledWith('world');
+    expect(onCommit).toHaveBeenCalledWith('world', { move: 'down' });
   });
 });
 

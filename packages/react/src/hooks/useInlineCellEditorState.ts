@@ -4,15 +4,25 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { formatDateForDisplay, parseUserInputDate, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-core';
+import { formatDateForDisplay, parseUserInputDate, DEFAULT_DATE_FORMAT, cycleReferenceAtCaret } from '@alaarab/ogrid-core';
 
 export type InlineCellEditorType = 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
+
+/** Where the active cell goes after the editor commits: Enter moves down, Shift+Enter up. */
+export interface InlineCellEditorCommitOptions {
+  move?: 'down' | 'up';
+}
 
 export interface UseInlineCellEditorStateParams {
   value: unknown;
   editorType: InlineCellEditorType;
-  onCommit: (value: unknown) => void;
+  onCommit: (value: unknown, options?: InlineCellEditorCommitOptions) => void;
   onCancel: () => void;
+  /**
+   * Text that replaces the cell's value when the editor opens: the character
+   * typed on a selected cell (type-to-replace). Text and date editors only.
+   */
+  initialText?: string;
   /** Date display/input format (e.g. 'MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'). */
   dateFormat?: string;
   /** Editor widget type: 'text' (default, Excel-style) or 'native' (browser <input type="date">). */
@@ -24,7 +34,7 @@ export interface UseInlineCellEditorStateResult {
   setLocalValue: (value: string) => void;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleBlur: () => void;
-  commit: (value: unknown) => void;
+  commit: (value: unknown, options?: InlineCellEditorCommitOptions) => void;
   cancel: () => void;
 }
 
@@ -51,10 +61,11 @@ function commitDateValue(localValue: string, dateFormat: string): string {
 export function useInlineCellEditorState(
   params: UseInlineCellEditorStateParams
 ): UseInlineCellEditorStateResult {
-  const { value, editorType, onCommit, onCancel, dateFormat, dateEditorType } = params;
+  const { value, editorType, onCommit, onCancel, dateFormat, dateEditorType, initialText } = params;
   const effectiveDateFormat = dateFormat ?? DEFAULT_DATE_FORMAT;
 
   const [localValue, setLocalValue] = useState<string>(() => {
+    if (initialText !== undefined && (editorType === 'text' || editorType === 'date')) return initialText;
     if (value === null || value === undefined) return '';
     if (editorType === 'date') {
       const str = String(value);
@@ -78,17 +89,35 @@ export function useInlineCellEditorState(
         settledRef.current = true;
         onCancel();
       }
+      // F4 in a formula cycles the reference at the caret: A1 -> $A$1 -> A$1 -> $A1 (Excel).
+      if (e.key === 'F4' && editorType === 'text' && localValue.startsWith('=')) {
+        e.preventDefault();
+        const input = e.target as HTMLInputElement;
+        const caret = typeof input.selectionStart === 'number' ? input.selectionStart : localValue.length;
+        const next = cycleReferenceAtCaret(localValue, caret);
+        if (next) {
+          // Write the DOM first so React sees an unchanged value and keeps the caret.
+          if (typeof input.setSelectionRange === 'function') {
+            input.value = next.text;
+            input.setSelectionRange(next.end, next.end);
+          }
+          settledRef.current = false;
+          setLocalValue(next.text);
+        }
+        return;
+      }
       if ((e.key === 'Enter' || e.key === 'Tab') && (editorType === 'text' || editorType === 'date')) {
         e.preventDefault();
         // Enter stops here so the grid doesn't re-open an editor; Tab bubbles on
         // so the grid can move to the next cell after this commit.
         if (e.key === 'Enter') e.stopPropagation();
         settledRef.current = true;
-        if (editorType === 'date' && dateEditorType !== 'native') {
-          onCommit(commitDateValue(localValue, effectiveDateFormat));
-        } else {
-          onCommit(localValue);
-        }
+        // Shift+Enter commits and moves up. Tab's move belongs to the grid, which handles Tab after this.
+        const committed = editorType === 'date' && dateEditorType !== 'native'
+          ? commitDateValue(localValue, effectiveDateFormat)
+          : localValue;
+        if (e.key === 'Enter') onCommit(committed, { move: e.shiftKey ? 'up' : 'down' });
+        else onCommit(committed);
       }
     },
     [onCancel, onCommit, localValue, editorType, effectiveDateFormat, dateEditorType]

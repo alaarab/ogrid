@@ -88,6 +88,8 @@ Type any value starting with `=` into an editable cell. The engine parses and ev
 =VLOOKUP(A1,C1:D10,2)         → lookup
 ```
 
+Typing `=` on a selected cell starts the formula right away (type-to-replace). While you edit a formula, in the cell or in the formula bar, **F4** cycles the reference at the caret between relative and absolute: `A1` → `$A$1` → `A$1` → `$A1` → `A1`.
+
 ## Pre-loading formulas
 
 Use `initialFormulas` to seed formulas when the grid mounts — useful for reports with fixed summary rows:
@@ -159,7 +161,7 @@ const history = useUndoRedo<Row>({ onCellValueChanged: applyEdit });
 
 ## Named ranges
 
-Give meaningful names to cells or ranges you reference often:
+Give meaningful names to cells or ranges you reference often (typing a name into the formula bar's name box and pressing Enter selects its range):
 
 ```tsx
 <OGrid

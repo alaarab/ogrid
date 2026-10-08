@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 
 /** Shared display text formatter for select and rich-select editors. */
 export function getSelectDisplayText(value: unknown, formatValue?: (v: unknown) => string): string {
@@ -12,6 +12,8 @@ export interface UseRichSelectStateParams {
   initialValue: unknown;
   onCommit: (value: unknown) => void;
   onCancel: () => void;
+  /** Search text the editor opens with (the character typed on a selected cell). */
+  initialSearchText?: string;
 }
 
 export interface UseRichSelectStateResult {
@@ -31,12 +33,15 @@ export interface UseRichSelectStateResult {
  */
 export function useRichSelectState(params: UseRichSelectStateParams): UseRichSelectStateResult {
   const { values, formatValue, initialValue, onCommit, onCancel } = params;
-  const [searchText, setSearchTextState] = useState('');
-  const initialIndex = values.findIndex((v) => String(v) === String(initialValue));
+  const [searchText, setSearchTextState] = useState(params.initialSearchText ?? '');
+  // Opening with search text highlights the first match, not the current value.
+  const searchingRef = useRef(!!params.initialSearchText);
+  const initialIndex = searchingRef.current ? 0 : values.findIndex((v) => String(v) === String(initialValue));
   const [highlightedIndex, setHighlightedIndex] = useState(Math.max(initialIndex, 0));
 
   // Reset highlighted index when initialValue changes (e.g., opening editor on a different cell)
   useEffect(() => {
+    if (searchingRef.current) return;
     const idx = values.findIndex((v) => String(v) === String(initialValue));
     setHighlightedIndex(Math.max(idx, 0));
   }, [initialValue, values]);

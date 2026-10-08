@@ -14,7 +14,7 @@ import {
   buildInlineEditorProps as coreBuildInlineEditorProps,
   buildPopoverEditorProps as coreBuildPopoverEditorProps,
 } from '@alaarab/ogrid-core';
-import type { CellRenderDescriptor } from '@alaarab/ogrid-core';
+import type { CellRenderDescriptor, ICellEditCommitOptions } from '@alaarab/ogrid-core';
 
 // Re-export pure functions from core (no type narrowing needed)
 export {
@@ -63,7 +63,7 @@ export function buildInlineEditorProps<T>(
   col: IColumnDef<T>,
   descriptor: CellRenderDescriptor,
   callbacks: {
-    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number, options?: { skipAdvance?: boolean }) => void;
+    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number, options?: ICellEditCommitOptions) => void;
     setEditingCell: (cell: null) => void;
   }
 ): {
@@ -72,7 +72,7 @@ export function buildInlineEditorProps<T>(
   column: IColumnDef<T>;
   rowIndex: number;
   editorType: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
-  onCommit: (newValue: unknown) => void;
+  onCommit: (newValue: unknown, options?: Pick<ICellEditCommitOptions, 'move'>) => void;
   onCancel: () => void;
 } {
   const result = coreBuildInlineEditorProps(item, col, descriptor, callbacks);

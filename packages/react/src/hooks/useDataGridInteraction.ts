@@ -53,6 +53,8 @@ export interface UseDataGridInteractionParams<T> {
   editingCell: { rowId: RowId; columnId: string } | null;
   /** From useCellEditing (called at orchestrator level). */
   setEditingCell: (cell: { rowId: RowId; columnId: string } | null) => void;
+  /** From useCellEditing: seeds the editor a typed character opens (type-to-replace). */
+  setPendingEditorValue?: (value: unknown) => void;
   /** From useActiveCell (called at orchestrator level). */
   activeCell: { rowIndex: number; columnIndex: number } | null;
   /** From useActiveCell (called at orchestrator level). */
@@ -432,7 +434,7 @@ export function useDataGridInteraction<T>(
     return { flatColumns, ...viewFormulas, formulaRow };
   }, [viewFormulas, flatColumns, formulaRowRef]);
 
-  const { handleFillHandleMouseDown, handleFillHandleDoubleClick, fillDown } = useFillHandleInternal({
+  const { handleFillHandleMouseDown, handleFillHandleDoubleClick, fillDown, fillRight } = useFillHandleInternal({
     items,
     visibleCols,
     editable,
@@ -451,8 +453,8 @@ export function useDataGridInteraction<T>(
   const { handleGridKeyDown, handleGridPaste, handleGridCopy, handleGridCut } = useKeyboardNavigation({
     data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId, mergeLayout },
     state: { activeCell, selectionRange, editingCell, selectedRowIds },
-    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopyEvent, handleCutEvent, handlePasteEvent, armPasteValues, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
-    features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, scrollToIndexRef, onKeyDown, fillDown },
+    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopyEvent, handleCutEvent, handlePasteEvent, armPasteValues, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch, setPendingEditorValue: params.setPendingEditorValue },
+    features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, scrollToIndexRef, onKeyDown, fillDown, fillRight },
   });
 
   const hasCellSelection = selectionRange != null || activeCell != null;

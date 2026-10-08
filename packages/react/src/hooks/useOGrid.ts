@@ -20,6 +20,7 @@ import { useOGridFormulas } from './useOGridFormulas';
 import { useOGridChrome } from './useOGridChrome';
 import { useOGridStructureEdits } from './useOGridStructureEdits';
 import { useOGridCellApi } from './useOGridCellApi';
+import { useOGridNameBox } from './useOGridNameBox';
 import { useSortFilterColumns } from './useSortFilterColumns';
 import {
   buildStatusBarConfig,
@@ -164,8 +165,9 @@ export function useOGrid<T>(
   const { sheetItems, formulaRowMap } = useOGridSheetCoordinates(
     chrome.spreadsheetMode, isServerSide, displayData, dataFetchingState, paginationState, getRowId,
   );
+  const nameBox = useOGridNameBox(props.namedRanges);
   const { dgFormulaProps, formulaBarEl, activeCellRef, onActiveCellChange, formulaEngine, formulasFollowData } =
-    useOGridFormulas(props, sheetItems, columns, formulaRowMap);
+    useOGridFormulas(props, sheetItems, columns, formulaRowMap, nameBox);
 
   // --- Cell API and structure edits (through the table's edit path and undo history) ---
   const gridEditBridgeRef = useRef<IGridEditBridge<T> | null>(null);
@@ -244,6 +246,7 @@ export function useOGrid<T>(
     mergedCells, frozenRows,
     rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef,
     findReplace, findRows, onFindPageChange: findRows ? setPage : undefined,
+    cellNavigatorRef: nameBox.cellNavigatorRef,
     emptyState: dgEmptyState,
     ...dgFormulaProps,
   }), [
@@ -260,7 +263,7 @@ export function useOGrid<T>(
     rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows,
     rowResize, rowHeights, onRowResized, structureActions,
     findReplace, findRows, setPage,
-    dgEmptyState, dgFormulaProps,
+    nameBox.cellNavigatorRef, dgEmptyState, dgFormulaProps,
   ]);
 
   const pagination = useMemo<UseOGridPagination>(() => ({
@@ -276,7 +279,7 @@ export function useOGrid<T>(
     placement: columnChooserPlacement,
   }), [columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns, columnChooserPlacement]);
 
-  const layout = useOGridChrome(props, showNameBox, activeCellRef, sideBarProps, formulaBarEl);
+  const layout = useOGridChrome(props, showNameBox, activeCellRef, sideBarProps, formulaBarEl, nameBox);
 
   const filtersResult = useMemo<UseOGridFilters>(() => ({
     hasActiveFilters: filtersState.hasActiveFilters,
