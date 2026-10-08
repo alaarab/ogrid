@@ -55,6 +55,8 @@ export interface UseKeyboardNavigationParams<T> {
     handleCutEvent: (event: ClipboardCopyEventLike) => void;
     /** Paste from a native `paste` event; see `handleGridPaste`. */
     handlePasteEvent: (event: ClipboardPasteEventLike) => void;
+    /** Ctrl/Cmd+Shift+V: make the paste event that follows paste values only. */
+    armPasteValues?: () => void;
     setContextMenu: (pos: ContextMenuPosition | null) => void;
     onUndo?: () => void;
     onRedo?: () => void;
@@ -304,6 +306,8 @@ export function useKeyboardNavigation<T>(
           // clipboard here as well would paste twice, and
           // navigator.clipboard.readText is unavailable on plain http and
           // denied by default in Firefox/Safari anyway.
+          // Ctrl/Cmd+Shift+V marks that paste event as values only.
+          if (shift && (e.ctrlKey || e.metaKey) && editingCell == null) handlers.armPasteValues?.();
           break;
         case 'ArrowDown':
         case 'ArrowUp':

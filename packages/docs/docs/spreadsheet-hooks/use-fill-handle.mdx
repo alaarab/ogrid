@@ -64,6 +64,7 @@ const r = range.range;
 | `rows` | `T[]` | The rows you render (`grid.rows`). Event `rowIndex` values index into this array. |
 | `columns` | `IColumnDef<T>[]` | Visible columns, in render order. |
 | `onFillCells` | `(events: ICellValueChangedEvent<T>[]) => void` | Called once on commit with every accepted cell. Not called when nothing changed. |
+| `fillSeries` | `boolean` | Continue detected series instead of copying (default `true`). |
 
 ## Returns
 
@@ -76,11 +77,14 @@ const r = range.range;
 | `fillRange` | `ISelectionRange \| null` | Source range extended toward the target along one axis (see behavior notes); equals the source range when idle or when the target is inside it. |
 | `startFill` | `() => void` | Begin a drag from the range's bottom-right cell. No-op without a range. |
 | `updateFill` | `(row, col) => void` | Move the target. No-op when not filling. |
-| `commitFill` | `() => void` | Compute events, call `onFillCells`, select the filled range, end the drag. |
+| `commitFill` | `(event?: { ctrlKey?, metaKey? }) => void` | Compute events, call `onFillCells`, select the filled range, end the drag. Pass the mouse event: Ctrl/Cmd held flips copy and series. |
+| `autoFillDown` | `(event?: { ctrlKey?, metaKey? }) => void` | Excel's double-click on the fill handle: fill the range down to the end of the adjacent data column (left, else right). |
 | `cancelFill` | `() => void` | End the drag without changes. |
 | `isInFillRange` | `(row, col) => boolean` | Hit test against `fillRange` (includes the source cells). |
 
 ## Behavior notes
+
+- Series are continued like Excel (`1, 2` -> `3`; `Mon` -> `Tue`; `Item 1` -> `Item 2`; dates by day, or by month/year for two same-day dates); a single number and anything that is not a series is copied. Ctrl/Cmd at commit flips that, and `fillSeries: false` always copies. See [Fill handle](/docs/features/editing#fill-handle).
 
 - **Tiling, not series.** The source block repeats across the fill range at
   the same offset modulo the block size (Excel's behavior for a plain drag).

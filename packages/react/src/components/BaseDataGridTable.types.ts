@@ -125,6 +125,7 @@ export interface DataGridPrimitives {
     canUndo: boolean; canRedo: boolean;
     onUndo: () => void; onRedo: () => void;
     onCopy: () => void; onCut: () => void; onPaste: () => void;
+    onPasteValues?: () => void;
     onSelectAll: () => void; onClose: () => void;
     structure?: import('./GridContextMenu').GridContextMenuStructure;
   }>;

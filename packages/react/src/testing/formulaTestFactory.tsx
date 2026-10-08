@@ -248,6 +248,60 @@ export function createFormulaTests(OGrid: React.ComponentType<IOGridProps<Row>>)
       await waitFor(() => expect(text(container, 2, 'total')).toBe('140'));
     });
 
+    it('pasting a formula copied in the grid shifts its relative references (Excel)', async () => {
+      const { container } = renderGrid();
+      await editCell(container, 1, 'total', '=B1*10');
+      expect(text(container, 1, 'total')).toBe('30');
+      const grid = container.querySelector('[role="region"]') as HTMLElement;
+      // Copy Cherry's total (sheet row 1) ...
+      activate(container, 1, 'total');
+      grid.focus();
+      const copied: Record<string, string> = {};
+      const copy = new Event('copy', { bubbles: true, cancelable: true });
+      Object.defineProperty(copy, 'clipboardData', { value: { setData: (f: string, v: string) => { copied[f] = v; } } });
+      await act(async () => {
+        fireEvent(grid, copy);
+      });
+      expect(copied['text/plain']).toBe('=B1*10');
+      // The HTML flavor carries the computed value, not the formula.
+      expect(copied['text/html']).toContain('<td>30</td>');
+      // ... and paste it onto Apple's total (sheet row 2): B1 becomes B2.
+      activate(container, 2, 'total');
+      const paste = new Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, 'clipboardData', { value: { getData: (f: string) => copied[f] ?? '' } });
+      await act(async () => {
+        fireEvent(grid, paste);
+      });
+      await waitFor(() => expect(text(container, 2, 'total')).toBe('10'));
+      expect(formulaInput(container).value).toBe('=B2*10');
+    });
+
+    it('Ctrl+Shift+V pastes computed values, not formulas', async () => {
+      const { container } = renderGrid();
+      const grid = container.querySelector('[role="region"]') as HTMLElement;
+      // Copy Banana's total (=B3*C3 = 60) ...
+      activate(container, 3, 'total');
+      grid.focus();
+      const copied: Record<string, string> = {};
+      const copy = new Event('copy', { bubbles: true, cancelable: true });
+      Object.defineProperty(copy, 'clipboardData', { value: { setData: (f: string, v: string) => { copied[f] = v; } } });
+      await act(async () => {
+        fireEvent(grid, copy);
+      });
+      // ... into Apple's price: the value 60, so Apple's total becomes 1 * 60.
+      activate(container, 2, 'price');
+      gridKey(container, { key: 'V', ctrlKey: true, shiftKey: true });
+      const paste = new Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, 'clipboardData', { value: { getData: (f: string) => copied[f] ?? '' } });
+      await act(async () => {
+        fireEvent(grid, paste);
+      });
+      await waitFor(() => expect(text(container, 2, 'price')).toBe('60'));
+      expect(text(container, 2, 'total')).toBe('60');
+      activate(container, 2, 'price');
+      expect(formulaInput(container).value).toBe('60');
+    });
+
     it('Delete clears a formula cell', async () => {
       const { container } = renderGrid();
       activate(container, 2, 'total');

@@ -334,6 +334,7 @@ export function BaseDataGridTableInner<T>(
               onCopy={handleCopy}
               onCut={handleCut}
               onPaste={handlePasteVoid}
+              onPasteValues={interaction.handlePasteValues}
               onSelectAll={o.interaction.handleSelectAllCells}
               onClose={closeContextMenu}
               structure={structureMenu}

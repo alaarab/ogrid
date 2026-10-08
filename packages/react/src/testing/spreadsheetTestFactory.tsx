@@ -390,7 +390,8 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         await act(async () => { await Promise.resolve(); });
 
         expect(copy.consumed).toBe(true);
-        expect(copy.setData).toHaveBeenCalledTimes(1);
+        // Once: one text/plain write (next to its text/html table).
+        expect(copy.setData.mock.calls.filter(([format]) => format === 'text/plain')).toHaveLength(1);
         expect(copy.setData).toHaveBeenCalledWith('text/plain', 'Alpha');
         expect(writeText).not.toHaveBeenCalled();
       });
@@ -957,7 +958,8 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
           copy = fireCopyOrCut(document.activeElement as Element, 'copy');
         });
         expect(copy.consumed).toBe(true);
-        expect(copy.setData).toHaveBeenCalledTimes(1);
+        // Once: one text/plain write (next to its text/html table).
+        expect(copy.setData.mock.calls.filter(([format]) => format === 'text/plain')).toHaveLength(1);
         expect(copy.data['text/plain']).toBe('Alpha');
 
         act(() => { fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown' }); });
@@ -1362,7 +1364,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
        * Drag the fill handle over each (row, col) in `path`, then release.
        * `document.elementFromPoint` is stubbed so pointer position N resolves to path[N].
        */
-      function dragFillHandle(container: HTMLElement, handle: HTMLElement, path: [number, number][]) {
+      function dragFillHandle(container: HTMLElement, handle: HTMLElement, path: [number, number][], release: PointerEventInit = {}) {
         const originalElementFromPoint = document.elementFromPoint;
         document.elementFromPoint = (x: number, _y: number) => {
           const step = path[x];
@@ -1377,7 +1379,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
             });
           });
           act(() => {
-            window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+            window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, ...release }));
           });
         } finally {
           document.elementFromPoint = originalElementFromPoint;
@@ -1455,6 +1457,146 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         });
         expect(onCellValueChanged).not.toHaveBeenCalled();
         expect(container.querySelectorAll('[data-in-range="true"]').length).toBe(2);
+      });
+    });
+
+    describe('fill series and paste special (Excel)', () => {
+      const seriesRows: FixtureRow[] = [
+        { id: '1', name: 'Item 1', status: 'Mon' },
+        { id: '2', name: 'Item 2', status: '' },
+        { id: '3', name: 'Item 3', status: '' },
+      ];
+      const changes = (fn: jest.Mock) =>
+        fn.mock.calls.map(([e]) => `${e.rowIndex}:${e.columnId}=${e.newValue}`).sort();
+
+      async function fillHandleAt(container: HTMLElement, row: number, col: number) {
+        fireEvent.pointerDown(getCellAt(container, row, col));
+        act(() => {
+          window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+        });
+        await waitFor(() => expect(container.querySelector('[aria-label="Fill handle"]')).toBeInTheDocument());
+        return container.querySelector('[aria-label="Fill handle"]') as HTMLElement;
+      }
+
+      function dragTo(container: HTMLElement, handle: HTMLElement, row: number, col: number, release: PointerEventInit = {}) {
+        const original = document.elementFromPoint;
+        document.elementFromPoint = () => getCellAt(container, row, col);
+        try {
+          fireEvent.pointerDown(handle, { button: 0 });
+          act(() => {
+            window.dispatchEvent(new PointerEvent('pointermove', { clientX: 1, clientY: 1, bubbles: true }));
+          });
+          act(() => {
+            window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, ...release }));
+          });
+        } finally {
+          document.elementFromPoint = original;
+        }
+      }
+
+      it('dragging the fill handle continues a weekday series; Ctrl held at release copies instead', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container, unmount } = renderSpreadsheetGrid({ onCellValueChanged, items: seriesRows });
+        dragTo(container, await fillHandleAt(container, 0, 1), 2, 1);
+        await waitFor(() => expect(onCellValueChanged).toHaveBeenCalledTimes(2));
+        expect(changes(onCellValueChanged)).toEqual(['1:status=Tue', '2:status=Wed']);
+        unmount();
+
+        const onCtrl = jest.fn();
+        const second = renderSpreadsheetGrid({ onCellValueChanged: onCtrl, items: seriesRows });
+        dragTo(second.container, await fillHandleAt(second.container, 0, 1), 2, 1, { ctrlKey: true });
+        await waitFor(() => expect(onCtrl).toHaveBeenCalledTimes(2));
+        expect(changes(onCtrl)).toEqual(['1:status=Mon', '2:status=Mon']);
+      });
+
+      it('dragging up continues a text-number series backward', async () => {
+        const onCellValueChanged = jest.fn();
+        const rows: FixtureRow[] = [
+          { id: '1', name: '', status: '' },
+          { id: '2', name: '', status: '' },
+          { id: '3', name: 'Item 7', status: '' },
+        ];
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged, items: rows });
+        dragTo(container, await fillHandleAt(container, 2, 0), 0, 0);
+        await waitFor(() => expect(onCellValueChanged).toHaveBeenCalledTimes(2));
+        expect(changes(onCellValueChanged)).toEqual(['0:name=Item 5', '1:name=Item 6']);
+      });
+
+      it('double-clicking the fill handle fills down to the end of the adjacent column', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged, items: seriesRows });
+        const handle = await fillHandleAt(container, 0, 1);
+        fireEvent.doubleClick(handle);
+        await waitFor(() => expect(onCellValueChanged).toHaveBeenCalledTimes(2));
+        expect(changes(onCellValueChanged)).toEqual(['1:status=Tue', '2:status=Wed']);
+        // The filled range becomes the selection; no editor opened.
+        await waitFor(() => expect(container.querySelectorAll('[data-in-range="true"]').length).toBe(3));
+        expect(container.querySelector('tbody input')).toBeNull();
+      });
+
+      it('a single pasted value fills every cell of the selection', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        fireEvent.pointerDown(getCellAt(container, 2, 1), { shiftKey: true });
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        await act(async () => {
+          firePaste(grid, 'X');
+        });
+        expect(changes(onCellValueChanged)).toEqual([
+          '0:name=X', '0:status=X', '1:name=X', '1:status=X', '2:name=X', '2:status=X',
+        ]);
+      });
+
+      it('a block pastes once when the selection is not an exact multiple of it', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        fireEvent.pointerDown(getCellAt(container, 2, 0), { shiftKey: true });
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        await act(async () => {
+          firePaste(grid, 'A\nB');
+        });
+        expect(changes(onCellValueChanged)).toEqual(['0:name=A', '1:name=B']);
+      });
+
+      it('a copy also puts an HTML table on the clipboard, and an HTML-only paste is read as a table', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        fireEvent.pointerDown(getCellAt(container, 1, 1), { shiftKey: true });
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        let copied: Record<string, string> = {};
+        await act(async () => {
+          copied = fireCopyOrCut(grid, 'copy').data;
+        });
+        expect(copied['text/html']).toBe(
+          '<table><tbody><tr><td>Alpha</td><td>Active</td></tr><tr><td>Beta</td><td>Closed</td></tr></tbody></table>'
+        );
+
+        fireEvent.pointerDown(getCellAt(container, 2, 0));
+        const event = new Event('paste', { bubbles: true, cancelable: true });
+        Object.defineProperty(event, 'clipboardData', {
+          value: { getData: (format: string) => (format === 'text/html' ? '<table><tr><td>H1</td><td>H2</td></tr></table>' : '') },
+        });
+        await act(async () => {
+          fireEvent(grid, event);
+        });
+        expect(changes(onCellValueChanged)).toEqual(['2:name=H1', '2:status=H2']);
+      });
+
+      it('the context menu offers Paste values only, which stores formula text as a plain value', async () => {
+        const onCellValueChanged = jest.fn();
+        const readText = jest.fn().mockResolvedValue('=A1');
+        Object.defineProperty(navigator, 'clipboard', { value: { readText }, configurable: true });
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        const cell = getCellAt(container, 1, 0);
+        fireEvent.pointerDown(cell);
+        fireEvent.contextMenu(cell, { clientX: 100, clientY: 100 });
+        await waitFor(() => expect(screen.getByRole('menu')).toBeInTheDocument());
+        fireEvent.click(screen.getByText('Paste values only'));
+        await waitFor(() => expect(onCellValueChanged).toHaveBeenCalledTimes(1));
+        expect(changes(onCellValueChanged)).toEqual(['1:name==A1']);
       });
     });
 

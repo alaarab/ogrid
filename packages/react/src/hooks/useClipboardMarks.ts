@@ -4,15 +4,22 @@
  * not exported from the package.
  */
 import { useCallback, useRef, useState } from 'react';
+import { htmlClipboardToTsv } from '@alaarab/ogrid-core';
 import type { ICutSource, ISelectionRange } from '@alaarab/ogrid-core';
 
 /** Text-entry controls whose keystrokes and clipboard events never belong to the grid. */
 export const TEXT_ENTRY_SELECTOR =
   'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, select, [contenteditable=""], [contenteditable="true"]';
 
-/** The text a native or React `paste` event carries ('' when none). */
+/**
+ * The text a native or React `paste` event carries ('' when none). Falls back
+ * to the `text/html` flavor (a copied table) when there is no plain text.
+ */
 export function getPastedText(data: Pick<DataTransfer, 'getData'> | null | undefined): string {
-  return data?.getData('text/plain') || data?.getData('text') || '';
+  const text = data?.getData('text/plain') || data?.getData('text') || '';
+  if (text) return text;
+  const html = data?.getData('text/html');
+  return html ? htmlClipboardToTsv(html) : '';
 }
 
 export interface ClipboardMarks {

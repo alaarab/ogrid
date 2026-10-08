@@ -9,6 +9,22 @@ import { parseValue } from './valueParsers';
 import { normalizeSelectionRange } from '../types';
 import { rangesEqual } from './selectionHelpers';
 import { adjustFormulaReferences } from '../formula/cellAddressUtils';
+import { detectFillSeries } from './fillSeries';
+import type { IFillSeries } from './fillSeries';
+
+/**
+ * Series behavior for a fill (see `detectFillSeries`). Without it a fill
+ * copies its source.
+ */
+export interface IFillSeriesOptions {
+  /** Continue detected series (numbers, dates, weekdays, months, quarters, "Item 1"). Default true. */
+  series?: boolean;
+  /**
+   * Excel's Ctrl-drag: a lone number counts up instead of copying, and any
+   * other series is copied instead of continued.
+   */
+  alternate?: boolean;
+}
 
 /**
  * Check whether two columns are type-compatible for fill operations.
@@ -115,6 +131,10 @@ export interface IFillFormulaOptions<T> {
  * @param visibleCols     Visible column definitions.
  * @param formulaOptions  Optional formula-aware fill configuration.
  * @param sourceRange     Optional normalized source block to tile across `range`.
+ * @param seriesOptions   With `sourceRange`: continue series instead of copying
+ *                        (each source column when filling down/up, each source
+ *                        row when filling right/left). Lines that hold a formula,
+ *                        or are not a series, are still tiled.
  * @returns Array of cell value changed events to apply. Empty if source cell is out of bounds.
  */
 export function applyFillValues<T>(
@@ -124,7 +144,8 @@ export function applyFillValues<T>(
   items: T[],
   visibleCols: IColumnDef<T>[],
   formulaOptions?: IFillFormulaOptions<T>,
-  sourceRange?: ISelectionRange
+  sourceRange?: ISelectionRange,
+  seriesOptions?: IFillSeriesOptions
 ): ICellValueChangedEvent<T>[] {
   const events: ICellValueChangedEvent<T>[] = [];
   const src = sourceRange ? normalizeSelectionRange(sourceRange) : null;
@@ -136,6 +157,10 @@ export function applyFillValues<T>(
   // (a large fill over a wide grid was O(cells x flatColumns)).
   const flatColIndexById = formulaOptions
     ? new Map(formulaOptions.flatColumns.map((c, i) => [c.columnId, i] as const))
+    : null;
+
+  const series = src && seriesOptions && seriesOptions.series !== false
+    ? detectLineSeries(range, src, items, visibleCols, seriesOptions, formulaOptions, flatColIndexById)
     : null;
 
   for (let row = range.startRow; row <= range.endRow; row++) {
@@ -182,6 +207,17 @@ export function applyFillValues<T>(
         }
       }
 
+      // Series path: this cell continues its line's series.
+      const line = series?.lines.get(series.vertical ? col : row);
+      if (line && src) {
+        const k = series?.vertical ? row - src.startRow : col - src.startCol;
+        const oldValue = getCellValue(item, colDef);
+        const result = parseValue(line.valueAt(k), oldValue, item, colDef);
+        if (!result.valid) continue;
+        events.push({ item, columnId: colDef.columnId, oldValue, newValue: result.value, rowIndex: row });
+        continue;
+      }
+
       // Normal value fill path
       const startValue = getCellValue(startItem, startColDef);
       const oldValue = getCellValue(item, colDef);
@@ -200,6 +236,47 @@ export function applyFillValues<T>(
 }
 
 /**
+ * The series of each source line of a fill, keyed by column (filling down/up)
+ * or row (filling right/left). Lines that are not a series, or hold a formula
+ * (formulas fill by shifting their references), are absent and get copied.
+ */
+function detectLineSeries<T>(
+  range: ISelectionRange,
+  src: ISelectionRange,
+  items: T[],
+  visibleCols: IColumnDef<T>[],
+  options: IFillSeriesOptions,
+  formulaOptions: IFillFormulaOptions<T> | undefined,
+  flatColIndexById: Map<string, number> | null
+): { vertical: boolean; lines: Map<number, IFillSeries> } | null {
+  const vertical = range.startRow < src.startRow || range.endRow > src.endRow;
+  if (!vertical && range.startCol >= src.startCol && range.endCol <= src.endCol) return null;
+  const lines = new Map<number, IFillSeries>();
+  const [from, to] = vertical ? [src.startCol, src.endCol] : [src.startRow, src.endRow];
+  const [start, end] = vertical ? [src.startRow, src.endRow] : [src.startCol, src.endCol];
+  for (let line = from; line <= to; line++) {
+    const values: unknown[] = [];
+    let usable = true;
+    for (let i = start; i <= end; i++) {
+      const r = vertical ? i : line;
+      const c = vertical ? line : i;
+      const item = items[r];
+      const colDef = visibleCols[c];
+      const flat = colDef ? (flatColIndexById?.get(colDef.columnId) ?? -1) : -1;
+      if (item === undefined || colDef === undefined || (flat >= 0 && formulaOptions?.hasFormula?.(flat, r))) {
+        usable = false;
+        break;
+      }
+      values.push(getCellValue(item, colDef));
+    }
+    if (!usable) continue;
+    const series = detectFillSeries(values, { alternate: options.alternate });
+    if (series) lines.set(line, series);
+  }
+  return lines.size > 0 ? { vertical, lines } : null;
+}
+
+/**
  * The edits a fill-handle drag makes when released over cell (`row`, `col`):
  * the fill `range` (`computeFillRange`) and the `events` that tile `source`
  * over it (`applyFillValues`). `<OGrid>` and the headless `useFillHandle`
@@ -212,6 +289,9 @@ export function applyFillValues<T>(
  * @param items           Array of all row data objects.
  * @param visibleCols     Visible column definitions.
  * @param formulaOptions  Optional formula-aware fill configuration.
+ * @param seriesOptions   Series behavior. Series are continued by default (Excel);
+ *                        pass `{ alternate: true }` for a Ctrl-drag, or
+ *                        `{ series: false }` to always copy.
  */
 export function computeFillDragEdits<T>(
   source: ISelectionRange,
@@ -219,11 +299,46 @@ export function computeFillDragEdits<T>(
   col: number,
   items: T[],
   visibleCols: IColumnDef<T>[],
-  formulaOptions?: IFillFormulaOptions<T>
+  formulaOptions?: IFillFormulaOptions<T>,
+  seriesOptions: IFillSeriesOptions = {}
 ): { range: ISelectionRange; events: ICellValueChangedEvent<T>[] } {
   const src = normalizeSelectionRange(source);
   const range = computeFillRange(src, row, col);
   // A range equal to the source has nothing outside it to tile over.
   if (rangesEqual(range, src)) return { range, events: [] };
-  return { range, events: applyFillValues(range, src.startRow, src.startCol, items, visibleCols, formulaOptions, src) };
+  return { range, events: applyFillValues(range, src.startRow, src.startCol, items, visibleCols, formulaOptions, src, seriesOptions) };
+}
+
+/**
+ * The last row a double-click on the fill handle fills down to (Excel): the
+ * end of the contiguous data in the column left of `source`, or, when that
+ * column has nothing below the source, the column to its right. Returns -1
+ * when neither neighbor has data directly below the source (nothing to fill).
+ *
+ * @param source         The selection the fill extends (any corner order).
+ * @param items          Array of all row data objects.
+ * @param visibleCols    Visible column definitions.
+ * @param isCoveredCell  Optional: cells covered by a merged cell count as empty.
+ */
+export function computeAutoFillEndRow<T>(
+  source: ISelectionRange,
+  items: T[],
+  visibleCols: IColumnDef<T>[],
+  isCoveredCell?: (row: number, col: number) => boolean
+): number {
+  const src = normalizeSelectionRange(source);
+  const hasData = (r: number, c: number): boolean => {
+    const item = items[r];
+    const colDef = visibleCols[c];
+    if (item === undefined || colDef === undefined) return false;
+    if (isCoveredCell?.(r, c)) return false;
+    const v = getCellValue(item, colDef);
+    return v != null && v !== '';
+  };
+  const first = src.endRow + 1;
+  const neighbor = [src.startCol - 1, src.endCol + 1].find((c) => c >= 0 && c < visibleCols.length && hasData(first, c));
+  if (neighbor === undefined) return -1;
+  let end = first;
+  while (end + 1 < items.length && hasData(end + 1, neighbor)) end++;
+  return end;
 }

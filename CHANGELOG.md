@@ -6,6 +6,32 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- Fill series like Excel: dragging the fill handle continues numbers (two or
+  more follow their linear trend), dates (by day; two same-day dates step by
+  month or year), weekday and month names and abbreviations, quarters (Q1..Q4)
+  and text ending in a number ("Item 1" -> "Item 2"), in all four directions
+  (up/left count backward). A single number still copies, and anything that is
+  not a series is copied as before; formulas still shift their references.
+  Holding Ctrl/Cmd at release flips copy and series. Headless `useFillHandle`
+  does the same (`commitFill(event)` reads Ctrl/Cmd; `fillSeries: false` to
+  always copy). Core exports `detectFillSeries`; `computeFillDragEdits` takes
+  series options.
+- Double-click the fill handle to fill down to the end of the adjacent data
+  column (left, else right), like Excel. Headless: `useFillHandle().autoFillDown`;
+  core: `computeAutoFillEndRow`.
+- Paste repeats a copied block over a larger selection that is an exact
+  multiple of it (a single value fills the whole selection), in `<OGrid>` and
+  `useCellClipboard`. Core: `tilePastedRows`.
+- Formulas copied inside the grid shift their relative references by the
+  copy-to-paste offset when pasted (sheet coordinates, so sorting is handled).
+  External text and cut-paste are unchanged.
+- "Paste values only" in the cell context menu and Ctrl/Cmd+Shift+V: pastes
+  the computed values of copied formulas and stores `=` text as text.
+- Copy writes a `text/html` table (the displayed values) next to the TSV, so
+  pasting into Excel, Google Sheets or a document keeps a table; paste reads
+  `text/html` when there is no plain text. Core: `formatTsvAsHtmlTable`,
+  `parseHtmlClipboard`, `htmlClipboardToTsv`.
+
 - Merged cells: `mergedCells?: IMergedCell[]` on `OGrid` and `DataGridTable`
   (`{ rowId, columnId, rowSpan?, colSpan? }`, spans counted over displayed rows
   and visible columns). The anchor renders across the block and covered cells

@@ -118,6 +118,10 @@ export interface DataGridCellInteractionState {
   /** Native `cut` handler for the grid wrapper (Ctrl/Cmd+X). */
   handleGridCut: (e: React.ClipboardEvent) => void;
   handleFillHandleMouseDown: (e: React.MouseEvent) => void;
+  /** Double-click on the fill handle: fill down to the end of the adjacent data column (Excel). */
+  handleFillHandleDoubleClick: (e: React.MouseEvent) => void;
+  /** Context menu "Paste values only": pastes computed values, never formulas. */
+  handlePasteValues: () => void;
   handleCopy: () => void;
   handleCut: () => void;
   handlePaste: () => Promise<void>;
@@ -454,6 +458,7 @@ export function useDataGridState<T>(
     getFormula: props.getFormula,
     hasFormula: props.hasFormula,
     setFormula: props.setFormula,
+    getFormulaValue: props.getFormulaValue,
     onFormulaInsertReference: props.onFormulaInsertReference,
     formulaCol,
     formulaRow,

@@ -243,12 +243,16 @@ export {
   applyCutClear,
   captureCutSource,
   resolveCutClear,
+  tilePastedRows,
+  formatTsvAsHtmlTable,
+  parseHtmlClipboard,
+  htmlClipboardToTsv,
 } from './utils';
-export type { ICutSource, ResolveCutClearParams } from './utils';
+export type { ICutSource, ResolveCutClearParams, IPasteFormulaSource } from './utils';
 
 // Utils  -  fillHelpers
-export { applyFillValues, areFillCompatible, computeFillRange, computeFillDragEdits } from './utils';
-export type { IFillFormulaOptions } from './utils';
+export { applyFillValues, areFillCompatible, computeFillRange, computeFillDragEdits, computeAutoFillEndRow, detectFillSeries } from './utils';
+export type { IFillFormulaOptions, IFillSeriesOptions, IFillSeries, IDetectFillSeriesOptions } from './utils';
 
 // Utils  -  undoRedoStack
 export { UndoRedoStack } from './utils';

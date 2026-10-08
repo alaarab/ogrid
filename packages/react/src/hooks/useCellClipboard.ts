@@ -37,6 +37,8 @@ import {
   applyPastedValues,
   captureCutSource,
   resolveCutClear,
+  tilePastedRows,
+  formatTsvAsHtmlTable,
 } from '@alaarab/ogrid-core';
 import type {
   ISelectionRange,
@@ -242,6 +244,7 @@ export function useCellClipboard<T>(
     if (!range || isTextEntryTarget(event) || !event.clipboardData) return;
     const text = formatSelectionAsTsv(rows, columns, range);
     event.clipboardData.setData('text/plain', text);
+    event.clipboardData.setData('text/html', formatTsvAsHtmlTable(text));
     event.preventDefault();
     markCopied(range);
   }, [rangeSelection.range, rows, columns, markCopied]);
@@ -251,6 +254,7 @@ export function useCellClipboard<T>(
     if (!range || isTextEntryTarget(event) || !event.clipboardData) return;
     const text = formatSelectionAsTsv(rows, columns, range);
     event.clipboardData.setData('text/plain', text);
+    event.clipboardData.setData('text/html', formatTsvAsHtmlTable(text));
     event.preventDefault();
     markCut(range, text);
   }, [rangeSelection.range, rows, columns, markCut]);
@@ -264,8 +268,11 @@ export function useCellClipboard<T>(
 
     // Anchor at the top-left even for ranges selected upward/leftward.
     const anchor = normalizeSelectionRange(range);
-    const events = applyPastedValues(parsed, anchor.startRow, anchor.startCol, rows, columns);
     const cut = takePendingCut();
+    // A copied block repeats over a selection that is an exact multiple of it
+    // (Excel); a cut moves its block once.
+    const block = cut ? parsed : tilePastedRows(parsed, anchor);
+    const events = applyPastedValues(block, anchor.startRow, anchor.startCol, rows, columns);
     const cutEvents = cut
       ? resolveCutClear({ cut, text, pasteEvents: events, anchorRow: anchor.startRow, anchorCol: anchor.startCol, items: rows, visibleCols: columns, rowKeyOf })
       : [];

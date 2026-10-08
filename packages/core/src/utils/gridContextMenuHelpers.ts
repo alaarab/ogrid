@@ -18,6 +18,7 @@ export const GRID_CONTEXT_MENU_ITEMS: GridContextMenuItem[] = [
   { id: 'copy', label: 'Copy', shortcut: 'Ctrl+C', disabledWhenNoSelection: true, dividerBefore: true },
   { id: 'cut', label: 'Cut', shortcut: 'Ctrl+X', disabledWhenNoSelection: true },
   { id: 'paste', label: 'Paste', shortcut: 'Ctrl+V' },
+  { id: 'pasteValues', label: 'Paste values only', shortcut: 'Ctrl+Shift+V' },
   { id: 'selectAll', label: 'Select all', shortcut: 'Ctrl+A', dividerBefore: true },
 ];
 
@@ -77,6 +78,8 @@ export interface GridContextMenuHandlerProps {
   onCopy: () => void;
   onCut: () => void;
   onPaste: () => void;
+  /** Paste computed values, not formulas. The item is disabled without it. */
+  onPasteValues?: () => void;
   onSelectAll: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -90,7 +93,7 @@ export interface GridContextMenuHandlerProps {
 export function getContextMenuHandlers(
   props: GridContextMenuHandlerProps
 ): Record<string, () => void> {
-  const { onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, onClose } = props;
+  const { onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, onClose } = props;
   return {
     undo: () => {
       onUndo();
@@ -110,6 +113,10 @@ export function getContextMenuHandlers(
     },
     paste: () => {
       onPaste();
+      onClose();
+    },
+    pasteValues: () => {
+      onPasteValues?.();
       onClose();
     },
     selectAll: () => {

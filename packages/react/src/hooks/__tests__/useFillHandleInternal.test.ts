@@ -417,13 +417,13 @@ describe('useFillHandleInternal  -  pointer drag', () => {
     }
   });
 
-  it('an upward drag fills up from a multi-row source, tiling it', () => {
+  it('an upward drag fills up from a multi-row source, continuing its series backward', () => {
     const t = setup({ startRow: 3, startCol: 0, endRow: 4, endCol: 0 });
     try {
       t.pointTo(0, 0);
       t.move();
       t.up();
-      expect(written(t.onCellValueChanged)).toEqual(['0:a=40', '1:a=30', '2:a=40']);
+      expect(written(t.onCellValueChanged)).toEqual(['0:a=0', '1:a=10', '2:a=20']);
       expect(t.setSelectionRange).toHaveBeenLastCalledWith({ startRow: 0, startCol: 0, endRow: 4, endCol: 0 });
       expect(t.setActiveCell).toHaveBeenLastCalledWith({ rowIndex: 3, columnIndex: 0 });
     } finally {

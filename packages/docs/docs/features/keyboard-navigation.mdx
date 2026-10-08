@@ -122,7 +122,8 @@ When a cell is in edit mode:
 |---|---|
 | Ctrl+C | Copy selected cells to clipboard (tab-separated) |
 | Ctrl+X | Cut selected cells (copy + clear originals) |
-| Ctrl+V | Paste clipboard contents starting at the active cell |
+| Ctrl+V | Paste clipboard contents starting at the active cell (repeated over a larger selection that is an exact multiple of it) |
+| Ctrl+Shift+V | Paste values only: computed values, never formulas |
 
 Copied data uses tab-separated format compatible with Excel and Google Sheets. Multi-cell selections copy the entire rectangular range.
 

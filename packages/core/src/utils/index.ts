@@ -122,10 +122,16 @@ export {
   applyCutClear,
   captureCutSource,
   resolveCutClear,
+  tilePastedRows,
+  formatTsvAsHtmlTable,
+  parseHtmlClipboard,
+  htmlClipboardToTsv,
 } from './clipboardHelpers';
-export type { ICutSource, ResolveCutClearParams } from './clipboardHelpers';
-export { applyFillValues, areFillCompatible, computeFillRange, computeFillDragEdits } from './fillHelpers';
-export type { IFillFormulaOptions } from './fillHelpers';
+export type { ICutSource, ResolveCutClearParams, IPasteFormulaSource } from './clipboardHelpers';
+export { applyFillValues, areFillCompatible, computeFillRange, computeFillDragEdits, computeAutoFillEndRow } from './fillHelpers';
+export { detectFillSeries } from './fillSeries';
+export type { IFillSeries, IDetectFillSeriesOptions } from './fillSeries';
+export type { IFillFormulaOptions, IFillSeriesOptions } from './fillHelpers';
 export { UndoRedoStack } from './undoRedoStack';
 export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './validation';
 export { indexToColumnLetter, columnLetterToIndex, formatCellReference } from './cellReference';

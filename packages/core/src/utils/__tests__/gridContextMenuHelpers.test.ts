@@ -5,7 +5,7 @@ describe('gridContextMenuHelpers', () => {
   describe('GRID_CONTEXT_MENU_ITEMS', () => {
     it('exports menu items array', () => {
       expect(Array.isArray(GRID_CONTEXT_MENU_ITEMS)).toBe(true);
-      expect(GRID_CONTEXT_MENU_ITEMS.length).toBe(6);
+      expect(GRID_CONTEXT_MENU_ITEMS.length).toBe(7);
     });
 
     it('includes undo item with correct properties', () => {
@@ -163,7 +163,7 @@ describe('gridContextMenuHelpers', () => {
         onClose: jest.fn(),
       };
       const handlers = getContextMenuHandlers(props);
-      expect(Object.keys(handlers)).toEqual(['undo', 'redo', 'copy', 'cut', 'paste', 'selectAll']);
+      expect(Object.keys(handlers)).toEqual(['undo', 'redo', 'copy', 'cut', 'paste', 'pasteValues', 'selectAll']);
     });
 
     it('undo handler calls onUndo then onClose', () => {

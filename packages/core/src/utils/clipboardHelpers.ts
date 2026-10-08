@@ -7,6 +7,7 @@ import type { ISelectionRange } from '../types/dataGridTypes';
 import { getCellValue, isColumnEditable } from './cellValue';
 import { parseValue } from './valueParsers';
 import { normalizeSelectionRange } from '../types';
+import { adjustFormulaReferences } from '../formula/cellAddressUtils';
 
 /**
  * Format a single cell value for inclusion in a TSV clipboard string.
@@ -42,7 +43,8 @@ export function formatCellValueForTsv(
  * @param range       The selection range to serialize (will be normalized).
  * @param formulaOptions  Optional formula-aware options. When provided, cells with
  *                        formulas will have their formula string copied instead of
- *                        the computed value.
+ *                        the computed value; with `valuesOnly`, their computed value
+ *                        (`getFormulaValue`) instead.
  * @param isCoveredCell  Optional: cells covered by a merged cell (not its anchor)
  *                        copy as empty, so a merge copies its anchor value once.
  * @returns TSV string with rows separated by \\r\\n and columns by \\t.
@@ -56,6 +58,10 @@ export function formatSelectionAsTsv<T>(
     flatColumns: IColumnDef<T>[];
     getFormula?: (col: number, row: number) => string | undefined;
     hasFormula?: (col: number, row: number) => boolean;
+    /** Computed value of a formula cell (flat column, row); used with `valuesOnly`. */
+    getFormulaValue?: (col: number, row: number) => unknown;
+    /** Copy formula cells as their computed values instead of their formula text. */
+    valuesOnly?: boolean;
   },
   isCoveredCell?: (row: number, col: number) => boolean
 ): string {
@@ -80,6 +86,11 @@ export function formatSelectionAsTsv<T>(
       if (formulaOptions?.hasFormula && formulaOptions?.getFormula) {
         const flatColIndex = flatColIndexById?.get(col.columnId) ?? -1;
         if (flatColIndex >= 0 && formulaOptions.hasFormula(flatColIndex, r)) {
+          if (formulaOptions.valuesOnly) {
+            const value = formulaOptions.getFormulaValue?.(flatColIndex, r);
+            cells.push(formatCellValueForTsv(value, col.valueFormatter ? col.valueFormatter(value, item) : value));
+            continue;
+          }
           const formulaStr = formulaOptions.getFormula(flatColIndex, r);
           if (formulaStr) {
             cells.push(formulaStr);
@@ -177,6 +188,9 @@ export function parseTsvClipboard(text: string): string[][] {
  *
  * When `formulaOptions` is provided, cells whose pasted text starts with "="
  * are routed through `setFormula` instead of the normal value parse path.
+ * With `formulaOptions.source` (the text was copied from this grid), their
+ * relative references shift by the distance from the copied cell to the target
+ * cell, as in Excel. Without it (external text) formulas paste unchanged.
  *
  * @param parsedRows   2D array of string values (from parseTsvClipboard).
  * @param anchorRow    Target starting row index.
@@ -198,6 +212,10 @@ export function applyPastedValues<T>(
     colOffset: number;
     flatColumns: IColumnDef<T>[];
     setFormula?: (col: number, row: number, formula: string | null) => void;
+    /** Where the pasted block was copied from in this grid; pasted formulas shift relative references by the offset. */
+    source?: IPasteFormulaSource;
+    /** Sheet row of a displayed row (sorting/filtering). Defaults to the display row. */
+    formulaRow?: (rowIndex: number) => number;
   },
   isCoveredCell?: (row: number, col: number) => boolean
 ): ICellValueChangedEvent<T>[] {
@@ -223,7 +241,15 @@ export function applyPastedValues<T>(
       if (cellText.startsWith('=') && formulaOptions?.setFormula) {
         const flatColIndex = flatColIndexById?.get(col.columnId) ?? -1;
         if (flatColIndex >= 0) {
-          formulaOptions.setFormula(flatColIndex, targetRow, cellText);
+          const source = formulaOptions.source;
+          const srcRow = source?.sheetRows[r % source.sheetRows.length];
+          const srcCol = source?.flatCols[c % source.flatCols.length];
+          let formula = cellText;
+          if (srcRow !== undefined && srcCol !== undefined && srcCol >= 0) {
+            const sheetRow = formulaOptions.formulaRow ? formulaOptions.formulaRow(targetRow) : targetRow;
+            formula = adjustFormulaReferences(cellText, flatColIndex - srcCol, sheetRow - srcRow);
+          }
+          formulaOptions.setFormula(flatColIndex, targetRow, formula);
           continue;
         }
       }
@@ -373,4 +399,121 @@ export function resolveCutClear<T>(params: ResolveCutClearParams<T>): ICellValue
     }
   }
   return events;
+}
+
+/**
+ * Where a copied block came from in the grid, so pasting its formulas can
+ * shift their relative references by the copy-to-paste offset (Excel).
+ * Coordinates are formula engine coordinates, one entry per copied row/column.
+ */
+export interface IPasteFormulaSource {
+  /** Sheet row of each copied row, top to bottom. */
+  sheetRows: number[];
+  /** Flat column index of each copied column, left to right (-1 when unknown). */
+  flatCols: number[];
+}
+
+/**
+ * Excel's paste-into-a-selection rule: when the selection is larger than the
+ * pasted block and an exact multiple of it in both directions, the block is
+ * repeated to fill the selection (so a single value fills every selected
+ * cell). Otherwise the block is returned as is and pastes once at the
+ * selection's top-left cell.
+ *
+ * @param parsedRows  The pasted block (from parseTsvClipboard).
+ * @param target      The selection being pasted into (any corner order).
+ */
+export function tilePastedRows(parsedRows: string[][], target: ISelectionRange): string[][] {
+  const height = parsedRows.length;
+  const width = parsedRows.reduce((w, row) => Math.max(w, row.length), 0);
+  if (height === 0 || width === 0) return parsedRows;
+  const norm = normalizeSelectionRange(target);
+  const targetHeight = norm.endRow - norm.startRow + 1;
+  const targetWidth = norm.endCol - norm.startCol + 1;
+  if (targetHeight % height !== 0 || targetWidth % width !== 0) return parsedRows;
+  if (targetHeight === height && targetWidth === width) return parsedRows;
+  const tiled: string[][] = [];
+  for (let r = 0; r < targetHeight; r++) {
+    const src = parsedRows[r % height] ?? [];
+    const row: string[] = [];
+    for (let c = 0; c < targetWidth; c++) row.push(src[c % width] ?? '');
+    tiled.push(row);
+  }
+  return tiled;
+}
+
+const escapeHtml = (s: string): string =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/**
+ * Render clipboard TSV as a minimal HTML `<table>`, the `text/html` flavor a
+ * copy puts next to `text/plain` so Excel, Google Sheets and word processors
+ * paste a table. Line breaks inside a cell become `<br>`.
+ */
+export function formatTsvAsHtmlTable(tsv: string): string {
+  const rows = parseTsvClipboard(tsv);
+  const body = rows
+    .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell).replace(/\r\n|\r|\n/g, '<br>')}</td>`).join('')}</tr>`)
+    .join('');
+  return `<table><tbody>${body}</tbody></table>`;
+}
+
+const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+
+function decodeEntities(s: string): string {
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, code: string) => {
+    if (code[0] === '#') {
+      const hex = code[1] === 'x' || code[1] === 'X';
+      const n = hex ? Number.parseInt(code.slice(2), 16) : Number.parseInt(code.slice(1), 10);
+      return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : match;
+    }
+    return NAMED_ENTITIES[code.toLowerCase()] ?? match;
+  });
+}
+
+/** The text of an HTML fragment: whitespace collapsed, `<br>` kept as a line break, tags dropped. */
+function htmlText(fragment: string): string {
+  const text = fragment
+    .replace(/\s+/g, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div)>/gi, '\n')
+    .replace(/<[^>]*>/g, '');
+  return decodeEntities(text).replace(/ *\n */g, '\n').trim();
+}
+
+/**
+ * Parse an HTML clipboard payload (what Excel, Google Sheets and browsers put
+ * on the clipboard as `text/html`) into rows of cell text. Reads the first
+ * `<table>`; `colspan` adds empty cells so columns stay aligned. Without a
+ * table the whole fragment's text is a single cell. Pure string parsing: no
+ * DOM needed.
+ */
+export function parseHtmlClipboard(html: string): string[][] {
+  const stripped = html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<(style|script|head)\b[\s\S]*?<\/\1>/gi, '');
+  const table = /<table\b[\s\S]*?<\/table>/i.exec(stripped)?.[0];
+  if (!table) {
+    const text = htmlText(stripped);
+    return text ? [[text]] : [];
+  }
+  const rows: string[][] = [];
+  for (const tr of table.match(/<tr\b[\s\S]*?<\/tr>/gi) ?? []) {
+    const row: string[] = [];
+    const cellRe = /<t([dh])\b([^>]*)>([\s\S]*?)<\/t\1>/gi;
+    for (let m = cellRe.exec(tr); m !== null; m = cellRe.exec(tr)) {
+      row.push(htmlText(m[3] ?? ''));
+      const span = Number(/colspan\s*=\s*["']?(\d+)/i.exec(m[2] ?? '')?.[1] ?? 1);
+      for (let i = 1; i < Math.min(span, 1000); i++) row.push('');
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+/** An HTML clipboard payload as clipboard TSV (see `parseHtmlClipboard`); '' when it holds no text. */
+export function htmlClipboardToTsv(html: string): string {
+  return parseHtmlClipboard(html)
+    .map((row) => row.map((cell) => formatCellValueForTsv(cell, cell)).join('\t'))
+    .join('\r\n');
 }

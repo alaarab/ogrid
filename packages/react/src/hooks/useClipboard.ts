@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { captureCutSource, resolveCutClear } from '@alaarab/ogrid-core';
+import { captureCutSource, resolveCutClear, tilePastedRows, formatTsvAsHtmlTable } from '@alaarab/ogrid-core';
+import type { IPasteFormulaSource } from '@alaarab/ogrid-core';
 import { formatSelectionAsTsv, parseTsvClipboard, applyPastedValues } from '../utils';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell, ICellValueChangedEvent, IColumnDef, RowId } from '../types';
@@ -32,6 +33,10 @@ export interface UseClipboardParams<T> {
   setFormula?: (col: number, row: number, formula: string | null) => void;
   /** Cells covered by a merged cell (not its anchor): copied as empty, skipped on paste. */
   isCoveredCell?: (row: number, col: number) => boolean;
+  /** Computed value of a formula cell (flat column + row), for "paste values only" and the HTML copy. */
+  getFormulaValue?: (col: number, row: number) => unknown;
+  /** Sheet row of a displayed row, so pasted formulas shift by sheet distance. Defaults to the display row. */
+  formulaRow?: (rowIndex: number) => number;
 }
 
 /** The parts of a native or React `ClipboardEvent` the paste handler reads. */
@@ -75,6 +80,17 @@ export interface UseClipboardResult {
    * keyboard shortcut must not call `handlePaste` as well, or it pastes twice.
    */
   handlePasteEvent: (event: ClipboardPasteEventLike) => void;
+  /**
+   * Programmatic "paste values only" (context menu): like `handlePaste`, but
+   * formulas copied from this grid paste as their computed values and pasted
+   * text starting with "=" is stored as text, not as a formula.
+   */
+  handlePasteValues: () => Promise<void>;
+  /**
+   * Make the next native `paste` event (within a second) paste values only.
+   * Ctrl/Cmd+Shift+V calls this on keydown and leaves the paste event to follow.
+   */
+  armPasteValues: () => void;
   /** Current cut range for UI (marching ants). Null when no cut or after paste. */
   cutRange: ISelectionRange | null;
   /** Current copy range for UI (marching ants). Null when no copy or after paste/cut. */
@@ -83,20 +99,50 @@ export interface UseClipboardResult {
   clearClipboardRanges: () => void;
 }
 
-// navigator.clipboard is undefined outside secure contexts (plain http);
-// the in-page clipboard still makes copy/paste work there.
-function writeSystemClipboard(tsv: string | null): void {
-  if (tsv != null) void navigator.clipboard?.writeText(tsv).catch(() => {});
+/** What a copy puts on the clipboard: TSV plus an HTML table of the values. */
+interface ClipboardPayload {
+  tsv: string;
+  html: string;
 }
 
-/** Put the TSV on the event's clipboardData; falls back to writeText if the event has none. */
-function fillClipboardEvent(event: ClipboardCopyEventLike, tsv: string | null): void {
-  if (tsv == null) return;
+/** The last in-grid copy: the in-page clipboard, its computed values, and where it came from. */
+interface InternalClipboard {
+  text: string;
+  valuesText: string;
+  source: IPasteFormulaSource;
+}
+
+const normalizeClipboardText = (s: string): string => s.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+
+/** How long after Ctrl/Cmd+Shift+V its paste event still pastes values only. */
+const PASTE_VALUES_WINDOW_MS = 1000;
+
+// navigator.clipboard is undefined outside secure contexts (plain http);
+// the in-page clipboard still makes copy/paste work there.
+function writeSystemClipboard(payload: ClipboardPayload | null): void {
+  if (payload == null) return;
+  const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+  if (!clipboard) return;
+  if (typeof clipboard.write === 'function' && typeof ClipboardItem !== 'undefined') {
+    const item = new ClipboardItem({
+      'text/plain': new Blob([payload.tsv], { type: 'text/plain' }),
+      'text/html': new Blob([payload.html], { type: 'text/html' }),
+    });
+    void clipboard.write([item]).catch(() => clipboard.writeText?.(payload.tsv).catch(() => {}));
+    return;
+  }
+  void clipboard.writeText?.(payload.tsv).catch(() => {});
+}
+
+/** Put the TSV and HTML on the event's clipboardData; falls back to the async clipboard if the event has none. */
+function fillClipboardEvent(event: ClipboardCopyEventLike, payload: ClipboardPayload | null): void {
+  if (payload == null) return;
   if (event.clipboardData) {
-    event.clipboardData.setData('text/plain', tsv);
+    event.clipboardData.setData('text/plain', payload.tsv);
+    event.clipboardData.setData('text/html', payload.html);
     event.preventDefault();
   } else {
-    writeSystemClipboard(tsv);
+    writeSystemClipboard(payload);
   }
 }
 
@@ -125,6 +171,8 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const hasFormulaRef = useLatestRef(params.hasFormula);
   const setFormulaRef = useLatestRef(params.setFormula);
   const isCoveredCellRef = useLatestRef(params.isCoveredCell);
+  const getFormulaValueRef = useLatestRef(params.getFormulaValue);
+  const formulaRowRef = useLatestRef(params.formulaRow);
 
   const getRowIdRef = useLatestRef(params.getRowId);
   const onClipboardErrorRef = useLatestRef(params.onClipboardError);
@@ -133,8 +181,15 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   // sort/filter/page/column change before paste cannot clear the wrong cells),
   // shared with the headless useCellClipboard.
   const { cutRange, copyRange, markCopied, markCut, takePendingCut, clearMarks: clearClipboardRanges } = useClipboardMarks();
-  /** In-page clipboard fallback when system clipboard is unavailable. */
-  const internalClipboardRef = useRef<string | null>(null);
+  /**
+   * The last in-grid copy. It is the paste source when the system clipboard is
+   * unavailable, and, when a paste carries the same text, says where the
+   * copied formulas came from (to shift their references) and what they
+   * computed (for paste values only).
+   */
+  const internalClipboardRef = useRef<InternalClipboard | null>(null);
+  /** When Ctrl/Cmd+Shift+V armed a values-only paste (ms timestamp), or 0. */
+  const pasteValuesArmedAtRef = useRef(0);
   /** Guard against async clipboard reads completing after unmount. */
   const isMountedRef = useRef(true);
   // Re-arm on every mount: StrictMode runs mount, cleanup, mount in development.
@@ -161,35 +216,52 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
       : null;
   }, [colOffset, selectionRangeRef, activeCellRef]);
 
-  /** Mark the effective range as copied and fill the in-page clipboard. Returns the TSV, or null with no range. */
-  const copySelection = useCallback((): string | null => {
+  /** Mark the effective range as copied and fill the in-page clipboard. Returns the clipboard payload, or null with no range. */
+  const copySelection = useCallback((): ClipboardPayload | null => {
     const range = getEffectiveRange();
     if (range == null) return null;
     const norm = normalizeSelectionRange(range);
-    const formulaOptions = formulasRef.current && flatColumnsRef.current
+    const items = itemsRef.current;
+    const visibleCols = visibleColsRef.current;
+    const flatColumns = flatColumnsRef.current;
+    const formulaOptions = formulasRef.current && flatColumns
       ? {
           colOffset,
-          flatColumns: flatColumnsRef.current,
+          flatColumns,
           getFormula: getFormulaRef.current,
           hasFormula: hasFormulaRef.current,
+          getFormulaValue: getFormulaValueRef.current,
         }
       : undefined;
-    const tsv = formatSelectionAsTsv(itemsRef.current, visibleColsRef.current, norm, formulaOptions, isCoveredCellRef.current);
-    internalClipboardRef.current = tsv;
+    const tsv = formatSelectionAsTsv(items, visibleCols, norm, formulaOptions, isCoveredCellRef.current);
+    // Formulas copy as text/plain; their computed values feed paste values
+    // only and the HTML table (other apps cannot evaluate grid formulas).
+    const valuesText = formulaOptions
+      ? formatSelectionAsTsv(items, visibleCols, norm, { ...formulaOptions, valuesOnly: true }, isCoveredCellRef.current)
+      : tsv;
+    const toSheetRow = formulaRowRef.current;
+    const sheetRows: number[] = [];
+    for (let r = norm.startRow; r <= norm.endRow; r++) sheetRows.push(toSheetRow ? toSheetRow(r) : r);
+    const flatCols: number[] = [];
+    for (let c = norm.startCol; c <= norm.endCol; c++) {
+      const id = visibleCols[c]?.columnId;
+      flatCols.push(flatColumns ? flatColumns.findIndex((fc) => fc.columnId === id) : c);
+    }
+    internalClipboardRef.current = { text: tsv, valuesText, source: { sheetRows, flatCols } };
     markCopied(norm);
-    return tsv;
-  }, [getEffectiveRange, itemsRef, visibleColsRef, formulasRef, flatColumnsRef, getFormulaRef, hasFormulaRef, colOffset, markCopied, isCoveredCellRef]);
+    return { tsv, html: formatTsvAsHtmlTable(valuesText) };
+  }, [getEffectiveRange, itemsRef, visibleColsRef, formulasRef, flatColumnsRef, getFormulaRef, hasFormulaRef, getFormulaValueRef, formulaRowRef, colOffset, markCopied, isCoveredCellRef]);
 
-  /** Copy, then register the range as a pending cut. Returns the TSV, or null when cut is not allowed. */
-  const cutSelection = useCallback((): string | null => {
+  /** Copy, then register the range as a pending cut. Returns the clipboard payload, or null when cut is not allowed. */
+  const cutSelection = useCallback((): ClipboardPayload | null => {
     if (editableRef.current === false) return null;
     const range = getEffectiveRange();
     if (range == null || onCellValueChangedRef.current == null) return null;
     const norm = normalizeSelectionRange(range);
     // copySelection fills the in-page clipboard; the cut mark then replaces its copy mark.
-    const tsv = copySelection() ?? '';
-    markCut(norm, captureCutSource(norm, itemsRef.current, visibleColsRef.current, rowKeyOf, tsv));
-    return tsv;
+    const payload = copySelection();
+    markCut(norm, captureCutSource(norm, itemsRef.current, visibleColsRef.current, rowKeyOf, payload?.tsv ?? ''));
+    return payload;
   }, [getEffectiveRange, copySelection, editableRef, onCellValueChangedRef, itemsRef, visibleColsRef, rowKeyOf, markCut]);
 
   const handleCopy = useCallback(() => {
@@ -208,8 +280,14 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     fillClipboardEvent(event, cutSelection());
   }, [cutSelection]);
 
-  /** Apply clipboard text at the selection anchor: values, formulas, pending cut, undo batch. */
-  const pasteText = useCallback((text: string) => {
+  /**
+   * Apply clipboard text at the selection anchor: values, formulas, pending
+   * cut, undo batch. A block repeats over a selection that is an exact
+   * multiple of it (Excel). Formulas copied from this grid shift their
+   * relative references to the paste position; with `valuesOnly` they paste
+   * as their computed values and nothing becomes a formula.
+   */
+  const pasteText = useCallback((text: string, valuesOnly = false) => {
     const onCellValueChanged = onCellValueChangedRef.current;
     if (onCellValueChanged == null) return;
     if (!text.trim()) return;
@@ -220,12 +298,17 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const anchorCol = norm ? norm.startCol : 0;
     const items = itemsRef.current;
     const visibleCols = visibleColsRef.current;
-    const parsedRows = parseTsvClipboard(text);
+    const internal = internalClipboardRef.current;
+    const fromGrid = internal != null && normalizeClipboardText(internal.text) === normalizeClipboardText(text);
+    // Taken up front: a cut moves its block once, never repeated over the selection.
+    const cut = takePendingCut();
+    const block = parseTsvClipboard(valuesOnly && fromGrid ? internal.valuesText : text);
+    const parsedRows = norm && !cut ? tilePastedRows(block, norm) : block;
     // Cells that received a pasted formula (they produce no value event).
     const pastedFormulaKeys: string[] = [];
     const flatColumns = flatColumnsRef.current;
     const setFormula = setFormulaRef.current;
-    const formulaOptions = formulasRef.current && flatColumns
+    const formulaOptions = formulasRef.current && flatColumns && !valuesOnly
       ? {
           colOffset,
           flatColumns,
@@ -233,13 +316,15 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
             pastedFormulaKeys.push(`${row}|${flatColumns[col]?.columnId}`);
             setFormula(col, row, formula);
           }),
+          // A cut moves formulas unchanged (Excel); a copy shifts them.
+          source: fromGrid && !cut ? internal.source : undefined,
+          formulaRow: formulaRowRef.current,
         }
       : undefined;
     beginBatch?.();
     try {
       const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols, formulaOptions, isCoveredCellRef.current);
       for (const evt of pasteEvents) onCellValueChanged(evt);
-      const cut = takePendingCut();
       if (cut) {
         const cutEvents = resolveCutClear({ cut, text, pasteEvents, pastedFormulaCells: pastedFormulaKeys, anchorRow, anchorCol, items, visibleCols, rowKeyOf });
         for (const evt of cutEvents) onCellValueChanged(evt);
@@ -247,31 +332,48 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     } finally {
       endBatch?.();
     }
-  }, [getEffectiveRange, activeCellRef, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset, rowKeyOf, takePendingCut, isCoveredCellRef]);
+  }, [getEffectiveRange, activeCellRef, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, formulaRowRef, colOffset, rowKeyOf, takePendingCut, isCoveredCellRef]);
 
-  const handlePaste = useCallback(async () => {
-    if (editableRef.current === false) return;
-    if (onCellValueChangedRef.current == null) return;
-    let text: string;
+  /** Read the clipboard for a programmatic paste (context menu), or null when the read failed. */
+  const readClipboardText = useCallback(async (): Promise<string | null> => {
     if (navigator.clipboard?.readText) {
       try {
-        text = await navigator.clipboard.readText();
+        return await navigator.clipboard.readText();
       } catch (err) {
         // A rejected read (permission denied, unfocused document) must not paste
         // a possibly stale in-grid copy over what the user meant to paste.
         onClipboardErrorRef.current?.(err);
-        return;
+        return null;
       }
-    } else {
-      // No system clipboard (plain http): the in-page copy is the only source.
-      text = internalClipboardRef.current ?? '';
     }
-    // Bail out if component unmounted during async clipboard read
-    if (!isMountedRef.current) return;
+    // No system clipboard (plain http): the in-page copy is the only source.
+    return internalClipboardRef.current?.text ?? '';
+  }, [onClipboardErrorRef]);
+
+  const handlePasteValues = useCallback(async () => {
+    if (editableRef.current === false) return;
+    if (onCellValueChangedRef.current == null) return;
+    const text = await readClipboardText();
+    if (text == null || !isMountedRef.current) return;
+    pasteText(text, true);
+  }, [editableRef, onCellValueChangedRef, readClipboardText, pasteText]);
+
+  const armPasteValues = useCallback(() => {
+    pasteValuesArmedAtRef.current = Date.now();
+  }, []);
+
+  const handlePaste = useCallback(async () => {
+    if (editableRef.current === false) return;
+    if (onCellValueChangedRef.current == null) return;
+    const text = await readClipboardText();
+    // Bail out if the read failed or the component unmounted during it.
+    if (text == null || !isMountedRef.current) return;
     pasteText(text);
-  }, [editableRef, onCellValueChangedRef, onClipboardErrorRef, pasteText]);
+  }, [editableRef, onCellValueChangedRef, readClipboardText, pasteText]);
 
   const handlePasteEvent = useCallback((event: ClipboardPasteEventLike) => {
+    const armedAt = pasteValuesArmedAtRef.current;
+    pasteValuesArmedAtRef.current = 0;
     if (editableRef.current === false) return;
     if (onCellValueChangedRef.current == null) return;
     const data = event.clipboardData;
@@ -280,10 +382,23 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     let text = getPastedText(data);
     // An in-grid copy on plain http never reached the system clipboard, so it
     // is the only thing the user can have meant when the event carries nothing.
-    if (!text.trim()) text = internalClipboardRef.current ?? '';
+    if (!text.trim()) text = internalClipboardRef.current?.text ?? '';
     event.preventDefault();
-    pasteText(text);
+    pasteText(text, armedAt > 0 && Date.now() - armedAt < PASTE_VALUES_WINDOW_MS);
   }, [editableRef, onCellValueChangedRef, pasteText]);
 
-  return { handleCopy, handleCut, handleCopyEvent, handleCutEvent, handlePaste, handlePasteEvent, cutRange, copyRange, clearClipboardRanges };
+  return {
+    handleCopy,
+    handleCut,
+    handleCopyEvent,
+    handleCutEvent,
+    handlePaste,
+    handlePasteEvent,
+    handlePasteValues,
+    armPasteValues,
+    cutRange,
+    copyRange,
+    clearClipboardRanges,
+  };
 }
+

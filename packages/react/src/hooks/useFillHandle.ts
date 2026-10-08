@@ -26,7 +26,7 @@
  *   });
  *
  *   // The fill-handle dot, rendered at the bottom-right of the active range:
- *   <div onMouseDown={fill.startFill} />
+ *   <div onMouseDown={fill.startFill} onDoubleClick={fill.autoFillDown} />
  *
  *   // While dragging, on each cell:
  *   <td
@@ -38,6 +38,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import {
+  computeAutoFillEndRow,
   computeFillDragEdits,
   computeFillRange,
   isInSelectionRange,
@@ -66,7 +67,16 @@ export interface UseFillHandleParams<T> {
    * `columnId: newValue`).
    */
   onFillCells: (events: ICellValueChangedEvent<T>[]) => void;
+  /**
+   * Continue detected series (1, 2 -> 3, 4; Mon -> Tue; Item 1 -> Item 2;
+   * dates) instead of copying, like Excel. Default true. A Ctrl/Cmd-held
+   * commit flips copy and series either way.
+   */
+  fillSeries?: boolean;
 }
+
+/** Modifier keys read from the event passed to `commitFill` / `autoFillDown`. */
+export type FillModifierEvent = { ctrlKey?: boolean; metaKey?: boolean };
 
 export interface UseFillHandleResult {
   /** The cell the user is currently dragging the fill handle toward, or null. */
@@ -80,8 +90,16 @@ export interface UseFillHandleResult {
   /**
    * Commit the fill: calls `onFillCells` with the resulting events and, when
    * the fill extends the source range, selects the filled range (Excel).
+   * Pass the mouse/pointer event (`onMouseUp={fill.commitFill}`): Ctrl/Cmd
+   * held flips copy and series, as Ctrl-drag does in Excel.
    */
-  commitFill: () => void;
+  commitFill: (event?: FillModifierEvent) => void;
+  /**
+   * Fill the current range down to the end of the contiguous data in the
+   * column to its left (else right): Excel's double-click on the fill handle.
+   * No-op when neither neighbor has data below the range.
+   */
+  autoFillDown: (event?: FillModifierEvent) => void;
   /** Cancel without committing. */
   cancelFill: () => void;
   /**
@@ -104,7 +122,7 @@ export interface UseFillHandleResult {
 export function useFillHandle<T>(
   params: UseFillHandleParams<T>,
 ): UseFillHandleResult {
-  const { rangeSelection, rows, columns, onFillCells } = params;
+  const { rangeSelection, rows, columns, onFillCells, fillSeries = true } = params;
 
   const [fillTarget, setFillTarget] = useState<CellCoord | null>(null);
 
@@ -141,17 +159,29 @@ export function useFillHandle<T>(
   }, []);
 
   const { setRange } = rangeSelection;
-  const commitFill = useCallback(() => {
-    // Same commit as <OGrid>'s fill handle: nothing happens when the target is
-    // inside the source range (released without dragging beyond it).
-    // Otherwise the filled range becomes the selection, as in Excel.
-    if (sourceRange && fillTarget) {
-      const { range, events } = computeFillDragEdits(sourceRange, fillTarget.row, fillTarget.col, rows, columns);
-      if (!rangesEqual(range, sourceRange)) setRange(range);
-      if (events.length > 0) onFillCells(events);
-    }
+  /** Fill `sourceRange` toward (row, col) and select the result: the commit <OGrid>'s fill handle shares. */
+  const fillTo = useCallback((row: number, col: number, event?: FillModifierEvent) => {
+    if (!sourceRange) return;
+    const seriesOptions = { series: fillSeries, alternate: Boolean(event?.ctrlKey || event?.metaKey) };
+    const { range, events } = computeFillDragEdits(sourceRange, row, col, rows, columns, undefined, seriesOptions);
+    if (!rangesEqual(range, sourceRange)) setRange(range);
+    if (events.length > 0) onFillCells(events);
+  }, [sourceRange, rows, columns, onFillCells, setRange, fillSeries]);
+
+  const commitFill = useCallback((event?: FillModifierEvent) => {
+    // Nothing happens when the target is inside the source range (released
+    // without dragging beyond it). Otherwise the filled range becomes the
+    // selection, as in Excel.
+    if (fillTarget) fillTo(fillTarget.row, fillTarget.col, event);
     setFillTarget(null);
-  }, [sourceRange, fillTarget, rows, columns, onFillCells, setRange]);
+  }, [fillTarget, fillTo]);
+
+  const autoFillDown = useCallback((event?: FillModifierEvent) => {
+    if (!sourceRange) return;
+    const endRow = computeAutoFillEndRow(sourceRange, rows, columns);
+    const norm = { endRow: Math.max(sourceRange.startRow, sourceRange.endRow), endCol: Math.max(sourceRange.startCol, sourceRange.endCol) };
+    if (endRow > norm.endRow) fillTo(endRow, norm.endCol, event);
+  }, [sourceRange, rows, columns, fillTo]);
 
   return {
     fillTarget,
@@ -159,6 +189,7 @@ export function useFillHandle<T>(
     startFill,
     updateFill,
     commitFill,
+    autoFillDown,
     cancelFill,
     fillRange,
     isInFillRange,
