@@ -363,7 +363,7 @@ describe('NETWORKDAYS.INTL', () => {
 });
 
 describe('TEXTSPLIT', () => {
-  it('returns the first element of the split (no spill)', () => {
+  it('displays the first element at the spill anchor', () => {
     expect(evalFormula('=TEXTSPLIT("a,b,c",",")')).toBe('a');
     expect(evalFormula('=TEXTSPLIT("x;y,z",",",";")')).toBe('x');
     expect(evalFormula('=TEXTSPLIT("abc",",")')).toBe('abc');
@@ -373,7 +373,7 @@ describe('TEXTSPLIT', () => {
     expect(evalFormula('=TEXTSPLIT(",b",",",";",FALSE)')).toBe('');
     expect(evalFormula('=TEXTSPLIT(",b",",",";",TRUE)')).toBe('b');
     expect(evalFormula('=TEXTSPLIT(";x,y",",",";",TRUE)')).toBe('x');
-    expect(errorType(evalFormula('=TEXTSPLIT(",,",",",";",TRUE)'))).toBe('#VALUE!');
+    expect(errorType(evalFormula('=TEXTSPLIT(",,",",",";",TRUE)'))).toBe('#CALC!');
   });
 
   it('match_mode 1 matches delimiters case-insensitively', () => {

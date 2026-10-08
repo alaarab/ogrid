@@ -199,6 +199,8 @@ export interface CellRenderDescriptorInput<T> {
   formulaRow?: (rowIndex: number) => number;
   /** Get the formula engine's computed value for a cell (formula col, formula row). */
   getFormulaValue?: (col: number, row: number) => unknown;
+  /** Spill outlined across the active formula's output. */
+  activeSpillRange?: import('../formula/types').ISpillRange;
   /** Check if a cell has a formula at the given coordinate. */
   hasFormula?: (col: number, row: number) => boolean;
   /** Get the formula string for a cell (e.g. '=SUM(A1:A5)'). Used to populate the editor with the formula instead of the computed value. */

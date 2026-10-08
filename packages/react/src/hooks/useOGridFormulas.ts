@@ -30,7 +30,7 @@ export interface UseOGridFormulaBarState {
  */
 export function useOGridFormulaBar<T>(
   formulas: boolean | undefined,
-  engine: Pick<UseFormulaEngineResult, 'enabled' | 'getFormula'>,
+  engine: Pick<UseFormulaEngineResult, 'enabled' | 'getFormula' | 'getSpillRange'>,
   /** Bumped on every recalc or formula edit; refreshes the bar's text. */
   formulaVersion: number,
   sheetItems: T[],
@@ -41,6 +41,7 @@ export function useOGridFormulaBar<T>(
 ): UseOGridFormulaBarState {
   const engineEnabled = engine.enabled;
   const engineGetFormula = engine.getFormula;
+  const engineGetSpillRange = engine.getSpillRange;
   const { activeCellRef, activeCellCoords } = activeCell;
   const getRawValue = useCallback((col: number, row: number): unknown => {
     const item = sheetItems[row];
@@ -50,8 +51,11 @@ export function useOGridFormulaBar<T>(
   }, [sheetItems, columns]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: formulaVersion is the deliberate trigger — a recalc or formula edit must refresh the bar's text
   const getFormulaForBar = useCallback(
-    (col: number, row: number) => engineGetFormula(col, row),
-    [engineGetFormula, formulaVersion]
+    (col: number, row: number) => {
+      const spill = engineGetSpillRange?.(col, row);
+      return engineGetFormula(spill?.anchorCol ?? col, spill?.anchorRow ?? row);
+    },
+    [engineGetFormula, engineGetSpillRange, formulaVersion]
   );
   // Commits go through the grid's own edit path, which the grid hands back through this ref.
   const formulaCellWriterRef = useRef<IFormulaCellWriter | null>(null);
@@ -84,10 +88,13 @@ export function useOGridFormulaBar<T>(
   // Enter / Escape in the bar hand focus back to the active cell, as an inline editor does.
   const returnFocusToGrid = useCallback(() => formulaCellWriterRef.current?.focusActiveCell?.(), []);
 
+  const activeSpill = activeCellCoords && engineGetSpillRange?.(activeCellCoords.col, activeCellCoords.row);
+  const spillChild = !!activeSpill && (activeSpill.anchorCol !== activeCellCoords?.col || activeSpill.anchorRow !== activeCellCoords?.row);
   const formulaBarEl = useMemo(() => {
     if (!formulas) return undefined;
     return React.createElement(FormulaBar, {
       cellRef: formulaBarState.cellRef,
+      spillChild,
       formulaText: formulaBarState.formulaText,
       isEditing: formulaBarState.isEditing,
       onInputChange: formulaBarState.onInputChange,
@@ -98,7 +105,7 @@ export function useOGridFormulaBar<T>(
       onReturnFocus: returnFocusToGrid,
       onNameBoxNavigate,
     });
-  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, startFormulaBarEditing, formulaBarState.inputRef, returnFocusToGrid, onNameBoxNavigate]);
+  }, [formulas, spillChild, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, startFormulaBarEditing, formulaBarState.inputRef, returnFocusToGrid, onNameBoxNavigate]);
 
   return { formulaBarState, formulaCellWriterRef, formulaBarEl };
 }
@@ -112,7 +119,7 @@ export function useOGridFormulaBar<T>(
 export function useOGridFormulas<T>(
   props: Pick<
     IOGridProps<T>,
-    'formulas' | 'initialFormulas' | 'onFormulaRecalc' | 'formulaFunctions' | 'namedRanges' | 'formulaLimits' | 'sheets' | 'onUndo'
+    'formulas' | 'initialFormulas' | 'onFormulaRecalc' | 'formulaFunctions' | 'namedRanges' | 'formulaLimits' | 'sheets' | 'onUndo' | 'mergedCells' | 'getRowId'
   >,
   sheetItems: T[],
   columns: IColumnDef<T>[],
@@ -122,6 +129,17 @@ export function useOGridFormulas<T>(
   isRowHidden?: (row: number) => boolean,
 ) {
   const { formulas, initialFormulas, onFormulaRecalc, formulaFunctions, namedRanges, formulaLimits, sheets } = props;
+  const { mergedCells, getRowId } = props;
+  const isCellMerged = useMemo(() => {
+    if (!formulas || !mergedCells?.length) return undefined;
+    const rows = new Map(sheetItems.map((item, row) => [getRowId(item), row]));
+    const cols = new Map(columns.map((column, col) => [column.columnId, col]));
+    const bounds = mergedCells.map(merge => ({
+      row: rows.get(merge.rowId) ?? -1, col: cols.get(merge.columnId) ?? -1,
+      rows: merge.rowSpan ?? 1, cols: merge.colSpan ?? 1,
+    })).filter(b => b.row >= 0 && b.col >= 0);
+    return (col: number, row: number) => bounds.some(b => row >= b.row && row < b.row + b.rows && col >= b.col && col < b.col + b.cols);
+  }, [formulas, mergedCells, getRowId, sheetItems, columns]);
   const [formulaVersion, setFormulaVersion] = useState(0);
   const wrappedOnFormulaRecalc = useCallback((result: IRecalcResult) => {
     setFormulaVersion(v => v + 1);
@@ -139,6 +157,7 @@ export function useOGridFormulas<T>(
     sheets,
     formulasFromData: formulasFollowData(props.onUndo != null),
     isRowHidden,
+    isCellMerged,
   });
 
   const activeCell = useOGridActiveCell();
@@ -149,6 +168,7 @@ export function useOGridFormulas<T>(
   const dgFormulaProps = useMemo(() => ({
     formulas,
     getFormulaValue: formulaEngine.enabled ? formulaEngine.getFormulaValue : undefined,
+    getSpillRange: formulaEngine.enabled ? formulaEngine.getSpillRange : undefined,
     hasFormula: formulaEngine.enabled ? formulaEngine.hasFormula : undefined,
     getFormula: formulaEngine.enabled ? formulaEngine.getFormula : undefined,
     setFormula: formulaEngine.enabled ? formulaEngine.setFormula : undefined,

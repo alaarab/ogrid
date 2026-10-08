@@ -70,13 +70,94 @@ const FUTURE_FUNCTIONS = new Set([
 /** Dynamic-array functions that also carry the `_xlws.` namespace. */
 const WORKSHEET_FUNCTIONS = new Set(['FILTER', 'SORT']);
 
+/** End of a quoted token, respecting Excel's doubled quote escaping. */
+function quoteEnd(text: string, start: number): number {
+  const quote = text[start];
+  for (let i = start + 1; i < text.length; i++) {
+    if (text[i] !== quote) continue;
+    if (text[i + 1] === quote) { i++; continue; }
+    return i + 1;
+  }
+  return text.length;
+}
+
+function balancedEnd(text: string, start: number): number {
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === '"' || text[i] === "'") { i = quoteEnd(text, i) - 1; continue; }
+    if (text[i] === '(') depth++;
+    if (text[i] === ')' && --depth === 0) return i + 1;
+  }
+  return text.length;
+}
+
+/** @ binds a complete unary operand (references, functions or parentheses). */
+function operandEnd(text: string, start: number): number {
+  let i = start;
+  while (/\s/.test(text[i] ?? '') && i < text.length) i++;
+  if (['@', '+', '-'].includes(text[i] ?? '')) return operandEnd(text, i + 1);
+  if (text[i] === '(') i = balancedEnd(text, i);
+  else if (text[i] === '"') i = quoteEnd(text, i);
+  else if (/^(?:\d|\.\d)/.test(text.slice(i))) {
+    i += /^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/i.exec(text.slice(i))?.[0].length ?? 0;
+  } else if (text[i] === '#') {
+    i += /^#(?:REF!|DIV\/0!|VALUE!|NAME\?|N\/A|NUM!|NULL!|SPILL!|CALC!)/i.exec(text.slice(i))?.[0].length ?? 0;
+  }
+  else {
+    if (text[i] === "'") i = quoteEnd(text, i);
+    while (i < text.length && /[A-Za-z0-9_.$!:]/.test(text.charAt(i))) i++;
+    let next = i;
+    while (next < text.length && /\s/.test(text.charAt(next))) next++;
+    if (text[next] === '(') i = balancedEnd(text, next);
+    else if (text[i] === '#') i++;
+  }
+  while (text[i] === '%') i++;
+  return i;
+}
+
+function serializeIntersections(text: string): string {
+  const positions: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '"' || text[i] === "'") { i = quoteEnd(text, i) - 1; continue; }
+    if (text[i] === '@') positions.push(i);
+  }
+  for (const start of positions.reverse()) {
+    const end = operandEnd(text, start + 1);
+    if (end > start + 1) text = `${text.slice(0, start)}_xlfn.SINGLE(${text.slice(start + 1, end)})${text.slice(end)}`;
+  }
+  return text;
+}
+
+function normalizeIntersections(text: string): string {
+  let result = '';
+  for (let i = 0; i < text.length;) {
+    if (text[i] === '"' || text[i] === "'") {
+      const end = quoteEnd(text, i);
+      result += text.slice(i, end); i = end; continue;
+    }
+    const single = (i === 0 || !/[A-Za-z0-9_.]/.test(text.charAt(i - 1))) && /^(?:_xlfn\.)?SINGLE\s*\(/i.exec(text.slice(i));
+    if (single) {
+      const open = i + single[0].length - 1, end = balancedEnd(text, open);
+      const operand = normalizeIntersections(text.slice(open + 1, end - 1));
+      result += `@${operandEnd(operand, 0) === operand.length ? operand : `(${operand})`}`;
+      i = end;
+    } else { result += text[i]; i++; }
+  }
+  return result;
+}
+
 /**
  * The inverse of normalizeFormula for export: drop the leading "=" and give
  * post-2007 functions their `_xlfn.` file-format prefix. String literals and
  * quoted sheet names are left untouched.
  */
 export function toFileFormula(formula: string): string {
-  const body = formula.startsWith('=') ? formula.slice(1) : formula;
+  const rawBody = formula.startsWith('=') ? formula.slice(1) : formula;
+  // Excel serializes spill references as ANCHORARRAY, not a literal '#'.
+  const intersected = serializeIntersections(rawBody);
+  const body = intersected.replace(/"(?:[^"]|"")*"|((?:'(?:[^']|'')*'!|[A-Za-z_][A-Za-z0-9_]*!)?\$?[A-Za-z]{1,3}\$?\d+)#|'(?:[^']|'')*'/g,
+    (match, ref: string | undefined) => ref ? `_xlfn.ANCHORARRAY(${ref})` : match);
+
   return body.replace(
     /"(?:[^"]|"")*"|'(?:[^']|'')*'|(?<![A-Za-z0-9_.])((?:_xlfn\.|_xlws\.)*)([A-Za-z][A-Za-z0-9_.]*)(?=\s*\()/g,
     (match, prefix: string | undefined, name: string | undefined) => {
@@ -89,7 +170,10 @@ export function toFileFormula(formula: string): string {
 }
 
 export function normalizeFormula(formula: string): string {
-  const normalized = formula.replace(
+  const spillRefs = formula.replace(/"(?:[^"]|"")*"|(?:_xlfn\.)?ANCHORARRAY\(((?:'(?:[^']|'')*'!|[A-Za-z_][A-Za-z0-9_]*!)?\$?[A-Za-z]{1,3}\$?\d+)\)|'(?:[^']|'')*'/gi,
+    (match, ref: string | undefined) => ref ? `${ref}#` : match);
+  const intersections = normalizeIntersections(spillRefs);
+  const normalized = intersections.replace(
     /"(?:[^"]|"")*"|'(?:[^']|'')*'|(?:_xlfn\.|_xlws\.)+(?=[A-Za-z_][A-Za-z0-9_.]*\s*\()/gi,
     (match) => match.startsWith('"') || match.startsWith("'") ? match : '',
   );

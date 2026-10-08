@@ -8,6 +8,7 @@ import { registerStatsFunctions } from './stats';
 import { registerInfoFunctions } from './info';
 import { registerFinancialFunctions } from './financial';
 import { registerStatisticalExtendedFunctions } from './statistical-extended';
+import { registerDynamicArrayFunctions } from './dynamicArrays';
 import { registerReferenceFunctions } from './reference';
 
 export function createBuiltInFunctions(): Map<string, IFormulaFunction> {
@@ -22,5 +23,6 @@ export function createBuiltInFunctions(): Map<string, IFormulaFunction> {
   registerFinancialFunctions(registry);
   registerStatisticalExtendedFunctions(registry);
   registerReferenceFunctions(registry);
+  registerDynamicArrayFunctions(registry);
   return registry;
 }

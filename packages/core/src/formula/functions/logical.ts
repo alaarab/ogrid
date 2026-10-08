@@ -1,4 +1,5 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
+import { mapArrays } from '../arrays';
 import { FormulaError } from '../types';
 import { evalArg, logicalValue, toNumber, compareValues, flattenArgs as expandArgs } from '../evaluator';
 
@@ -6,7 +7,7 @@ function logicalArgs(args: ASTNode[], context: IFormulaContext, evaluator: IEval
   const result: boolean[] = [];
   for (const arg of args) {
     const values = expandArgs([arg], context, evaluator);
-    const reference = arg.kind === 'range' || arg.kind === 'cellRef' || arg.kind === 'functionCall' && ['INDIRECT', 'OFFSET'].includes(arg.name);
+    const reference = arg.kind === 'range' || arg.kind === 'spillRef' || arg.kind === 'cellRef' || arg.kind === 'functionCall' && ['INDIRECT', 'OFFSET'].includes(arg.name);
     for (const value of values) {
       if (value instanceof FormulaError) return value;
       if (reference && (value === null || value === undefined || typeof value === 'string')) continue;
@@ -23,7 +24,16 @@ export function registerLogicalFunctions(registry: Map<string, IFormulaFunction>
     minArgs: 2,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const condition = logicalValue(evalArg(evaluator, args[0], context));
+      const test = evalArg(evaluator, args[0], context);
+      if (Array.isArray(test)) {
+        const yes = evalArg(evaluator, args[1], context);
+        const no = args[2] ? evalArg(evaluator, args[2], context) : false;
+        return mapArrays([test, yes, no], context, ([t, y, n]) => {
+          const logical = logicalValue(t);
+          return logical instanceof FormulaError ? logical : logical ? y : n;
+        });
+      }
+      const condition = logicalValue(test);
       if (condition instanceof FormulaError) return condition;
 
       // Short-circuit: only evaluate the needed branch
@@ -79,6 +89,7 @@ export function registerLogicalFunctions(registry: Map<string, IFormulaFunction>
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
+      if (Array.isArray(val)) return mapArrays([val, evalArg(evaluator, args[1], context)], context, ([v, fallback]) => v instanceof FormulaError ? fallback : v);
       if (val instanceof FormulaError) {
         return evalArg(evaluator, args[1], context);
       }
@@ -91,6 +102,7 @@ export function registerLogicalFunctions(registry: Map<string, IFormulaFunction>
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
+      if (Array.isArray(val)) return mapArrays([val, evalArg(evaluator, args[1], context)], context, ([v, fallback]) => v instanceof FormulaError && v.type === '#N/A' ? fallback : v);
       if (val instanceof FormulaError && val.type === '#N/A') {
         return evalArg(evaluator, args[1], context);
       }

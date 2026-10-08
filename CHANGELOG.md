@@ -18,6 +18,7 @@ All notable changes to OGrid will be documented in this file.
   caches with remapped ZIP relationships/content types; pivot caches refresh
   on open in Excel. Media code loads on demand. Includes a live workbook demo
   and real XLSX edit/export fixtures.
+- Dynamic array formulas with spill ownership, collision errors, automatic resize/clear, `A1#` references and `@` implicit intersection. Added UNIQUE, FILTER, SORT, SORTBY and RANDARRAY; SEQUENCE, TEXTSPLIT, TRANSPOSE and matrix outputs now preserve their arrays. Both React kits show a blue spill outline and read-only child formulas, and copy spilled values. XLSX import/export preserves array refs and cached output values; ExcelJS's legacy-array metadata limitation is documented.
 
 - Formula autocomplete and argument hints, in the cell editor and the formula
   bar, in both kits: typing a name after `=`, `(`, a comma or an operator lists

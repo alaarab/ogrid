@@ -1,7 +1,9 @@
+import { resolveReference } from '../references';
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
+import { asArray, checkArraySize } from '../arrays';
 import { FormulaError } from '../types';
-import { toNumber } from '../evaluator';
-import { MAX_MATRIX_SIZE, MAX_RANGE_CELLS } from '../limits';
+import { evalArg, toNumber } from '../evaluator';
+import { MAX_MATRIX_SIZE } from '../limits';
 import { parseCellRef, parseRange } from '../cellAddressUtils';
 import { indexToColumnLetter } from '../../utils/cellReference';
 
@@ -13,7 +15,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const refArg = args[0];
+      const refArg = resolveReference(args[0], context);
       if (refArg === undefined) {
         return new FormulaError('#REF!', 'INDIRECT: missing reference');
       }
@@ -56,7 +58,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
       let baseCol: number;
       let baseRow: number;
 
-      const refArg = args[0];
+      const refArg = resolveReference(args[0], context);
       if (refArg !== undefined && refArg.kind === 'cellRef') {
         baseCol = refArg.address.col;
         baseRow = refArg.address.row;
@@ -208,7 +210,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 0,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const arg = args[0];
+      const arg = resolveReference(args[0], context);
       if (arg === undefined) {
         return (context.currentCell?.row ?? 0) + 1;
       }
@@ -241,7 +243,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 0,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const arg = args[0];
+      const arg = resolveReference(args[0], context);
       if (arg === undefined) {
         return (context.currentCell?.col ?? 0) + 1;
       }
@@ -272,14 +274,17 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
   registry.set('ROWS', {
     minArgs: 1,
     maxArgs: 1,
-    evaluate(args: ASTNode[], _context: IFormulaContext, _evaluator: IEvaluator): unknown {
-      const arg = args[0];
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const arg = resolveReference(args[0], context);
       if (arg !== undefined && arg.kind === 'range') {
         return Math.abs(arg.end.row - arg.start.row) + 1;
       }
       if (arg !== undefined && arg.kind === 'cellRef') {
         return 1;
       }
+      const value = evalArg(evaluator, arg, context);
+      if (value instanceof FormulaError) return value;
+      if (Array.isArray(value)) return value.length;
       return new FormulaError('#VALUE!', 'ROWS: argument must be a range reference');
     },
   });
@@ -290,96 +295,18 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
   registry.set('COLUMNS', {
     minArgs: 1,
     maxArgs: 1,
-    evaluate(args: ASTNode[], _context: IFormulaContext, _evaluator: IEvaluator): unknown {
-      const arg = args[0];
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const arg = resolveReference(args[0], context);
       if (arg !== undefined && arg.kind === 'range') {
         return Math.abs(arg.end.col - arg.start.col) + 1;
       }
       if (arg !== undefined && arg.kind === 'cellRef') {
         return 1;
       }
+      const value = evalArg(evaluator, arg, context);
+      if (value instanceof FormulaError) return value;
+      if (Array.isArray(value)) return value[0]?.length ?? 0;
       return new FormulaError('#VALUE!', 'COLUMNS: argument must be a range reference');
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // SEQUENCE(rows, [cols=1], [start=1], [step=1])
-  // Returns a flat array for single-row sequences, or nested for multi-row.
-  // Since OGrid formula cells hold a single value, return the first element
-  // for use in a cell context. Full array support would require a spill engine.
-  // For test purposes, we expose the full nested array via a helper path.
-  // ---------------------------------------------------------------------------
-  registry.set('SEQUENCE', {
-    minArgs: 1,
-    maxArgs: 4,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rowsArg = args[0];
-      if (rowsArg === undefined) {
-        return new FormulaError('#VALUE!', 'SEQUENCE: rows is required');
-      }
-      const rawRows = evaluator.evaluate(rowsArg, context);
-      if (rawRows instanceof FormulaError) return rawRows;
-      const rows = toNumber(rawRows);
-      if (rows instanceof FormulaError) return rows;
-
-      let cols = 1;
-      const colsArg = args[1];
-      if (colsArg !== undefined) {
-        const rawCols = evaluator.evaluate(colsArg, context);
-        if (rawCols instanceof FormulaError) return rawCols;
-        const c = toNumber(rawCols);
-        if (c instanceof FormulaError) return c;
-        cols = Math.trunc(c);
-      }
-
-      let start = 1;
-      const startArg = args[2];
-      if (startArg !== undefined) {
-        const rawStart = evaluator.evaluate(startArg, context);
-        if (rawStart instanceof FormulaError) return rawStart;
-        const s = toNumber(rawStart);
-        if (s instanceof FormulaError) return s;
-        start = s;
-      }
-
-      // step is validated for error propagation; it can't affect the first element.
-      const stepArg = args[3];
-      if (stepArg !== undefined) {
-        const rawStep = evaluator.evaluate(stepArg, context);
-        if (rawStep instanceof FormulaError) return rawStep;
-        const st = toNumber(rawStep);
-        if (st instanceof FormulaError) return st;
-      }
-
-      const rowCount = Math.trunc(rows);
-      const colCount = Math.max(1, cols);
-
-      if (rowCount < 1) {
-        return new FormulaError('#VALUE!', 'SEQUENCE: rows must be >= 1');
-      }
-
-      // A formula cell holds a single value (no spill engine), so the result
-      // is the sequence's first element. Don't materialise the whole array:
-      // =SEQUENCE(1e9) would otherwise exhaust memory.
-      if (!Number.isFinite(rowCount) || !Number.isFinite(colCount)) {
-        return new FormulaError('#NUM!', 'SEQUENCE: size must be finite');
-      }
-      return start;
-    },
-  });
-
-  // ---------------------------------------------------------------------------
-  // TRANSPOSE(array)  -  transpose a 2D range
-  // ---------------------------------------------------------------------------
-  registry.set('TRANSPOSE', {
-    minArgs: 1,
-    maxArgs: 1,
-    evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
-      const arrayArg = args[0];
-      if (arrayArg === undefined || arrayArg.kind !== 'range') {
-        return new FormulaError('#VALUE!', 'TRANSPOSE: argument must be a range');
-      }
-      return context.getCellValue({ ...arrayArg.start, col: Math.min(arrayArg.start.col, arrayArg.end.col), row: Math.min(arrayArg.start.row, arrayArg.end.row) });
     },
   });
 
@@ -390,32 +317,36 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
-      const array1Arg = args[0];
+      const array1Arg = resolveReference(args[0], context);
       if (array1Arg === undefined || array1Arg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'MMULT: array1 must be a range');
       }
-      const array2Arg = args[1];
+      const array2Arg = resolveReference(args[1], context);
       if (array2Arg === undefined || array2Arg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'MMULT: array2 must be a range');
       }
 
-      const aCols = Math.abs(array1Arg.end.col - array1Arg.start.col) + 1;
-      const bRows = Math.abs(array2Arg.end.row - array2Arg.start.row) + 1;
-      if (aCols !== bRows) return new FormulaError('#VALUE!', 'MMULT dimensions do not match');
-      if (aCols > MAX_RANGE_CELLS) return new FormulaError('#VALUE!', 'MMULT too large');
-      let sum = 0;
-      const aCol = Math.min(array1Arg.start.col, array1Arg.end.col);
-      const aRow = Math.min(array1Arg.start.row, array1Arg.end.row);
-      const bCol = Math.min(array2Arg.start.col, array2Arg.end.col);
-      const bRow = Math.min(array2Arg.start.row, array2Arg.end.row);
-      for (let k = 0; k < aCols; k++) {
-        const av = toNumber(context.getCellValue({ ...array1Arg.start, col: aCol + k, row: aRow }));
-        const bv = toNumber(context.getCellValue({ ...array2Arg.start, col: bCol, row: bRow + k }));
-        if (av instanceof FormulaError) return av;
-        if (bv instanceof FormulaError) return bv;
-        sum += av * bv;
+      const a = asArray(_evaluator.evaluate(array1Arg, context)), b = asArray(_evaluator.evaluate(array2Arg, context));
+      const width = a[0]?.length ?? 0, cols = b[0]?.length ?? 0;
+      if (!width || width !== b.length) return new FormulaError('#VALUE!', 'MMULT dimensions do not match');
+      checkArraySize(a.length, cols, context);
+      context.consumeWork?.(a.length * cols * width);
+      const result: unknown[][] = [];
+      for (const row of a) {
+        const out: unknown[] = [];
+        for (let c = 0; c < cols; c++) {
+          let sum = 0;
+          for (let k = 0; k < width; k++) {
+            const left = toNumber(row[k]), right = toNumber(b[k]?.[c]);
+            if (left instanceof FormulaError) return left;
+            if (right instanceof FormulaError) return right;
+            sum += left * right;
+          }
+          out.push(Number.isFinite(sum) ? sum : new FormulaError('#NUM!'));
+        }
+        result.push(out);
       }
-      return sum;
+      return result;
     },
   });
 
@@ -426,7 +357,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
-      const arrayArg = args[0];
+      const arrayArg = resolveReference(args[0], context);
       if (arrayArg === undefined || arrayArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'MDETERM: argument must be a range');
       }
@@ -463,7 +394,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
-      const arrayArg = args[0];
+      const arrayArg = resolveReference(args[0], context);
       if (arrayArg === undefined || arrayArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'MINVERSE: argument must be a range');
       }
@@ -526,14 +457,14 @@ function determinant(m: number[][]): number {
 // ---------------------------------------------------------------------------
 // Helper: Gauss-Jordan matrix inverse
 // ---------------------------------------------------------------------------
-function matrixInverse(m: number[][], n: number): number | FormulaError {
+function matrixInverse(m: number[][], n: number): number[][] | FormulaError {
   // Augment with identity matrix
   const aug: number[][] = [];
   for (let r = 0; r < n; r++) {
     const srcRow = m[r];
     if (srcRow === undefined) continue; // unreachable: r < n and m is n x n
     const row: number[] = [...srcRow];
-    row.push(r === 0 ? 1 : 0);
+    for (let c = 0; c < n; c++) row.push(r === c ? 1 : 0);
     aug.push(row);
   }
 
@@ -573,7 +504,7 @@ function matrixInverse(m: number[][], n: number): number | FormulaError {
     if (scale === undefined) {
       return new FormulaError('#NUM!', 'MINVERSE: matrix is singular'); // unreachable
     }
-    for (let c = 0; c < n + 1; c++) {
+    for (let c = 0; c < n * 2; c++) {
       const v = pivotArr[c];
       if (v !== undefined) pivotArr[c] = v / scale;
     }
@@ -585,7 +516,7 @@ function matrixInverse(m: number[][], n: number): number | FormulaError {
         if (rowArr === undefined) continue; // unreachable: r < n
         const factor = rowArr[col];
         if (factor === undefined) continue; // unreachable: col < 2n
-        for (let c = 0; c < n + 1; c++) {
+        for (let c = 0; c < n * 2; c++) {
           const rv = rowArr[c];
           const pv = pivotArr[c];
           if (rv !== undefined && pv !== undefined) {
@@ -596,5 +527,5 @@ function matrixInverse(m: number[][], n: number): number | FormulaError {
     }
   }
 
-  return aug[0]?.[n] ?? new FormulaError('#NUM!', 'Singular matrix');
+  return aug.map(row => row.slice(n));
 }

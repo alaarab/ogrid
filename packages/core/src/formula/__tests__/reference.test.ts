@@ -317,20 +317,20 @@ describe('COLUMNS', () => {
 
 describe('SEQUENCE', () => {
   it('returns start value for 1-row, 1-col sequence', () => {
-    expect(evalFn('SEQUENCE', [num(1)])).toBe(1);
+    expect(evalFn('SEQUENCE', [num(1)])).toEqual([[1]]);
   });
 
   it('uses custom start', () => {
-    expect(evalFn('SEQUENCE', [num(1), num(1), num(5)])).toBe(5);
+    expect(evalFn('SEQUENCE', [num(1), num(1), num(5)])).toEqual([[5]]);
   });
 
   it('uses custom start and step', () => {
-    expect(evalFn('SEQUENCE', [num(1), num(1), num(10), num(3)])).toBe(10);
+    expect(evalFn('SEQUENCE', [num(1), num(1), num(10), num(3)])).toEqual([[10]]);
   });
 
-  it('returns first element for multi-row sequence', () => {
-    // SEQUENCE(5)  to  first value is 1
-    expect(evalFn('SEQUENCE', [num(5)])).toBe(1);
+  it('returns every element for multi-row sequence', () => {
+    // SEQUENCE(5) returns a column.
+    expect(evalFn('SEQUENCE', [num(5)])).toEqual([[1], [2], [3], [4], [5]]);
   });
 
   it('returns #VALUE! for rows < 1', () => {
@@ -345,20 +345,18 @@ describe('SEQUENCE', () => {
 // ===========================================================================
 
 describe('TRANSPOSE', () => {
-  it('returns top-left element after transposing', () => {
-    // Range A1:B2  to  [[1,2],[3,4]], transposed  to  [[1,3],[2,4]], top-left = 1
+  it('transposes every element', () => {
+    // A1:B2 transposes from [[1,2],[3,4]] to [[1,3],[2,4]].
     const cells = { '0,0': 1, '1,0': 2, '0,1': 3, '1,1': 4 };
-    expect(evalFn('TRANSPOSE', [range(0, 0, 1, 1)], cells)).toBe(1);
+    expect(evalFn('TRANSPOSE', [range(0, 0, 1, 1)], cells)).toEqual([[1, 3], [2, 4]]);
   });
 
-  it('returns #VALUE! for non-range argument', () => {
-    const result = evalFn('TRANSPOSE', [num(42)]);
-    expect(result).toBeInstanceOf(FormulaError);
-    expect((result as FormulaError).type).toBe('#VALUE!');
+  it('transposes a scalar to a singleton array', () => {
+    expect(evalFn('TRANSPOSE', [num(42)])).toEqual([[42]]);
   });
 
-  it('returns null for empty range', () => {
-    expect(evalFn('TRANSPOSE', [range(0, 0, 0, 0)])).toBeNull();
+  it('preserves a blank singleton', () => {
+    expect(evalFn('TRANSPOSE', [range(0, 0, 0, 0)])).toEqual([[null]]);
   });
 });
 
@@ -371,7 +369,7 @@ describe('MMULT', () => {
     // [[3]] * [[4]] = [[12]]
     const cells = { '0,0': 3, '1,0': 4 };
     // We need separate ranges: A1 and B1 each as 1x1
-    expect(evalFn('MMULT', [range(0, 0, 0, 0), range(1, 0, 1, 0)], cells)).toBe(12);
+    expect(evalFn('MMULT', [range(0, 0, 0, 0), range(1, 0, 1, 0)], cells)).toEqual([[12]]);
   });
 
   it('multiplies 2x2 matrices', () => {
@@ -382,7 +380,7 @@ describe('MMULT', () => {
       '2,0': 5, '3,0': 6,  // row 0 of B
       '2,1': 7, '3,1': 8,  // row 1 of B
     };
-    expect(evalFn('MMULT', [range(0, 0, 1, 1), range(2, 0, 3, 1)], cells)).toBe(19);
+    expect(evalFn('MMULT', [range(0, 0, 1, 1), range(2, 0, 3, 1)], cells)).toEqual([[19, 22], [43, 50]]);
   });
 
   it('returns #VALUE! if column count of A does not equal row count of B', () => {
@@ -445,13 +443,17 @@ describe('MDETERM', () => {
 describe('MINVERSE', () => {
   it('returns inverse of 1x1 matrix', () => {
     const cells = { '0,0': 4 };
-    expect(evalFn('MINVERSE', [range(0, 0, 0, 0)], cells)).toBeCloseTo(0.25);
+    expect(evalFn('MINVERSE', [range(0, 0, 0, 0)], cells)).toEqual([[0.25]]);
   });
 
-  it('returns top-left element of inverse of 2x2 matrix', () => {
+  it('returns every element of inverse of 2x2 matrix', () => {
     // [[1,2],[3,4]]^-1 = [[-2, 1],[1.5, -0.5]] / det(-2)  to  top-left = -2
     const cells = { '0,0': 1, '1,0': 2, '0,1': 3, '1,1': 4 };
-    expect(evalFn('MINVERSE', [range(0, 0, 1, 1)], cells)).toBeCloseTo(-2);
+    const inverse = evalFn('MINVERSE', [range(0, 0, 1, 1)], cells) as number[][];
+    expect(inverse[0]![0]).toBeCloseTo(-2);
+    expect(inverse[0]![1]).toBeCloseTo(1);
+    expect(inverse[1]![0]).toBeCloseTo(1.5);
+    expect(inverse[1]![1]).toBeCloseTo(-0.5);
   });
 
   it('returns #NUM! for singular matrix', () => {

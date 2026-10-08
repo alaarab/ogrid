@@ -389,6 +389,7 @@ export type { ZIndexKey } from './constants';
 
 // Formula types (type-only  -  zero runtime cost; runtime is in @alaarab/ogrid-core/formula)
 export type {
+  ISpillRange,
   ICellAddress,
   ICellRange,
   CellKey,

@@ -1,3 +1,4 @@
+import { resolveReference } from '../../references';
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode, ICellAddress } from '../../types';
 import { FormulaError } from '../../types';
 import { toNumber, flattenArgs, evalArg } from '../../evaluator';
@@ -182,7 +183,8 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
       // All args must be ranges of the same dimensions
       const arrays: unknown[][][] = [];
-      for (const arg of args) {
+      for (const node of args) {
+        const arg = resolveReference(node, context);
         if (arg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'SUMPRODUCT arguments must be ranges');
         }
@@ -244,7 +246,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rangeArg = args[0];
+      const rangeArg = resolveReference(args[0], context);
       if (rangeArg === undefined || (rangeArg.kind !== 'range' && rangeArg.kind !== 'cellRef')) {
         return new FormulaError('#VALUE!', 'LARGE first argument must be a range');
       }
@@ -270,7 +272,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rangeArg = args[0];
+      const rangeArg = resolveReference(args[0], context);
       if (rangeArg === undefined || (rangeArg.kind !== 'range' && rangeArg.kind !== 'cellRef')) {
         return new FormulaError('#VALUE!', 'SMALL first argument must be a range');
       }
@@ -341,7 +343,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
       const name = n >= 1 && n <= 11 ? SUBTOTAL_FUNCTIONS[n] : n >= 101 && n <= 111 ? SUBTOTAL_FUNCTIONS[n - 100] : undefined;
       const fn = name === undefined ? undefined : registry.get(name);
       if (fn === undefined) return new FormulaError('#VALUE!', 'SUBTOTAL function_num must be 1-11 or 101-111');
-      const refs = args.slice(1);
+      const refs = args.slice(1).map(arg => resolveReference(arg, context));
       for (const ref of refs) {
         const isReference = ref.kind === 'range' || ref.kind === 'cellRef' || ref.kind === 'functionCall' && (ref.name === 'OFFSET' || ref.name === 'INDIRECT');
         if (!isReference) return new FormulaError('#VALUE!', 'SUBTOTAL arguments must be references');
@@ -359,7 +361,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
       if (rawNum instanceof FormulaError) return rawNum;
       const num = toNumber(rawNum);
       if (num instanceof FormulaError) return num;
-      const rangeArg = args[1];
+      const rangeArg = resolveReference(args[1], context);
       if (rangeArg === undefined || (rangeArg.kind !== 'range' && rangeArg.kind !== 'cellRef')) {
         return new FormulaError('#VALUE!', 'RANK second argument must be a range');
       }

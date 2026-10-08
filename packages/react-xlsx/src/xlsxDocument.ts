@@ -9,8 +9,8 @@
 // through exactly as ExcelJS read it.
 
 import ExcelJS from 'exceljs';
-import { UndoRedoStack, triggerBlobDownload, type ICellNote, type IColumnDef, type RowId } from '@alaarab/ogrid-core';
-import { createBuiltInFunctions, tokenize, type IGridDataAccessor, type IRecalcResult } from '@alaarab/ogrid-core/formula';
+import { UndoRedoStack, triggerBlobDownload, type ICellNote, type IColumnDef, type RowId, type ISpillRange } from '@alaarab/ogrid-core';
+import { createBuiltInFunctions, tokenize, parseRange, type IGridDataAccessor, type IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { applyBorderSides, applyStyleEdit, borderSidesForCell, styleHas, type BorderOptions, type StyleEdit, type XlsxCellStyle } from './cellStyles';
 import { xlsxBlobFromWorkbook } from './exportToXlsx';
 import { attachSourceArchive, sourceArchiveOf } from './sourceArchive';
@@ -87,6 +87,9 @@ interface MutableSheetState {
   initialRowHeights: Map<number, number>;
   rowHeights: Map<number, number>;
   formulaResults: Map<string, unknown>;
+  /** Engine output by grid coordinates, including cells outside the loaded view. */
+  outputResults: Map<string, unknown>;
+  spillRanges: ISpillRange[];
   columns: IColumnDef<SheetRow>[];
   columnIndex: Map<string, number>;
 }
@@ -203,15 +206,52 @@ export class XlsxWorkbookDocument {
     // cached result in the row; export leaves those cells untouched.
     const rows = source.rows.slice();
     const formulaResults = new Map<string, unknown>();
+    const outputResults = new Map<string, unknown>();
     for (const f of source.initialFormulas) {
       const column = source.columns[f.col];
       const row = rows[f.row];
       if (!column || !row) continue;
       const cached = row[column.columnId];
       if (cached !== undefined && !engineCanEvaluate(f, sheetNames, functions)) continue;
-      if (cached !== undefined) formulaResults.set(cellKey(row.__rowIdx, column.columnId), cached);
+      if (cached !== undefined) {
+        formulaResults.set(cellKey(row.__rowIdx, column.columnId), cached);
+        outputResults.set(`${f.col},${f.row}`, cached);
+      }
       if (row === source.rows[f.row]) rows[f.row] = { ...row };
       (rows[f.row] as SheetRow)[column.columnId] = f.formula;
+    }
+    // Array children are caches, not independent input cells. Keep caches
+    // separately so the engine can spill into their empty source cells.
+    for (const range of source.arrayRanges ?? []) {
+      const anchor = rows[range.anchorRow];
+      const anchorColumn = source.columns[range.anchorCol];
+      if (!anchor || !anchorColumn || !isFormulaText(anchor[anchorColumn.columnId])) continue;
+      for (let r = range.anchorRow; r <= Math.min(range.endRow, rows.length - 1); r++) {
+        for (let c = range.anchorCol; c <= Math.min(range.endCol, source.columns.length - 1); c++) {
+          if (r === range.anchorRow && c === range.anchorCol) continue;
+          const row = rows[r], column = source.columns[c];
+          const cached = normalizeCellValue(worksheet.findRow(r + 1 + (source.formatting.headerPromoted ? 1 : 0))?.findCell(c + 1)?.value);
+          outputResults.set(`${c},${r}`, cached);
+          if (!row || !column) continue;
+          formulaResults.set(cellKey(row.__rowIdx, column.columnId), row[column.columnId]);
+          if (row === source.rows[r]) rows[r] = { ...row };
+          (rows[r] as SheetRow)[column.columnId] = '';
+        }
+      }
+      // Read existing caches beyond the view sparsely. The logical array
+      // extent can be much larger than either the loaded grid or file data.
+      if (range.endRow >= rows.length || range.endCol >= source.columns.length) {
+        const offset = source.formatting.headerPromoted ? 1 : 0;
+        worksheet.eachRow({ includeEmpty: false }, (row, sheetRow) => {
+          const r = sheetRow - 1 - offset;
+          if (r < range.anchorRow || r > range.endRow) return;
+          row.eachCell({ includeEmpty: false }, (cell, sheetCol) => {
+            const c = sheetCol - 1;
+            if (c < range.anchorCol || c > range.endCol || (r < rows.length && c < source.columns.length)) return;
+            outputResults.set(`${c},${r}`, normalizeCellValue(cell.value));
+          });
+        });
+      }
     }
     const notes = readSheetNotes(worksheet, source);
     const state: MutableSheetState = {
@@ -232,6 +272,8 @@ export class XlsxWorkbookDocument {
       initialRowHeights: source.formatting.rowHeights,
       rowHeights: new Map(source.formatting.rowHeights),
       formulaResults,
+      outputResults,
+      spillRanges: source.arrayRanges ?? [],
       columns: source.columns,
       columnIndex: new Map(source.columns.map((c, i) => [c.columnId, i])),
     };
@@ -301,8 +343,10 @@ export class XlsxWorkbookDocument {
 
   private commit(state: MutableSheetState, ops: Op[]): void {
     if (ops.length === 0) return;
+    // The formula hook compares the previous render's row identities. Keep
+    // that snapshot intact while applying edits, including subsequent edits.
+    state.rows = state.rows.slice();
     for (const op of ops) this.applyOp(state, op, 'after');
-    if (state.rows !== state.initialRows) state.rows = state.rows.slice();
     this.record(state, ops);
     this.emit();
   }
@@ -574,7 +618,17 @@ export class XlsxWorkbookDocument {
   recordFormulaResults(sheetName: string, result: IRecalcResult): void {
     const state = this.sheets.get(sheetName);
     if (!state) return;
+    if (result.spillRanges) {
+      // Unsupported imported arrays retain their file caches and extents.
+      const updated = new Set(result.updatedCells.map(cell => `${cell.col},${cell.row}`));
+      const preserved = state.spillRanges.filter(range => {
+        const row = state.rows[range.anchorRow], column = state.columns[range.anchorCol];
+        return row && column && !isFormulaText(row[column.columnId]) && !updated.has(`${range.anchorCol},${range.anchorRow}`);
+      });
+      state.spillRanges = [...preserved, ...result.spillRanges];
+    }
     for (const cell of result.updatedCells) {
+      state.outputResults.set(`${cell.col},${cell.row}`, cell.newValue);
       const row = state.rows[cell.row];
       const column = state.columns[cell.col];
       if (row && column) state.formulaResults.set(cellKey(row.__rowIdx, column.columnId), cell.newValue);
@@ -631,16 +685,33 @@ export class XlsxWorkbookDocument {
           const offset = state?.source.formatting.headerPromoted ? 1 : 0;
           const dataRow = state ? state.rows[row - offset] : undefined;
           const column = state?.columns[col];
+          const outputKey = `${col},${row - offset}`;
+          const spilled = state?.spillRanges.some(r => col >= r.anchorCol && col <= r.endCol && row - offset >= r.anchorRow && row - offset <= r.endRow);
+          if (state && spilled && state.outputResults.has(outputKey)) return state.outputResults.get(outputKey);
           if (state && dataRow && column) {
             const v = dataRow[column.columnId];
-            if (!isFormulaText(v)) return v;
             const key = cellKey(dataRow.__rowIdx, column.columnId);
+            if (!isFormulaText(v) && !spilled) return v;
             if (state.formulaResults.has(key)) return state.formulaResults.get(key);
           }
           return normalizeCellValue(this.worksheet(name)?.findRow(row + 1)?.findCell(col + 1)?.value);
         },
-        getRowCount: () => this.worksheet(name)?.rowCount ?? 0,
-        getColumnCount: () => this.worksheet(name)?.columnCount ?? 0,
+        getSpillRange: (col, row) => {
+          const state = this.sheets.get(name);
+          if (state) {
+            const offset = state.source.formatting.headerPromoted ? 1 : 0;
+            const spill = state.spillRanges.find(r => r.anchorCol === col && r.anchorRow === row - offset);
+            return spill && { ...spill, anchorRow: spill.anchorRow + offset, endRow: spill.endRow + offset };
+          }
+          const value = this.worksheet(name)?.findRow(row + 1)?.findCell(col + 1)?.value;
+          const range = value && typeof value === 'object' && 'formula' in value && 'shareType' in value && value.shareType === 'array' && 'ref' in value && typeof value.ref === 'string' ? parseRange(value.ref) : undefined;
+          return range ? { anchorCol: range.start.col, anchorRow: range.start.row, endCol: range.end.col, endRow: range.end.row } : undefined;
+        },
+        getRowCount: () => {
+          const state = this.sheets.get(name);
+          return Math.max((this.worksheet(name)?.rowCount ?? 0), ...(state?.spillRanges.map(r => r.endRow + 1 + (state.source.formatting.headerPromoted ? 1 : 0)) ?? []));
+        },
+        getColumnCount: () => Math.max((this.worksheet(name)?.columnCount ?? 0), ...(this.sheets.get(name)?.spillRanges.map(r => r.endCol + 1) ?? [])),
       };
     }
     this.accessors = accessors;
@@ -745,6 +816,41 @@ export class XlsxWorkbookDocument {
           cell.value = { ...(v as ExcelJS.CellFormulaValue), result: r } as ExcelJS.CellValue;
         }
       }
+    }
+
+    // Refresh all output caches, including children removed by a resize or
+    // anchor deletion. Never turn a child into another formula.
+    for (const [key, cached] of state.outputResults) {
+      const [col = 0, row = 0] = key.split(',').map(Number);
+      const columnId = state.columns[col]?.columnId;
+      const raw = columnId ? state.rows[row]?.[columnId] : undefined;
+      const output = ws.getCell(sheetRowOf(row), col + 1);
+      if (!output.isMerged && !isFormulaText(raw) && (raw === '' || raw == null)) output.value = resultValue(cached) ?? null;
+      // A recalculated array can become a scalar or #SPILL!. Its old file
+      // extent must no longer claim the child cells (including obstructions).
+      if (isFormulaText(raw) && !state.spillRanges.some(r => r.anchorCol === col && r.anchorRow === row)) {
+        const result = resultValue(cached);
+        const value = output.value;
+        if (value && typeof value === 'object' && ('formula' in value || 'sharedFormula' in value) && !('shareType' in value && value.shareType === 'array')) {
+          output.value = { ...value, result } as ExcelJS.CellValue;
+        } else {
+          output.value = { formula: toFileFormula(rebaseFormulaRows(raw, offset)), ...(result !== undefined ? { result } : {}) } as ExcelJS.CellFormulaValue;
+        }
+      }
+    }
+    for (const spill of state.spillRanges) {
+      const row = state.rows[spill.anchorRow], column = state.columns[spill.anchorCol];
+      if (!row || !column) continue;
+      const formula = row[column.columnId];
+      if (!isFormulaText(formula)) continue;
+      const anchor = ws.getCell(sheetRowOf(spill.anchorRow), spill.anchorCol + 1);
+      const end = ws.getCell(sheetRowOf(spill.endRow), spill.endCol + 1);
+      const cached = resultValue(state.formulaResults.get(cellKey(row.__rowIdx, column.columnId)));
+      anchor.value = {
+        formula: toFileFormula(rebaseFormulaRows(formula, offset)),
+        shareType: 'array', ref: `${anchor.address}:${end.address}`,
+        ...(cached !== undefined ? { result: cached } : {}),
+      } as ExcelJS.CellFormulaValue;
     }
 
     // Styles: rewrite only cells whose style object changed.
