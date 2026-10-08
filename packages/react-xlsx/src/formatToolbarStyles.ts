@@ -3,10 +3,12 @@
 // --ogrid-* theme variables, so the toolbar follows light and dark themes.
 
 export const FORMAT_TOOLBAR_CSS = `
-.ogrid-xtb{position:relative;z-index:20;display:flex;align-items:center;flex-wrap:wrap;flex:0 0 auto;gap:2px;padding:8px;border-bottom:1px solid var(--ogrid-border,#e0e0e0);background:var(--ogrid-header-bg,#f5f5f5);color:var(--ogrid-fg,#242424);font-family:var(--ogrid-font,inherit);font-size:12px;line-height:1;}
-.ogrid-xtb-group{display:inline-flex;align-items:center;gap:2px;}
+.ogrid-xtb{position:relative;z-index:20;display:flex;align-items:center;flex-wrap:nowrap;min-width:0;flex:0 0 auto;gap:2px;padding:8px;border-bottom:1px solid var(--ogrid-border,#e0e0e0);background:var(--ogrid-header-bg,#f5f5f5);color:var(--ogrid-fg,#242424);font-family:var(--ogrid-font,inherit);font-size:12px;line-height:1;}
+.ogrid-xtb-group{display:inline-flex;align-items:center;gap:2px;flex:0 0 auto;}
+.ogrid-xtb-measure{position:absolute;inset:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none;}
+.ogrid-xtb-measure-row{display:flex;align-items:center;width:max-content;gap:2px;}
+.ogrid-xtb-export-group{margin-left:auto;}
 .ogrid-xtb-sep{width:1px;height:18px;margin:0 1px;background:var(--ogrid-border,#e0e0e0);flex:0 0 auto;}
-.ogrid-xtb-spacer{flex:1 1 auto;}
 .ogrid-xtb-anchor{position:relative;display:inline-flex;}
 .ogrid-xtb-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:32px;height:32px;padding:0 6px;margin:0;border:0;border-radius:var(--ogrid-radius-sm,4px);background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;transition:background-color 80ms ease,opacity 80ms ease;}
 .ogrid-xtb-btn.ogrid-xtb-icon{width:32px;padding:0;}
@@ -50,7 +52,8 @@ export const FORMAT_TOOLBAR_CSS = `
 .ogrid-xtb-size-apply:hover{background:var(--ogrid-active-bg,rgba(0,0,0,0.08));}
 .ogrid-xtb-size-list{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;max-height:220px;overflow-y:auto;}
 .ogrid-xtb-border-pop{min-width:208px;}
-.ogrid-xtb-more{display:flex;gap:6px;left:auto;right:0;}
+.ogrid-xtb-more-anchor,.ogrid-xtb-more .ogrid-xtb-anchor{position:static;}
+.ogrid-xtb-more{display:flex;flex-wrap:wrap;gap:6px;left:auto;right:8px;width:max-content;min-width:0;max-width:min(420px,calc(100% - 16px));box-sizing:border-box;}
 .ogrid-xtb-more .ogrid-xtb-pop{left:auto;right:0;}
 .ogrid-xtb-border-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:2px 2px 6px;}
 .ogrid-xtb-border-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:32px;padding:0;border:1px solid var(--ogrid-border,#e0e0e0);border-radius:var(--ogrid-radius-sm,4px);background:transparent;color:inherit;cursor:pointer;}

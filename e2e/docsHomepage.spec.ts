@@ -76,84 +76,115 @@ test('docs homepage hero grid stays clipped and edit height stays stable', async
   expect(after?.height).toBe(before?.height);
 });
 
-test('XLSX demo toolbar fits 790px with keyboard access to every group', async ({ page }) => {
-  await page.goto('docs/features/xlsx-import');
-  const demo = page.locator('.live-demo').first();
-  await demo.evaluate(el => { (el as HTMLElement).style.width = '790px'; });
-  const toolbar = demo.getByRole('toolbar', { name: 'Cell formatting' });
-  await expect(toolbar).toBeVisible();
-  const expectSingleRow = async () => {
-    await expect.poll(async () => toolbar.evaluate(el => {
-      const bounds = el.getBoundingClientRect();
-      const buttons = Array.from(el.querySelectorAll<HTMLElement>('[data-xtb-item]')).map(b => b.getBoundingClientRect());
-      return Math.max(
-        Math.max(...buttons.map(b => b.top)) - Math.min(...buttons.map(b => b.top)),
-        bounds.left - Math.min(...buttons.map(b => b.left)),
-        Math.max(...buttons.map(b => b.right)) - bounds.right,
-      );
-    })).toBeLessThan(2);
-  };
-  await expectSingleRow();
-  const cell = demo.locator('tbody [data-row-index][data-col-index]').first();
-  await cell.click();
-  const font = toolbar.getByRole('button', { name: 'Font', exact: true });
-  await font.focus();
-  await font.press('Enter');
-  await expect(page.getByRole('menuitemradio', { name: 'Default font', exact: true })).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(font).toBeFocused();
-  await font.press('ArrowRight');
-  await expect(toolbar.getByRole('button', { name: 'Font size', exact: true })).toBeFocused();
-  // A long font name must not widen the trigger or push Export off the row.
-  await font.press('Enter');
-  const longFont = page.getByRole('menuitemradio', { name: 'Times New Roman', exact: true });
-  await longFont.focus();
-  await longFont.press('Enter');
-  await expect(font).toHaveAttribute('title', 'Font: Times New Roman');
-  await expectSingleRow();
-  for (const name of ['Font size', 'Bold', 'Italic', 'Underline', 'Strikethrough', 'Fill color', 'Font color', 'Align left', 'Align center', 'Align right', 'Number format', 'More']) {
-    await page.keyboard.press('ArrowRight');
-    await expect(toolbar.getByRole('button', { name, exact: true })).toBeFocused();
-  }
-  const more = toolbar.getByRole('button', { name: 'More', exact: true });
-  await more.press('Enter');
-  const overflow = toolbar.getByRole('dialog', { name: 'More formatting options' });
-  const borders = overflow.getByRole('button', { name: 'Borders', exact: true });
-  await expect(borders).toBeFocused();
-  await borders.press('Enter');
-  await expect(toolbar.getByRole('button', { name: 'All borders', exact: true })).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(borders).toBeFocused();
-  await expect(overflow).toBeVisible();
-  await borders.press('ArrowRight');
-  await expect(overflow.getByRole('button', { name: 'Merge cells', exact: true })).toBeFocused();
-  await page.keyboard.press('ArrowRight');
-  await expect(overflow.getByRole('button', { name: 'Unmerge cells', exact: true })).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(more).toBeFocused();
-  await more.press('ArrowRight');
-  await expect(toolbar.getByRole('button', { name: 'Export .xlsx', exact: true })).toBeFocused();
-  await page.keyboard.press('Home');
-  await expect(toolbar.getByRole('button', { name: 'Undo', exact: true })).toBeFocused();
-  // Resize the host without changing the viewport: secondary groups return.
-  for (const theme of ['light', 'dark']) {
-    await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme);
-    await demo.evaluate(el => { (el as HTMLElement).style.width = '1200px'; });
-    await expect(more).toHaveCount(0);
-    await expectSingleRow();
-    await toolbar.getByRole('button', { name: 'Borders', exact: true }).focus();
-    await page.keyboard.press('ArrowRight');
-    await expect(toolbar.getByRole('button', { name: 'Number format', exact: true })).toBeFocused();
-    await page.keyboard.press('ArrowRight');
-    await expect(toolbar.getByRole('button', { name: 'Merge cells', exact: true })).toBeFocused();
-    await page.keyboard.press('ArrowRight');
-    await expect(toolbar.getByRole('button', { name: 'Unmerge cells', exact: true })).toBeFocused();
+for (const wideFont of [false, true]) {
+  test(`XLSX demo toolbar fits 790/600/420px with keyboard access to every group${wideFont ? ' with wide fallback fonts' : ''}`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.goto('docs/features/xlsx-import');
+    const demo = page.locator('.live-demo').first();
     await demo.evaluate(el => { (el as HTMLElement).style.width = '790px'; });
-    await expect(more).toBeVisible();
-    await expectSingleRow();
-  }
-  await expect(demo.getByRole('button', { name: 'Insert order row' })).toHaveCSS('border-radius', '6px');
-});
+    const toolbar = demo.getByRole('toolbar', { name: 'Cell formatting' });
+    await expect(toolbar).toBeVisible();
+    // Change fonts after mount, without resizing the host: intrinsic width
+    // changes must also update overflow. Monospace stays wide across runners.
+    if (wideFont) await page.addStyleTag({ content: `
+      :root { --ifm-font-family-base: 'DejaVu Sans Mono', 'Courier New', monospace; }
+      .ogrid-xtb { font-family: 'DejaVu Sans Mono', 'Courier New', monospace !important; }
+    ` });
+    const expectSingleRow = async (width: number) => {
+      await expect.poll(async () => toolbar.evaluate(el => {
+        const bounds = el.getBoundingClientRect();
+        const controls = Array.from(el.querySelectorAll<HTMLElement>('[data-xtb-item]'))
+          .filter(button => button.checkVisibility({ visibilityProperty: true })).map(button => button.getBoundingClientRect());
+        return Math.max(
+          Math.max(...controls.map(b => b.top)) - Math.min(...controls.map(b => b.top)),
+          bounds.left - Math.min(...controls.map(b => b.left)),
+          Math.max(...controls.map(b => b.right)) - bounds.right,
+        );
+      }), { message: `Toolbar controls fit one row at ${width}px` }).toBeLessThan(2);
+    };
+    await expectSingleRow(790);
+    await demo.locator('tbody [data-row-index][data-col-index]').first().click();
+    const font = toolbar.getByRole('button', { name: 'Font', exact: true });
+    await font.focus();
+    await font.press('Enter');
+    await expect(page.getByRole('menuitemradio', { name: 'Default font', exact: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(font).toBeFocused();
+    await font.press('ArrowRight');
+    await expect(toolbar.getByRole('button', { name: 'Font size', exact: true })).toBeFocused();
+    // Long workbook font names retain compact triggers.
+    await font.press('Enter');
+    const longFont = page.getByRole('menuitemradio', { name: 'Times New Roman', exact: true });
+    await longFont.focus();
+    await longFont.press('Enter');
+    await expect(font).toHaveAttribute('title', 'Font: Times New Roman');
+    await expectSingleRow(790);
+
+    const allControls = ['Undo', 'Redo', 'Font', 'Font size', 'Bold', 'Italic', 'Underline', 'Strikethrough', 'Fill color', 'Font color', 'Align left', 'Align center', 'Align right', 'Borders', 'Number format', 'Merge cells', 'Unmerge cells', 'Export .xlsx'];
+    const labels = async (enabledOnly: boolean) => toolbar.evaluate((el, enabledOnly) =>
+      Array.from(el.querySelectorAll<HTMLButtonElement>('[data-xtb-item]'))
+        .filter(button => button.checkVisibility({ visibilityProperty: true }) && (!enabledOnly || !button.disabled))
+        .map(button => button.getAttribute('aria-label') ?? ''), enabledOnly);
+    const more = toolbar.getByRole('button', { name: 'More', exact: true });
+    const overflow = toolbar.getByRole('dialog', { name: 'More formatting options' });
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme);
+      // Resize the host only; widening must restore overflowed controls too.
+      for (const width of [790, 600, 420, 1200, 790]) {
+        await demo.evaluate((el, width) => { (el as HTMLElement).style.width = `${width}px`; }, width);
+        await expectSingleRow(width);
+        await expect.poll(() => toolbar.evaluate(el => el.contains(document.activeElement))).toBe(true);
+        await expect(toolbar.getByRole('button', { name: 'Export .xlsx', exact: true })).toBeVisible();
+        await expect(font).toBeVisible();
+        await expect(toolbar.getByRole('button', { name: 'Font size', exact: true })).toBeVisible();
+        if (width === 1200) await expect(more).toHaveCount(0);
+        else await expect(more).toBeVisible();
+        const visibleLabels = await labels(false);
+        const priority = ['Merge cells', 'Borders', 'Align left', 'Number format'];
+        for (const [index, name] of priority.entries()) {
+          if (visibleLabels.includes(name)) expect(visibleLabels).toEqual(expect.arrayContaining(priority.slice(index)));
+        }
+        const mainKeys = await labels(true);
+        await toolbar.getByRole('button', { name: mainKeys[0], exact: true }).focus();
+        for (const name of mainKeys.slice(1)) {
+          await page.keyboard.press('ArrowRight');
+          await expect(toolbar.getByRole('button', { name, exact: true })).toBeFocused();
+        }
+        await page.keyboard.press('Home');
+        await expect(toolbar.getByRole('button', { name: mainKeys[0], exact: true })).toBeFocused();
+        await page.keyboard.press('End');
+        await expect(toolbar.getByRole('button', { name: 'Export .xlsx', exact: true })).toBeFocused();
+        if (await more.count()) {
+          await more.focus();
+          await more.press('Enter');
+          await expect(overflow).toBeVisible();
+          const hostBounds = await toolbar.boundingBox();
+          const moreBounds = await overflow.boundingBox();
+          expect(moreBounds?.x ?? 0).toBeGreaterThanOrEqual(hostBounds?.x ?? 0);
+          expect((moreBounds?.x ?? 0) + (moreBounds?.width ?? 0)).toBeLessThanOrEqual((hostBounds?.x ?? 0) + (hostBounds?.width ?? 0));
+          const overflowKeys = await overflow.evaluate(el => Array.from(el.querySelectorAll<HTMLButtonElement>('[data-xtb-item]')).filter(button => !button.disabled).map(button => button.getAttribute('aria-label') ?? ''));
+          await expect(overflow.getByRole('button', { name: overflowKeys[0], exact: true })).toBeFocused();
+          for (const name of overflowKeys.slice(1)) {
+            await page.keyboard.press('ArrowRight');
+            await expect(overflow.getByRole('button', { name, exact: true })).toBeFocused();
+          }
+          expect((await labels(false)).filter(name => name !== 'More').sort()).toEqual([...allControls].sort());
+          // Nested picker Escape returns to its trigger inside More.
+          const borders = overflow.getByRole('button', { name: 'Borders', exact: true });
+          await borders.focus();
+          await borders.press('Enter');
+          await expect(toolbar.getByRole('button', { name: 'All borders', exact: true })).toBeFocused();
+          await page.keyboard.press('Escape');
+          await expect(borders).toBeFocused();
+          await expect(overflow).toBeVisible();
+          await page.keyboard.press('Escape');
+          await expect(more).toBeFocused();
+        } else expect(visibleLabels.sort()).toEqual([...allControls].sort());
+      }
+    }
+    await expect(demo.getByRole('button', { name: 'Insert order row' })).toHaveCSS('border-radius', '6px');
+  });
+}
 
 test('drag demo instructions use the shared controls typography', async ({ page }) => {
   await page.goto('docs/features/drag-and-drop');

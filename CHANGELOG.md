@@ -10,7 +10,7 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
-- The XLSX formatting toolbar fits a 790px container in one row. Compact font controls and tighter group spacing preserve button sizes; borders and merge/unmerge move into a keyboard-accessible More menu below 900px.
+- The XLSX formatting toolbar measures its controls and available space to stay on one row across container widths and fallback fonts. Lower-priority groups move into a keyboard-accessible More menu as needed, preserving font controls, undo/redo and Export longest.
 
 - Column filter popovers stay within a 12px viewport margin while opening on small screens. Radix reserves space for entrance motion; Fluent caps the surface to available space and scrolls overflowing filter content.
 
