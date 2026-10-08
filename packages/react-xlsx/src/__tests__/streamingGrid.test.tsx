@@ -191,7 +191,7 @@ test('Enable editing hands worker-loaded spills and frozen panes to structure an
   await waitFor(() => expect(screen.getByRole('button', { name: 'Enable editing' }).hasAttribute('disabled')).toBe(false));
   fireEvent.click(screen.getByRole('button', { name: 'Enable editing' }));
   await waitFor(() => expect(doc).toBeDefined());
-  await waitFor(() => expect(container.querySelector('[inert]')).toBeNull());
+  await waitFor(() => expect(container.querySelector('[inert][aria-busy="true"]')).toBeNull());
   const cell = (row: number, col: number) => container.querySelector<HTMLElement>(`tbody tr[data-row-id="${row}"] td[data-column-id="${String.fromCharCode(65 + col)}"] [data-row-index]`)!;
   await waitFor(() => expect(cell(1, 1)?.textContent).toBe('2'));
   expect(cell(0, 0).closest('td')!.style.left).not.toBe('');

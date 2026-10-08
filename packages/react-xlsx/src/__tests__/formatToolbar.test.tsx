@@ -31,7 +31,7 @@ function cell(container: HTMLElement, rowId: number, columnId: string): HTMLElem
 
 async function selectRange(container: HTMLElement, from: [number, string], to: [number, string]): Promise<void> {
   // Visible SSR/fallback rows accept input only after the lazy drag table mounts.
-  await waitFor(() => expect(container.querySelector('[inert]')).toBeNull(), { timeout: 20000 });
+  await waitFor(() => expect(container.querySelector('[inert][aria-busy="true"]')).toBeNull(), { timeout: 20000 });
   const a = cell(container, from[0], from[1]);
   fireEvent.pointerDown(a);
   fireEvent.mouseDown(a, { button: 0 });

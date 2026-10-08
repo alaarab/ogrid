@@ -3,7 +3,7 @@
 // grid's current selection and lands in the sheet's undo history. Toggles
 // and color swatches reflect the active cell's style.
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useLayoutEffect, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { colorToCss, cssToArgb, NUMBER_FORMAT_PRESETS, themePaletteOf, COMMON_FONTS, type BorderLineStyle, type BorderOptions, type BorderScope, type StyleEdit, type XlsxCellStyle } from './cellStyles';
 import { FORMAT_TOOLBAR_CSS } from './formatToolbarStyles';
 import type { XlsxSelection } from './gridAdapter';
@@ -20,6 +20,10 @@ export interface FormatToolbarProps {
 }
 
 type Toggle = 'bold' | 'italic' | 'underline' | 'strike';
+const OVERFLOW_PRIORITY = ['merge', 'borders', 'alignment', 'numFmt', 'colors', 'emphasis', 'fonts', 'history', 'export'] as const;
+type Group = typeof OVERFLOW_PRIORITY[number];
+const GROUP_ORDER: Group[] = ['history', 'fonts', 'emphasis', 'colors', 'alignment', 'borders', 'numFmt', 'merge', 'export'];
+
 type Menu = 'fill' | 'fontColor' | 'numFmt' | 'fontFamily' | 'fontSize' | 'borders';
 
 export function FormatToolbar({ document: doc, sheetName, getSelection, exportFileName }: FormatToolbarProps) {
@@ -33,23 +37,68 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
   const [live, setLive] = useState<XlsxSelection | null>(getSelection);
   const captured = useRef<XlsxSelection | null>(live);
   const [menu, setMenu] = useState<Menu | null>(null);
-  const [compact, setCompact] = useState(false);
+  const [overflowCount, setOverflowCount] = useState(0);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const resizeFocus = useRef<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const palette = useMemo(() => themePaletteOf(doc.workbook), [doc]);
 
-  // Respond to the host's width, including a sidebar or a resized demo.
-  useEffect(() => {
+  // Measure the same controls in an inert row: hidden groups still report
+  // their natural widths, including new labels, theme styles and late fonts.
+  useLayoutEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    const measure = measureRef.current;
+    if (!root || !measure) return;
+    let previous = 0;
     const resize = () => {
-      const width = root.getBoundingClientRect().width;
-      if (width > 0) setCompact(width < 900);
+      if (!root.clientWidth) return;
+      const css = getComputedStyle(root);
+      const available = root.clientWidth - parseFloat(css.paddingLeft) - parseFloat(css.paddingRight);
+      const gap = parseFloat(css.columnGap) || 0;
+      const groups = Array.from(measure.querySelectorAll<HTMLElement>('[data-xtb-group]'));
+      const moreWidth = measure.querySelector<HTMLElement>('[data-xtb-more]')?.getBoundingClientRect().width ?? 0;
+      const sep = measure.querySelector<HTMLElement>('.ogrid-xtb-sep');
+      const sepCss = sep && getComputedStyle(sep);
+      const separatorWidth = sep && sepCss ? sep.getBoundingClientRect().width + parseFloat(sepCss.marginLeft) + parseFloat(sepCss.marginRight) : 0;
+      let count = 0;
+      for (; count <= OVERFLOW_PRIORITY.length; count++) {
+        const hidden = new Set<string>(OVERFLOW_PRIORITY.slice(0, count));
+        const visible = groups.filter(group => !hidden.has(group.dataset.xtbGroup ?? ''));
+        const items = visible.length + (count > 0 ? 1 : 0);
+        const needed = visible.reduce((width, group) => width + group.getBoundingClientRect().width, count > 0 ? moreWidth : 0)
+          + Math.max(0, items - 1) * (separatorWidth + 2 * gap);
+        if (needed <= available) break;
+      }
+      count = Math.min(count, OVERFLOW_PRIORITY.length);
+      if (count === previous) return;
+      const active = root.ownerDocument.activeElement;
+      if (active instanceof HTMLElement && root.contains(active)) {
+        resizeFocus.current = active.getAttribute('aria-label');
+        setMenu(null);
+      }
+      previous = count;
+      setOverflowCount(count);
     };
     resize();
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize);
     observer?.observe(root);
-    return () => observer?.disconnect();
+    observer?.observe(measure);
+    for (const child of measure.children) observer?.observe(child);
+    // A font can change intrinsic widths without changing the host's width.
+    root.ownerDocument.fonts?.addEventListener('loadingdone', resize);
+    return () => {
+      observer?.disconnect();
+      root.ownerDocument.fonts?.removeEventListener('loadingdone', resize);
+    };
   }, []);
+
+  useLayoutEffect(() => {
+    const label = resizeFocus.current;
+    resizeFocus.current = null;
+    if (!label) return;
+    const items = navItems(rootRef.current, '[data-xtb-item]');
+    (items.find(item => item.getAttribute('aria-label') === label) ?? items.find(item => item.getAttribute('aria-label') === 'More') ?? items[0])?.focus();
+  });
 
   const capture = () => {
     const sel = getSelection();
@@ -136,18 +185,65 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
       disabled: noSelection,
     });
 
-  const menuProps = (id: Menu) => ({
-    open: menu === id,
-    onOpenChange: (open: boolean) => setMenu(open ? id : null),
-    disabled: noSelection,
-  });
-  const borders = <BorderMenu {...menuProps('borders')} onPick={applyBorder} />;
-  const merges = (
-    <div className="ogrid-xtb-group">
-      {iconButton('Merge cells', <MergeIcon />, () => { const s = selection(); if (s) doc.mergeCells(sheetName, s); }, { disabled: noSelection })}
-      {iconButton('Unmerge cells', <UnmergeIcon />, () => { const s = selection(); if (s) doc.unmergeCells(sheetName, s); }, { disabled: noSelection })}
-    </div>
-  );
+  const renderGroup = (id: Group, measuring = false) => {
+    const menuProps = (menuId: Menu) => ({
+      open: !measuring && menu === menuId,
+      onOpenChange: (open: boolean) => setMenu(open ? menuId : null),
+      disabled: noSelection,
+    });
+    switch (id) {
+      case 'history': return <>
+        {iconButton('Undo', <UndoIcon />, () => doc.undo(sheetName), { disabled: !doc.canUndo(sheetName) })}
+        {iconButton('Redo', <RedoIcon />, () => doc.redo(sheetName), { disabled: !doc.canRedo(sheetName) })}
+      </>;
+      case 'fonts': return <>
+        <FontFamilyMenu {...menuProps('fontFamily')} current={fontName} fonts={fontChoices} onPick={(name) => style({ kind: 'fontFamily', value: name })} />
+        <FontSizeMenu {...menuProps('fontSize')} current={fontSize} onPick={(size) => style({ kind: 'fontSize', value: size })} />
+      </>;
+      case 'emphasis': return <>
+        {toggle('bold', 'Bold', <BoldIcon />)}
+        {toggle('italic', 'Italic', <ItalicIcon />)}
+        {toggle('underline', 'Underline', <UnderlineIcon />)}
+        {toggle('strike', 'Strikethrough', <StrikeIcon />)}
+      </>;
+      case 'colors': return <>
+        <ColorMenu {...menuProps('fill')} label="Fill color" icon={<FillIcon />} color={fillColor} resetLabel="No fill" onPick={(hex) => style({ kind: 'fill', argb: hex ? cssToArgb(hex) : null })} />
+        <ColorMenu {...menuProps('fontColor')} label="Font color" icon={<FontColorIcon />} color={fontColor} resetLabel="Automatic" onPick={(hex) => style({ kind: 'fontColor', argb: hex ? cssToArgb(hex) : null })} />
+      </>;
+      case 'alignment': return <>
+        {align('left', 'Align left', <AlignIcon lines={[[3, 21], [3, 15], [3, 17]]} />)}
+        {align('center', 'Align center', <AlignIcon lines={[[3, 21], [7, 17], [5, 19]]} />)}
+        {align('right', 'Align right', <AlignIcon lines={[[3, 21], [9, 21], [7, 21]]} />)}
+      </>;
+      case 'borders': return <BorderMenu {...menuProps('borders')} onPick={applyBorder} />;
+      case 'numFmt': return <NumberFormatMenu {...menuProps('numFmt')} current={preset?.id} currentLabel={formatLabel} onPick={(value) => style({ kind: 'numFmt', value })} />;
+      case 'merge': return <>
+        {iconButton('Merge cells', <MergeIcon />, () => { const sel = selection(); if (sel) doc.mergeCells(sheetName, sel); }, { disabled: noSelection })}
+        {iconButton('Unmerge cells', <UnmergeIcon />, () => { const sel = selection(); if (sel) doc.unmergeCells(sheetName, sel); }, { disabled: noSelection })}
+      </>;
+      case 'export': return <button
+        type="button"
+        className="ogrid-xtb-btn ogrid-xtb-export"
+        aria-label="Export .xlsx"
+        title={`Download ${exportFileName}`}
+        data-xtb-item=""
+        onMouseDown={keepFocus}
+        disabled={exporting}
+        onClick={() => {
+          if (!exportFileName) return;
+          setExporting(true);
+          doc.download(exportFileName).finally(() => setExporting(false));
+        }}
+      ><DownloadIcon />{exporting ? 'Exporting…' : 'Export'}</button>;
+    }
+  };
+  const groups = GROUP_ORDER.filter(id => id !== 'export' || exportFileName);
+  const hidden = new Set<Group>(OVERFLOW_PRIORITY.slice(0, overflowCount));
+  const visible = groups.filter(id => !hidden.has(id));
+  const overflow = groups.filter(id => hidden.has(id));
+  const row: Array<Group | 'more'> = [...visible];
+  if (overflow.length) row.splice(visible.includes('export') ? row.length - 1 : row.length, 0, 'more');
+  const separator = <span className="ogrid-xtb-sep" aria-hidden />;
 
   return (
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: arrow keys move between controls (ARIA toolbar pattern)
@@ -161,89 +257,21 @@ export function FormatToolbar({ document: doc, sheetName, getSelection, exportFi
       onKeyDown={onToolbarKeyDown}
     >
       <style>{FORMAT_TOOLBAR_CSS}</style>
-      <div className="ogrid-xtb-group">
-        {iconButton('Undo', <UndoIcon />, () => doc.undo(sheetName), { disabled: !doc.canUndo(sheetName) })}
-        {iconButton('Redo', <RedoIcon />, () => doc.redo(sheetName), { disabled: !doc.canRedo(sheetName) })}
+      <div className="ogrid-xtb-measure" aria-hidden="true" ref={element => { element?.setAttribute('inert', ''); }}>
+        <div className="ogrid-xtb-measure-row" ref={measureRef}>
+          {groups.map(id => <div className="ogrid-xtb-group" data-xtb-group={id} key={id}>{renderGroup(id, true)}</div>)}
+          {separator}
+          <div data-xtb-more=""><MoreMenu onOpen={() => {}} /></div>
+        </div>
       </div>
-      <span className="ogrid-xtb-sep" aria-hidden />
-      <div className="ogrid-xtb-group">
-        <FontFamilyMenu
-          {...menuProps('fontFamily')}
-          current={fontName}
-          fonts={fontChoices}
-          onPick={(name) => style({ kind: 'fontFamily', value: name })}
-        />
-        <FontSizeMenu
-          {...menuProps('fontSize')}
-          current={fontSize}
-          onPick={(size) => style({ kind: 'fontSize', value: size })}
-        />
-      </div>
-      <span className="ogrid-xtb-sep" aria-hidden />
-      <div className="ogrid-xtb-group">
-        {toggle('bold', 'Bold', <BoldIcon />)}
-        {toggle('italic', 'Italic', <ItalicIcon />)}
-        {toggle('underline', 'Underline', <UnderlineIcon />)}
-        {toggle('strike', 'Strikethrough', <StrikeIcon />)}
-      </div>
-      <span className="ogrid-xtb-sep" aria-hidden />
-      <div className="ogrid-xtb-group">
-        <ColorMenu
-          {...menuProps('fill')}
-          label="Fill color"
-          icon={<FillIcon />}
-          color={fillColor}
-          resetLabel="No fill"
-          onPick={(hex) => style({ kind: 'fill', argb: hex ? cssToArgb(hex) : null })}
-        />
-        <ColorMenu
-          {...menuProps('fontColor')}
-          label="Font color"
-          icon={<FontColorIcon />}
-          color={fontColor}
-          resetLabel="Automatic"
-          onPick={(hex) => style({ kind: 'fontColor', argb: hex ? cssToArgb(hex) : null })}
-        />
-      </div>
-      <span className="ogrid-xtb-sep" aria-hidden />
-      <div className="ogrid-xtb-group">
-        {align('left', 'Align left', <AlignIcon lines={[[3, 21], [3, 15], [3, 17]]} />)}
-        {align('center', 'Align center', <AlignIcon lines={[[3, 21], [7, 17], [5, 19]]} />)}
-        {align('right', 'Align right', <AlignIcon lines={[[3, 21], [9, 21], [7, 21]]} />)}
-      </div>
-      <span className="ogrid-xtb-sep" aria-hidden />
-      {!compact && <>{borders}<span className="ogrid-xtb-sep" aria-hidden /></>}
-      <NumberFormatMenu
-        {...menuProps('numFmt')}
-        current={preset?.id}
-        currentLabel={formatLabel}
-        onPick={(value) => style({ kind: 'numFmt', value })}
-      />
-      <span className="ogrid-xtb-sep" aria-hidden />
-      {compact ? (
-        <MoreMenu disabled={noSelection} onOpen={() => setMenu(null)}>{borders}{merges}</MoreMenu>
-      ) : merges}
-      {exportFileName && (
-        <>
-          <span className="ogrid-xtb-spacer" />
-          <button
-            type="button"
-            className="ogrid-xtb-btn ogrid-xtb-export"
-            aria-label="Export .xlsx"
-            title={`Download ${exportFileName}`}
-            data-xtb-item=""
-            onMouseDown={keepFocus}
-            disabled={exporting}
-            onClick={() => {
-              setExporting(true);
-              doc.download(exportFileName).finally(() => setExporting(false));
-            }}
-          >
-            <DownloadIcon />
-            {exporting ? 'Exporting…' : 'Export'}
-          </button>
-        </>
-      )}
+      {row.map((id, index) => <Fragment key={id}>
+        {index > 0 && separator}
+        <div className={`ogrid-xtb-group${id === 'export' ? ' ogrid-xtb-export-group' : ''}`}>
+          {id === 'more' ? <MoreMenu onOpen={() => setMenu(null)}>
+            {overflow.map(group => <div className="ogrid-xtb-group" key={group}>{renderGroup(group)}</div>)}
+          </MoreMenu> : renderGroup(id)}
+        </div>
+      </Fragment>)}
     </div>
   );
 }
@@ -330,12 +358,12 @@ function useMenu({ open, onOpenChange }: MenuBaseProps, selector = '[data-xtb-na
 }
 
 /** Keep secondary controls at their normal size in a keyboard-accessible surface. */
-function MoreMenu({ children, disabled, onOpen }: { children: React.ReactNode; disabled: boolean; onOpen: () => void }) {
+function MoreMenu({ children, onOpen }: { children?: React.ReactNode; onOpen: () => void }) {
   const [open, setOpen] = useState(false);
   const { anchorRef, trigger, popover } = useMenu({ open, onOpenChange: (next) => { if (next) onOpen(); setOpen(next); } }, '[data-xtb-item]');
   return (
-    <span className="ogrid-xtb-anchor" ref={anchorRef}>
-      <button type="button" className="ogrid-xtb-btn" aria-label="More" title="More formatting options" aria-haspopup="dialog" data-xtb-item="" disabled={disabled} {...trigger}>
+    <span className="ogrid-xtb-anchor ogrid-xtb-more-anchor" ref={anchorRef}>
+      <button type="button" className="ogrid-xtb-btn" aria-label="More" title="More formatting options" aria-haspopup="dialog" data-xtb-item="" {...trigger}>
         More<ChevronIcon />
       </button>
       {open && <div role="dialog" aria-label="More formatting options" className="ogrid-xtb-pop ogrid-xtb-more" {...popover}>{children}</div>}
@@ -734,7 +762,7 @@ function fillCss(style: XlsxCellStyle | undefined, palette: string[]): string | 
 
 function navItems(root: HTMLElement | null, selector = '[data-xtb-nav]'): HTMLElement[] {
   if (!root) return [];
-  return Array.from(root.querySelectorAll<HTMLElement>(selector)).filter((el) => !(el as HTMLButtonElement).disabled);
+  return Array.from(root.querySelectorAll<HTMLElement>(selector)).filter((el) => !(el as HTMLButtonElement).disabled && !el.closest('[inert]'));
 }
 
 /**
