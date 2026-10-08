@@ -55,6 +55,15 @@ export type { ParseValueResult } from './valueParsers';
 export { computeAggregations } from './aggregationUtils';
 export type { AggregationResult } from './aggregationUtils';
 export { processClientSideData } from './clientSideData';
+export {
+  CONDITION_OPERATORS,
+  getConditionOperatorLabel,
+  getConditionOperatorArity,
+  resolveConditionFilterKind,
+  isConditionComplete,
+  normalizeConditionFilter,
+  createConditionPredicate,
+} from './conditionFilter';
 export { areGridRowPropsEqual, isRowInRange } from './gridRowComparator';
 export type { GridRowComparatorProps } from './gridRowComparator';
 export {
@@ -109,8 +118,8 @@ export type {
 export { debounce } from './debounce';
 export { measureRange, buildCellIndex, cellIndexKey, CELL_INDEX_STRIDE, injectGlobalStyles } from './dom';
 export type { OverlayRect } from './dom';
-export { computeNextSortState } from './sortHelpers';
-export type { ISortState } from './sortHelpers';
+export { computeNextSortState, computeNextSortModel, normalizeSortModel, sortModelKey } from './sortHelpers';
+export type { ISortState, ComputeNextSortModelOptions } from './sortHelpers';
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './columnAutosize';
 export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner, computeRangeCycleStep } from './keyboardNavigation';
 export type { ArrowNavigationContext, ArrowNavigationResult, RangeCycleDirection } from './keyboardNavigation';

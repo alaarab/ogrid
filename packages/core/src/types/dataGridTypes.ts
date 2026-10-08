@@ -1,5 +1,5 @@
 import type { FilterOption } from './columnTypes';
-import type { IDateFilterValue, IColumnDef } from './columnTypes';
+import type { IConditionFilterValue, IDateFilterValue, IColumnDef } from './columnTypes';
 
 /** Row identifier type  -  grids accept string or number IDs. */
 export type RowId = string | number;
@@ -36,17 +36,30 @@ export type FilterValue =
   | { type: 'text'; value: string }
   | { type: 'multiSelect'; value: string[] }
   | { type: 'people'; value: UserLike }
-  | { type: 'date'; value: IDateFilterValue };
+  | { type: 'date'; value: IDateFilterValue }
+  | { type: 'condition'; value: IConditionFilterValue };
 
 /** Unified filter model: field id -> discriminated filter value. */
 export interface IFilters {
   [field: string]: FilterValue | undefined;
 }
 
+/** One level of a (multi-level) sort. */
+export interface ISortModelItem {
+  field: string;
+  direction: 'asc' | 'desc';
+}
+
+/** Ordered sort levels: the first item is the primary sort, later items break ties. */
+export type SortModel = ISortModelItem[];
+
 export interface IFetchParams {
   page: number;
   pageSize: number;
+  /** Primary sort level (same as `sortModel[0]`). */
   sort?: { field: string; direction: 'asc' | 'desc' };
+  /** Every sort level, primary first. Empty when the grid is unsorted. */
+  sortModel?: SortModel;
   filters: IFilters;
   /** Optional abort signal for cancelling stale requests when the grid state changes. */
   signal?: AbortSignal;
@@ -64,6 +77,8 @@ export interface IRowWindowParams {
   /** One past the last row index to fetch (0-based, exclusive). */
   end: number;
   sort?: { field: string; direction: 'asc' | 'desc' };
+  /** Every sort level, primary first (see IFetchParams.sortModel). */
+  sortModel?: SortModel;
   filters: IFilters;
   /** Optional abort signal for cancelling stale window requests when grid state changes. */
   signal?: AbortSignal;
@@ -83,6 +98,8 @@ export interface IRowWindowResult<T> {
 /** Sort/filter context shared by windowed row-count and row-window requests. */
 export interface IRowQueryContext {
   sort?: { field: string; direction: 'asc' | 'desc' };
+  /** Every sort level, primary first (see IFetchParams.sortModel). */
+  sortModel?: SortModel;
   filters: IFilters;
   /** Optional abort signal for cancelling a stale request. */
   signal?: AbortSignal;
@@ -136,6 +153,8 @@ export function isWindowedDataSource<T>(
 export interface IGridColumnState {
   visibleColumns: string[];
   sort?: { field: string; direction: 'asc' | 'desc' };
+  /** Every sort level, primary first. Takes precedence over `sort` in applyColumnState. */
+  sortModel?: SortModel;
   /** Column display order (array of column ids). */
   columnOrder?: string[];
   /** Column widths (column id -> width in pixels). */

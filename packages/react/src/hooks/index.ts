@@ -51,7 +51,7 @@ export type {
 export { useOGridPagination } from './useOGridPagination';
 export type { UseOGridPaginationParams, UseOGridPaginationState } from './useOGridPagination';
 export { useOGridSorting } from './useOGridSorting';
-export type { UseOGridSortingParams, UseOGridSortingState, SortState } from './useOGridSorting';
+export type { UseOGridSortingParams, UseOGridSortingState, SortState, SortRequestOptions } from './useOGridSorting';
 export { useOGridFilters as useOGridFiltersState } from './useOGridFilters';
 export type { UseOGridFiltersParams, UseOGridFiltersState } from './useOGridFilters';
 export { useOGridDataFetching } from './useOGridDataFetching';
@@ -140,6 +140,12 @@ export type {
   UsePeopleFilterStateResult,
 } from './usePeopleFilterState';
 export { useDateFilterState } from './useDateFilterState';
+export { useConditionFilterState } from './useConditionFilterState';
+export type {
+  ConditionDraft,
+  UseConditionFilterStateParams,
+  UseConditionFilterStateResult,
+} from './useConditionFilterState';
 export type {
   UseDateFilterStateParams,
   UseDateFilterStateResult,

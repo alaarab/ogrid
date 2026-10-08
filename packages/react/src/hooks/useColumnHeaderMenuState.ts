@@ -8,7 +8,9 @@ export interface UseColumnHeaderMenuStateParams {
   onUnpinColumn: (columnId: string) => void;
   sortBy?: string;
   sortDirection: 'asc' | 'desc';
-  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
+  /** Every sort level, primary first (defaults to `sortBy`/`sortDirection`). */
+  sortModel?: ReadonlyArray<{ field: string; direction: 'asc' | 'desc' }>;
+  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null, options?: { additive?: boolean }) => void;
   onColumnResized?: (columnId: string, width: number) => void;
   onAutosizeColumn?: (columnId: string, width: number) => void;
   columns: Array<{ columnId: string; name?: string; width?: number | string; minWidth?: number; sortable?: boolean; resizable?: boolean }>;
@@ -40,6 +42,8 @@ export interface UseColumnHeaderMenuStateResult {
   handleSortAsc: () => void;
   handleSortDesc: () => void;
   handleClearSort: () => void;
+  /** Add the column as the next sort level (ascending). */
+  handleAddToSort: () => void;
   handleAutosizeThis: () => void;
   handleAutosizeAll: () => void;
   handleInsertColumnLeft: () => void;
@@ -59,6 +63,8 @@ export interface UseColumnHeaderMenuStateResult {
   currentSort: 'asc' | 'desc' | null;
   isSortable: boolean;
   isResizable: boolean;
+  /** True when the grid is sorted by other columns and this one isn't a sort level yet. */
+  canAddToSort: boolean;
 }
 
 /**
@@ -75,6 +81,7 @@ export function useColumnHeaderMenuState(
     onUnpinColumn,
     sortBy,
     sortDirection,
+    sortModel,
     onColumnSort,
     onColumnResized,
     onAutosizeColumn,
@@ -109,8 +116,11 @@ export function useColumnHeaderMenuState(
   const canUnpin = !!currentPinState;
 
   const currentColumn = columns.find((c) => c.columnId === openForColumn);
-  const currentSort = openForColumn === sortBy ? sortDirection : null;
+  const sortLevels = sortModel ?? (sortBy ? [{ field: sortBy, direction: sortDirection }] : []);
+  const sortLevel = sortLevels.find((level) => level.field === openForColumn);
+  const currentSort = sortLevel?.direction ?? null;
   const isSortable = currentColumn?.sortable !== false;
+  const canAddToSort = isSortable && sortLevels.length > 0 && !sortLevel;
   const isResizable = currentColumn?.resizable !== false;
 
   const handlePinLeft = useCallback(() => {
@@ -151,6 +161,13 @@ export function useColumnHeaderMenuState(
   const handleClearSort = useCallback(() => {
     if (openForColumn && isSortable) {
       onColumnSort(openForColumn, null);
+      close();
+    }
+  }, [openForColumn, isSortable, onColumnSort, close]);
+
+  const handleAddToSort = useCallback(() => {
+    if (openForColumn && isSortable) {
+      onColumnSort(openForColumn, 'asc', { additive: true });
       close();
     }
   }, [openForColumn, isSortable, onColumnSort, close]);
@@ -220,6 +237,7 @@ export function useColumnHeaderMenuState(
     handleSortAsc,
     handleSortDesc,
     handleClearSort,
+    handleAddToSort,
     handleAutosizeThis,
     handleAutosizeAll,
     handleInsertColumnLeft,
@@ -236,6 +254,7 @@ export function useColumnHeaderMenuState(
     currentSort,
     isSortable,
     isResizable,
+    canAddToSort,
   };
 }
 
@@ -255,6 +274,7 @@ export function getColumnHeaderMenuProps(headerMenu: UseColumnHeaderMenuStateRes
     onSortAsc: headerMenu.handleSortAsc,
     onSortDesc: headerMenu.handleSortDesc,
     onClearSort: headerMenu.handleClearSort,
+    onAddToSort: headerMenu.handleAddToSort,
     onAutosizeThis: headerMenu.handleAutosizeThis,
     onAutosizeAll: headerMenu.handleAutosizeAll,
     onInsertColumnLeft: headerMenu.handleInsertColumnLeft,
@@ -271,5 +291,6 @@ export function getColumnHeaderMenuProps(headerMenu: UseColumnHeaderMenuStateRes
     currentSort: headerMenu.currentSort,
     isSortable: headerMenu.isSortable,
     isResizable: headerMenu.isResizable,
+    canAddToSort: headerMenu.canAddToSort,
   };
 }

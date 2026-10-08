@@ -6,7 +6,18 @@
  * and column metadata; the worker applies filters + sort and returns row indices.
  */
 
-import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey, createSortCollator } from './sortFilterPrimitives';
+import {
+  compareSortKeys,
+  compareTimestamps,
+  toDateTimestamp,
+  toSortKey,
+  createSortCollator,
+  conditionFilterNeedsColumnValues,
+  prepareConditionFilter,
+  matchConditionFilter,
+  compareSortLevels,
+} from './sortFilterPrimitives';
+import type { ConditionFilterInput, PreparedConditionFilter } from './sortFilterPrimitives';
 
 // --- Worker message types ---
 
@@ -24,9 +35,12 @@ export interface SortFilterRequest {
     | { type: 'text'; value: string }
     | { type: 'multiSelect'; value: string[] }
     | { type: 'date'; value: { from?: string; to?: string } }
+    | { type: 'condition'; value: ConditionFilterInput }
   >;
-  /** Sort spec (optional). */
+  /** Single-level sort spec (optional). Ignored when `sorts` is set. */
   sort?: { columnIndex: number; direction: 'asc' | 'desc' };
+  /** Multi-level sort spec, primary first (optional). */
+  sorts?: { columnIndex: number; direction: 'asc' | 'desc' }[];
 }
 
 export interface SortFilterResponse {
@@ -75,6 +89,15 @@ export function workerBody(): void {
         if (filter.type === 'multiSelect') {
           return { colIdx, type: 'multiSelect' as const, set: new Set(filter.value), empty: filter.value.length === 0 };
         }
+        if (filter.type === 'condition') {
+          // Top N / average need the whole column (before other filters), like the sync path.
+          let columnValues: unknown[] | null = null;
+          if (conditionFilterNeedsColumnValues(filter.value)) {
+            columnValues = new Array(rowCount);
+            for (let r = 0; r < rowCount; r++) columnValues[r] = values[r]?.[colIdx] ?? null;
+          }
+          return { colIdx, type: 'condition' as const, prepared: prepareConditionFilter(filter.value, columnValues) };
+        }
         // Parse boundary timestamps once here; NaN means "no bound".
         return {
           colIdx,
@@ -112,6 +135,11 @@ export function workerBody(): void {
               }
               break;
             }
+            case 'condition': {
+              const prepared: PreparedConditionFilter | null = pf.prepared;
+              if (prepared && !matchConditionFilter(prepared, cellVal)) pass = false;
+              break;
+            }
             case 'date': {
               const ts = toDateTimestamp(cellVal);
               if (Number.isNaN(ts)) { pass = false; break; }
@@ -127,42 +155,43 @@ export function workerBody(): void {
     }
 
     // --- Sorting ---
-    if (sort) {
-      const { columnIndex, direction } = sort;
-      const dir = direction === 'asc' ? 1 : -1;
-
-      let isDateSort = false;
-      for (let i = 0; i < columnMeta.length; i++) {
-        const meta = columnMeta[i];
-        if (meta === undefined) continue;
-        if (meta.index === columnIndex) {
-          isDateSort = meta.type === 'date';
-          break;
+    // Each level's keys are computed once per row (not per comparison). Rows
+    // compare level by level; Array#sort is stable, so full ties keep data order.
+    const sortSpecs = msg.sorts ?? (sort ? [sort] : []);
+    if (sortSpecs.length > 0) {
+      const levels: [(string | number | undefined)[], boolean, number][] = [];
+      for (let s = 0; s < sortSpecs.length; s++) {
+        const spec = sortSpecs[s];
+        if (spec === undefined) continue;
+        const columnIndex = spec.columnIndex;
+        let isDateSort = false;
+        for (let i = 0; i < columnMeta.length; i++) {
+          const meta = columnMeta[i];
+          if (meta === undefined) continue;
+          if (meta.index === columnIndex) {
+            isDateSort = meta.type === 'date';
+            break;
+          }
         }
-      }
-
-      if (isDateSort) {
-        // Date columns sort by timestamp like the sync path — lexical order
-        // is wrong for non-ISO date strings. Timestamps are parsed once per
-        // row; null/invalid stay NaN so they group first in ascending order.
-        const timestamps = new Map<number, number>();
-        for (let i = 0; i < indices.length; i++) {
-          const r = indices[i];
-          if (r === undefined) continue;
-          const rowVals = values[r];
-          const v = rowVals === undefined ? null : rowVals[columnIndex];
-          timestamps.set(r, toDateTimestamp(v));
-        }
-        indices.sort((a, b) => compareTimestamps(timestamps.get(a) as number, timestamps.get(b) as number) * dir);
-      } else {
-        // Sort keys once per row instead of once per comparison.
+        // Date columns sort by timestamp like the sync path (lexical order is
+        // wrong for non-ISO date strings); null/invalid stay NaN and group first.
         const keys: (string | number | undefined)[] = new Array(rowCount);
         for (let i = 0; i < indices.length; i++) {
           const r = indices[i];
           if (r === undefined) continue;
-          keys[r] = toSortKey(values[r]?.[columnIndex]);
+          const v = values[r]?.[columnIndex] ?? null;
+          keys[r] = isDateSort ? toDateTimestamp(v) : toSortKey(v);
         }
-        indices.sort((a, b) => compareSortKeys(keys[a], keys[b], sortCollator) * dir);
+        levels.push([keys, isDateSort, spec.direction === 'asc' ? 1 : -1]);
+      }
+      const first = levels[0];
+      if (levels.length === 1 && first) {
+        const [keys, isDate, dir] = first;
+        indices.sort((a, b) => (isDate
+          ? compareTimestamps(keys[a] as number, keys[b] as number)
+          : compareSortKeys(keys[a], keys[b], sortCollator)) * dir);
+      } else {
+        indices.sort((a, b) => compareSortLevels(levels, a, b, sortCollator));
       }
     }
 

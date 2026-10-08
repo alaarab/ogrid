@@ -5,11 +5,13 @@
  *   - Sort column has a custom `compare` function
  */
 
-import type { IColumnDef, IFilters } from '../types';
+import type { IColumnDef, IFilters, ISortModelItem } from '../types';
 import { getCellValue } from './cellValue';
 import { formatCellValue } from './cellFormatting';
 import { getFilterField } from './ogridHelpers';
 import { processClientSideData } from './clientSideData';
+import { normalizeConditionFilter } from './conditionFilter';
+import { normalizeSortModel } from './sortHelpers';
 import type { SortFilterRequest, SortFilterResponse } from '../workers/sortFilterWorker';
 import { workerBody } from '../workers/sortFilterWorker';
 import { SORT_FILTER_PRIMITIVES } from '../workers/sortFilterPrimitives';
@@ -185,18 +187,16 @@ export function processClientSideDataAsync<T>(
   data: T[],
   columns: IColumnDef<T>[],
   filters: IFilters,
-  sortBy?: string,
+  sortBy?: string | readonly ISortModelItem[],
   sortDirection?: 'asc' | 'desc'
 ): Promise<T[]> {
-  // Check if sort column has custom compare (not serializable to worker)
-  if (sortBy) {
-    const sortCol = columns.find(c => c.columnId === sortBy);
-    if (sortCol?.compare) {
-      return Promise.resolve(processClientSideData(data, columns, filters, sortBy, sortDirection));
-    }
-  }
-
   const sync = () => Promise.resolve(processClientSideData(data, columns, filters, sortBy, sortDirection));
+  const sortLevels = normalizeSortModel(sortBy, sortDirection);
+
+  // A sort column with a custom compare isn't serializable to the worker.
+  for (const level of sortLevels) {
+    if (columns.find((c) => c.columnId === level.field)?.compare) return sync();
+  }
 
   // Only the filtered/sorted columns are sent, packed into a compact matrix
   // (worker column index = position in workerColumns).
@@ -229,6 +229,14 @@ export function processClientSideDataAsync<T>(
       case 'date':
         workerFilters[workerColumnOf(col)] = { type: 'date', value: { from: val.value.from, to: val.value.to } };
         break;
+      case 'condition': {
+        const condition = normalizeConditionFilter(val.value);
+        if (!condition) break;
+        // Text conditions read the column as text, like the sync path's String(value).
+        if (condition.kind === 'text') stringColumns.add(workerColumnOf(col));
+        workerFilters[workerColumnOf(col)] = { type: 'condition', value: condition };
+        break;
+      }
       // 'people' filter has a UserLike object  -  fall back to sync
       case 'people':
         return sync();
@@ -238,15 +246,16 @@ export function processClientSideDataAsync<T>(
   // Build sort spec. A sort column that isn't a column def (sync sorts by the
   // raw field) or that is also read as text (it needs both a string and a
   // timestamp) stays on the sync path.
-  let sort: SortFilterRequest['sort'];
-  if (sortBy) {
+  const sorts: NonNullable<SortFilterRequest['sorts']> = [];
+  for (const level of sortLevels) {
     let sortCol: IColumnDef<T> | undefined;
-    for (const col of columns) if (col.columnId === sortBy) sortCol = col;
+    for (const col of columns) if (col.columnId === level.field) sortCol = col;
     if (!sortCol) return sync();
     const sortColIdx = workerColumnOf(sortCol);
     if (stringColumns.has(sortColIdx) && sortCol.type === 'date') return sync();
-    sort = { columnIndex: sortColIdx, direction: sortDirection ?? 'asc' };
+    sorts.push({ columnIndex: sortColIdx, direction: level.direction });
   }
+  const sort: SortFilterRequest['sort'] = sorts.length === 1 ? sorts[0] : undefined;
 
   // Nothing to filter or sort: the sync path returns the data as-is.
   if (workerColumns.length === 0) return sync();
@@ -296,6 +305,7 @@ export function processClientSideDataAsync<T>(
       columnMeta,
       filters: workerFilters,
       sort,
+      ...(sorts.length > 1 ? { sorts } : {}),
     };
 
     worker.postMessage(request);

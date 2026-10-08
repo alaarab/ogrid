@@ -13,6 +13,8 @@ import { applySnapshot, createResortTracker, createSnapshot, trackResort } from 
 import type { ResortInputs, ResortTracker, RowOrderSnapshot } from './rowOrderSnapshot';
 import type { IFilters, IDataSource, WindowedDataState, RowId } from '../types';
 import type { IColumnDef as ICoreColumnDef, WindowedRow, PageSize, IHiddenGaps } from '@alaarab/ogrid-core';
+import { normalizeSortModel, sortModelKey } from '@alaarab/ogrid-core';
+import type { ISortModelItem } from '@alaarab/ogrid-core';
 
 /** One page of rows; `'all'` yields the entire (filtered, sorted) dataset. */
 function pageWindow<T>(rows: T[], page: number, pageSize: PageSize): T[] {
@@ -88,6 +90,11 @@ export interface UseOGridDataFetchingParams<T> {
   stableFilters: IFilters;
   sort: { field: string; direction: 'asc' | 'desc' };
   /**
+   * Every sort level, primary first. When omitted, `sort` is the only level.
+   * Client-side sorting applies every level; data sources receive it as `sortModel`.
+   */
+  sortModel?: readonly ISortModelItem[];
+  /**
    * Increments when the user explicitly changes the sort (not on data edits).
    * Used to apply sort as a snapshot: re-sort only on explicit sort actions,
    * not on every cell edit - matching Excel behavior.
@@ -155,9 +162,19 @@ const EMPTY_ROWS: readonly unknown[] = Object.freeze([]);
 export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): UseOGridDataFetchingState<T> {
   const {
     isServerSide, dataSource, dataSourceKey, displayData, getRowId, columns, stableFilters,
-    sort, sortVersion, page, pageSize, paginate = true, onError, onFirstDataRendered, workerSort,
+    sort, sortModel: sortModelParam, sortVersion, page, pageSize, paginate = true, onError, onFirstDataRendered, workerSort,
     editVersionRef, structureVersionRef, hiddenRowIds,
   } = params;
+  // Effects and memos depend on the sort's content (`sortKey`), not object identity.
+  const sortKey = sortModelKey(sortModelParam ?? normalizeSortModel(sort.field, sort.direction));
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on sort content (sortKey)
+  const sortLevels = useMemo(
+    () => normalizeSortModel(sortModelParam ?? normalizeSortModel(sort.field, sort.direction)),
+    [sortKey],
+  );
+  // Single-level sorts keep passing field/direction (identical to the pre-multi-sort calls).
+  const sortArg: string | readonly ISortModelItem[] = sortLevels.length > 1 ? sortLevels : (sortLevels[0]?.field ?? '');
+  const sortDirArg = sortLevels.length > 1 ? undefined : sortLevels[0]?.direction ?? sort.direction;
   const editVersion = editVersionRef?.current ?? 0;
   const structureVersion = structureVersionRef?.current ?? 0;
   const structureSeenRef = useRef(structureVersion);
@@ -172,6 +189,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     columns,
     filters: stableFilters,
     sortBy: sort.field,
+    sortModel: sortLevels,
   });
 
   // --- Stable sorted order (snapshot) ---
@@ -184,7 +202,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   // rebuilt from a full re-sort. Rows only move when the user explicitly sorts.
   const snapshotRef = useRef<RowOrderSnapshot<T> | null>(null);
   const resortTrackerRef = useRef<ResortTracker<T>>(createResortTracker<T>());
-  const resortInputs: ResortInputs = [sortVersion, stableFilters, columns, sort.field, sort.direction];
+  const resortInputs: ResortInputs = [sortVersion, stableFilters, columns, sortKey, sort.direction];
   // A structure edit the host has applied (new data since the edit): full re-sort.
   const structureChanged =
     structureSeenRef.current !== structureVersion && resortTrackerRef.current.data !== displayData;
@@ -224,7 +242,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     } else {
       // Full re-sort against the current displayData; the snapshot remembers
       // the resulting order so later edits can look up the updated rows.
-      orderedRows = processClientSideData(displayData, columns, stableFilters, sort.field, sort.direction);
+      orderedRows = processClientSideData(displayData, columns, stableFilters, sortArg, sortDirArg);
       snapshotRef.current = createSnapshot(displayData, orderedRows, getRowIdRef.current);
     }
 
@@ -239,7 +257,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     return { items: pageWindow(shownRows, page, pageSize), totalCount: total, all: shownRows, gaps };
     // Note: sortVersion is implicitly tracked via trackResort / snapshotRef.current === null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, filterRows, getRowIdRef, hiddenRowIds]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sortKey, page, pageSize, paginate, filterRows, getRowIdRef, hiddenRowIds]);
 
   // Stabilize callback refs so inline dataSource/onError don't cause infinite re-fetches.
   const dataSourceRef = useLatestRef(dataSource);
@@ -262,7 +280,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       return;
     }
 
-    const asyncInputs: ResortInputs = [sortVersion, stableFilters, columns, sort.field, sort.direction];
+    const asyncInputs: ResortInputs = [sortVersion, stableFilters, columns, sortKey, sort.direction];
     if (trackResort(asyncResortTrackerRef.current, asyncInputs, displayData, editVersionRef?.current ?? 0, asyncSnapshotRef.current, getRowIdRef.current)) {
       asyncSnapshotRef.current = null;
     }
@@ -298,8 +316,8 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
         displayData,
         columns as Parameters<typeof processClientSideDataAsync>[1],
         stableFilters,
-        sort.field,
-        sort.direction,
+        sortArg,
+        sortDirArg,
       ).then((rows) => {
         if (id !== asyncIdRef.current) return; // stale
         commitSorted(rows as T[]);
@@ -308,11 +326,11 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
         // Worker failed at runtime: report and fall back to synchronous
         // processing so the grid still updates instead of keeping stale rows.
         onErrorRef.current?.(err);
-        commitSorted(processClientSideData(displayData, columns, stableFilters, sort.field, sort.direction));
+        commitSorted(processClientSideData(displayData, columns, stableFilters, sortArg, sortDirArg));
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, onErrorRef, filterRows, hiddenRowIds]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sortKey, page, pageSize, paginate, onErrorRef, filterRows, hiddenRowIds]);
 
   // --- Server-side data fetching ---
   const [serverItems, setServerItems] = useState<T[]>([]);
@@ -342,6 +360,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
         // IFetchParams is numeric; 'all' asks the source for everything.
         page, pageSize: pageSize === 'all' ? Number.MAX_SAFE_INTEGER : pageSize,
         sort: { field: sort.field, direction: sort.direction },
+        sortModel: sortLevels.slice(),
         filters: stableFilters,
         signal: controller.signal,
       })
@@ -362,7 +381,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     return () => {
       controller.abort();
     };
-  }, [isServerSide, page, pageSize, sort.field, sort.direction, stableFilters, refreshCounter, dataSourceVersion, dataSourceRef, onErrorRef]);
+  }, [isServerSide, page, pageSize, sort.field, sort.direction, sortLevels, stableFilters, refreshCounter, dataSourceVersion, dataSourceRef, onErrorRef]);
 
   // --- Windowed (lazy) data source ---
   // When the data source implements the windowed contract (getRowCount +
@@ -421,6 +440,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     if (!cache) return;
     cache.setContext({
       sort: { field: sort.field, direction: sort.direction },
+      sortModel: sortLevels.slice(),
       filters: stableFilters,
     });
     const last = lastWindowRef.current;
@@ -428,7 +448,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     // stableFilters is read but intentionally excluded from deps in favour of
     // windowedFiltersKey (its content-stable string form).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWindowed, sort.field, sort.direction, windowedFiltersKey, refreshCounter, dataSourceVersion]);
+  }, [isWindowed, sort.field, sort.direction, sortKey, windowedFiltersKey, refreshCounter, dataSourceVersion]);
 
   const requestWindow = useCallback((start: number, end: number) => {
     lastWindowRef.current = { start, end };

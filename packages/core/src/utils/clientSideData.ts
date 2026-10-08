@@ -1,5 +1,7 @@
-import type { IColumnDef, IFilters } from '../types';
+import type { IColumnDef, IFilters, ISortModelItem } from '../types';
 import { getCellValue } from './cellValue';
+import { createConditionPredicate } from './conditionFilter';
+import { normalizeSortModel } from './sortHelpers';
 import { formatCellValue } from './cellFormatting';
 import { getFilterField } from './ogridHelpers';
 import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey, createSortCollator } from '../workers/sortFilterPrimitives';
@@ -22,15 +24,15 @@ const columnMapCache = new WeakMap<IColumnDef<unknown>[], Map<string, IColumnDef
  * @param data - The full dataset to process
  * @param columns - Column definitions (used for filtering and sorting)
  * @param filters - Current filter state (discriminated FilterValue union)
- * @param sortBy - Column ID to sort by (optional)
- * @param sortDirection - Sort direction (optional)
+ * @param sortBy - Column ID to sort by, or a multi-level sort model (primary first). Optional.
+ * @param sortDirection - Sort direction when `sortBy` is a column ID (default ascending)
  * @returns Filtered and sorted array
  */
 export function processClientSideData<T>(
   data: T[],
   columns: IColumnDef<T>[],
   filters: IFilters,
-  sortBy?: string,
+  sortBy?: string | readonly ISortModelItem[],
   sortDirection?: 'asc' | 'desc'
 ): T[] {
   // Get or build column lookup map (cached via WeakMap)
@@ -88,6 +90,13 @@ export function processClientSideData<T>(
         predicates.push((r) => String(getCellValue(r, col) ?? '').toLowerCase() === email);
         break;
       }
+      case 'condition': {
+        // Top N and above/below average compare against every row passed in,
+        // before the other columns' filters.
+        const matches = createConditionPredicate(val.value, () => data.map((r) => getCellValue(r, col)));
+        if (matches) predicates.push((r) => matches(getCellValue(r, col)));
+        break;
+      }
       case 'date': {
         const dv = val.value;
         // Pre-compute filter boundary timestamps to avoid repeated Date parsing in the filter loop
@@ -117,53 +126,65 @@ export function processClientSideData<T>(
     : data;
 
   // --- Sorting ---
-  if (sortBy) {
-    // Copy before sorting if we didn't filter (filter already creates a new array).
-    // This avoids mutating the caller's original data array.
-    const sortable = filtered ? rows : rows.slice();
-    const sortCol = columnMap.get(sortBy);
-    const compare = sortCol?.compare;
-    // Default to ascending when unspecified, matching the worker path in
-    // workerSortFilter.ts  -  otherwise the same grid sorts in opposite
-    // directions depending on whether the async path was taken.
-    const dir = sortDirection === 'desc' ? -1 : 1;
-    const isDateSort = sortCol?.type === 'date';
+  // Default to ascending when unspecified, matching the worker path in
+  // workerSortFilter.ts  -  otherwise the same grid sorts in opposite
+  // directions depending on whether the async path was taken.
+  const levels = normalizeSortModel(sortBy, sortDirection);
+  if (levels.length === 0) return rows;
 
-    // For date columns, pre-compute timestamps to avoid repeated new Date() in O(n log n) comparisons.
-    // NOTE: The timestamp cache is scoped to this single sort invocation. It is rebuilt on every call,
-    // so mutating row objects between calls is safe  -  stale timestamps cannot persist across invocations.
-    if (isDateSort && !compare) {
-      const timestampCache = new Map<T, number>();
-      for (let i = 0; i < sortable.length; i++) {
-        const row = sortable[i];
-        if (row === undefined) continue;
-        const val = sortCol ? getCellValue(row, sortCol) : (row as Record<string, unknown>)[sortBy];
-        // Invalid dates stay NaN so they group with nulls (first in asc order),
-        // matching the date-filter cache above instead of sorting as 1970.
-        timestampCache.set(row, toDateTimestamp(val));
+  // Copy before sorting if we didn't filter (filter already creates a new array).
+  // This avoids mutating the caller's original data array.
+  const sortable = filtered ? rows : rows.slice();
+  const comparators = levels.map((level) => buildLevelComparator(sortable, columnMap.get(level.field), level.field, level.direction === 'desc' ? -1 : 1));
+  const first = comparators[0];
+  if (comparators.length === 1 && first) {
+    sortable.sort(first);
+  } else {
+    // Later levels only break ties of earlier ones; Array#sort is stable, so
+    // rows equal on every level keep their data order.
+    sortable.sort((a, b) => {
+      for (let i = 0; i < comparators.length; i++) {
+        const r = (comparators[i] as (a: T, b: T) => number)(a, b);
+        if (r !== 0) return r;
       }
-      sortable.sort((a, b) => compareTimestamps(timestampCache.get(a) ?? NaN, timestampCache.get(b) ?? NaN) * dir);
-    } else if (!compare) {
-      // Pre-compute sort keys before sort to avoid repeated String().toLowerCase()
-      // in O(n log n) comparisons. Numeric values use their raw form (no string conversion needed).
-      // NOTE: Cache is scoped to this sort invocation  -  rebuilt on every call, safe for mutations.
-      // We use `undefined` as a sentinel for null/undefined cell values so we can distinguish
-      // them from empty strings (both null and undefined map to undefined here).
-      const keyCache = new Map<T, string | number | undefined>();
-      for (let i = 0; i < sortable.length; i++) {
-        const row = sortable[i];
-        if (row === undefined) continue;
-        const v = sortCol
-          ? getCellValue(row, sortCol)
-          : (row as Record<string, unknown>)[sortBy];
-        keyCache.set(row, toSortKey(v));
-      }
-      sortable.sort((a, b) => compareSortKeys(keyCache.get(a), keyCache.get(b), sortCollator) * dir);
-    } else {
-      sortable.sort((a, b) => compare(a, b) * dir);
+      return 0;
+    });
+  }
+  return sortable;
+}
+
+/**
+ * Comparator for one sort level. Keys are precomputed once per row so the
+ * O(n log n) comparisons don't re-read or re-parse cell values. Caches are
+ * scoped to this call, so mutating rows between calls is safe.
+ */
+function buildLevelComparator<T>(
+  rows: T[],
+  sortCol: IColumnDef<T> | undefined,
+  field: string,
+  dir: number,
+): (a: T, b: T) => number {
+  const compare = sortCol?.compare;
+  if (compare) return (a, b) => compare(a, b) * dir;
+  const read = (row: T): unknown => (sortCol ? getCellValue(row, sortCol) : (row as Record<string, unknown>)[field]);
+
+  if (sortCol?.type === 'date') {
+    // Invalid dates stay NaN so they group with nulls (first in asc order),
+    // matching the date filter instead of sorting as 1970.
+    const timestampCache = new Map<T, number>();
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (row !== undefined) timestampCache.set(row, toDateTimestamp(read(row)));
     }
-    return sortable;
+    return (a, b) => compareTimestamps(timestampCache.get(a) ?? NaN, timestampCache.get(b) ?? NaN) * dir;
   }
 
-  return rows;
+  // Numbers keep their raw form; text is lowercased once. null/undefined map
+  // to `undefined` so they stay distinct from empty strings.
+  const keyCache = new Map<T, string | number | undefined>();
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (row !== undefined) keyCache.set(row, toSortKey(read(row)));
+  }
+  return (a, b) => compareSortKeys(keyCache.get(a), keyCache.get(b), sortCollator) * dir;
 }

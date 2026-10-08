@@ -378,3 +378,17 @@
     font-size: 16px;
   }
 }
+
+// Sort on label click (Shift+click adds a level)
+.columnName[data-sortable] {
+  cursor: pointer;
+}
+
+// Priority of this column in a multi-level sort (1 = primary)
+.sortPriority {
+  margin-left: 1px;
+  font-size: 9px;
+  font-weight: 600;
+  vertical-align: super;
+  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+}

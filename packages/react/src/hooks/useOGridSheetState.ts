@@ -7,18 +7,18 @@ import type { UseOGridColumnLayoutState } from './useOGridColumnLayout';
 import type { UseOGridColumnVisibilityState } from './useOGridColumnVisibility';
 import type { UseOGridHiddenRowsState } from './useOGridHiddenRows';
 import type { SheetScopedGridState } from './useOGrid.types';
-import type { IOGridProps, RowId } from '../types';
+import type { IOGridProps, ISortModelItem, RowId } from '../types';
 
 /** The props whose presence makes a sheet-scoped slot controlled (never written on a sheet switch). */
 export type SheetStateControlProps = Pick<
   IOGridProps<unknown>,
-  'visibleColumns' | 'sort' | 'filters' | 'page' | 'selectedRows' | 'columnOrder' | 'hiddenRowIds'
+  'visibleColumns' | 'sort' | 'sortModel' | 'filters' | 'page' | 'selectedRows' | 'columnOrder' | 'hiddenRowIds'
 >;
 
 /** The raw (non-notifying) setters a sheet switch writes through. */
 export interface SheetStateSlices {
   visibility: Pick<UseOGridColumnVisibilityState, 'setInternalVisibleColumns'>;
-  sorting: Pick<UseOGridSortingState, 'setInternalSort'>;
+  sorting: Pick<UseOGridSortingState, 'setInternalSort'> & Partial<Pick<UseOGridSortingState, 'setInternalSortModel'>>;
   filters: Pick<UseOGridFiltersState, 'setInternalFilters'>;
   pagination: Pick<UseOGridPaginationState, 'setInternalPage'>;
   selection: Pick<UseOGridRowSelectionState<unknown>, 'setInternalSelectedRows'>;
@@ -27,10 +27,11 @@ export interface SheetStateSlices {
 }
 
 /** State for a sheet seen for the first time: its own defaults, nothing inherited. */
-export function sheetStateDefaults(defaultSort: SortState): SheetScopedGridState {
+export function sheetStateDefaults(defaultSort: SortState, defaultSortModel?: ISortModelItem[]): SheetScopedGridState {
   return {
     visibleColumns: undefined,
     sort: defaultSort,
+    ...(defaultSortModel ? { sortModel: defaultSortModel } : {}),
     filters: {},
     page: 1,
     selectedRows: new Set<RowId>(),
@@ -52,7 +53,10 @@ export function applySheetState(state: SheetScopedGridState, props: SheetStateCo
   if (props.visibleColumns === undefined && state.visibleColumns !== undefined) {
     s.visibility.setInternalVisibleColumns(state.visibleColumns);
   }
-  if (props.sort === undefined) s.sorting.setInternalSort(state.sort);
+  if (props.sort === undefined && props.sortModel === undefined) {
+    if (state.sortModel && s.sorting.setInternalSortModel) s.sorting.setInternalSortModel(state.sortModel);
+    else s.sorting.setInternalSort(state.sort);
+  }
   if (props.filters === undefined) s.filters.setInternalFilters(state.filters);
   if (props.page === undefined) s.pagination.setInternalPage(state.page);
   if (props.selectedRows === undefined) s.selection.setInternalSelectedRows(state.selectedRows);
@@ -74,7 +78,7 @@ export function applySheetState(state: SheetScopedGridState, props: SheetStateCo
  * not something the sheet's columns or rows give meaning to.
  */
 export function useOGridSheetState(
-  props: SheetStateControlProps & Pick<IOGridProps<unknown>, 'activeSheet'>,
+  props: SheetStateControlProps & Pick<IOGridProps<unknown>, 'activeSheet' | 'defaultSortModel'>,
   current: SheetScopedGridState,
   defaultSortField: string,
   defaultSortDirection: SortState['direction'],
@@ -83,7 +87,7 @@ export function useOGridSheetState(
   useSheetScopedState<SheetScopedGridState>({
     activeSheet: props.activeSheet,
     current,
-    defaults: () => sheetStateDefaults({ field: defaultSortField, direction: defaultSortDirection }),
+    defaults: () => sheetStateDefaults({ field: defaultSortField, direction: defaultSortDirection }, props.defaultSortModel),
     apply: (state) => applySheetState(state, props, slices),
   });
 }

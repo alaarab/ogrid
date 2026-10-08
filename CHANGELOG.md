@@ -51,6 +51,33 @@ All notable changes to OGrid will be documented in this file.
   `getHidingMenuItems`; `@alaarab/ogrid-react` exports `SHEET_TAB_COLORS` and
   `moveSheetId`.
 
+- Multi-level sort: click a header to sort by it, Shift+click another header
+  (or **Add to sort** in its column menu) to add a tie-breaking level, and
+  Shift+click a sorted column again to flip it, then remove it. A plain click
+  goes back to a single sort. Sorted headers show a priority number when
+  there is more than one level. New props `sortModel`, `onSortModelChange`
+  and `defaultSortModel` (`ISortModelItem[]`, primary first); `sort` /
+  `onSortChange` keep working and describe the primary level. Works with
+  client sort (stable), custom `compare`, `workerSort`, and data sources:
+  `fetchPage`, `getRows` and `getRowCount` receive `sortModel`.
+  `getColumnState()` includes `sortModel` for multi-level sorts and
+  `applyColumnState` accepts it. `useHeadlessGrid` adds `sortModel`,
+  `setSortModel`, `sortPriority` and `toggleSort(id, { additive })`.
+- Number and condition filters: `filterable: { type: 'number' }` (number
+  operators) or `{ type: 'condition' }` (number, date or text operators from
+  the column `type`). Operators: equals, does not equal, greater/less than (or
+  equal), between, top/bottom N, above/below average, begins with, ends with,
+  contains, does not contain, is blank, is not blank; up to two conditions
+  joined with And/Or. The filter value is a serializable
+  `{ type: 'condition', value: { kind, conditions, join } }` passed to data
+  sources unchanged. Both kits' filter popovers include the editor, with the
+  active-filter indicator and Clear.
+- `@alaarab/ogrid-core` exports `computeNextSortModel`, `normalizeSortModel`,
+  `CONDITION_OPERATORS`, `getConditionOperatorLabel`,
+  `getConditionOperatorArity`, `resolveConditionFilterKind`,
+  `normalizeConditionFilter` and `createConditionPredicate`;
+  `processClientSideData` and `processClientSideDataAsync` accept a sort model
+  in place of the sort field.
 - Merged cells: `mergedCells?: IMergedCell[]` on `OGrid` and `DataGridTable`
   (`{ rowId, columnId, rowSpan?, colSpan? }`, spans counted over displayed rows
   and visible columns). The anchor renders across the block and covered cells
@@ -214,6 +241,10 @@ All notable changes to OGrid will be documented in this file.
 - Shift+Space in a data cell selects the row as a cell range when
   `rowSelection` is off (it did nothing before). The name box renders as an
   `<input>` (same `aria-label`) instead of an `<output>`.
+- Clicking a column header's name in the React kits now sorts by that column
+  (click again to reverse), as the docs described; it used to need the column
+  menu. A press that turns into a column drag doesn't sort. Keyboard users
+  still sort from the column menu.
 - Ctrl+Z / Ctrl+Y work while no cell is active (e.g. after deleting the
   selected rows).
 - `@alaarab/ogrid-react-xlsx`: columns use the sheet's widths (Excel's

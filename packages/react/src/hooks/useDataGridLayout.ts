@@ -25,7 +25,8 @@ export interface UseDataGridLayoutParams<T> {
   onColumnPinned?: (columnId: string, side: 'left' | 'right' | null) => void;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
-  onColumnSort?: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
+  sortModel?: ReadonlyArray<{ field: string; direction: 'asc' | 'desc' }>;
+  onColumnSort?: (columnKey: string, direction?: 'asc' | 'desc' | null, options?: { additive?: boolean }) => void;
   responsiveColumns?: boolean | IResponsiveColumnsConfig;
   wrapperRef: RefObject<HTMLDivElement | null>;
   /** Column structure edits for the header menu (omit to hide those items). */
@@ -69,7 +70,7 @@ export interface UseDataGridLayoutResult<T> {
     React.SetStateAction<Record<string, { widthPx: number }>>
   >;
   handleAutosizeColumn: (columnId: string, width: number) => void;
-  stableOnColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
+  stableOnColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null, options?: { additive?: boolean }) => void;
 }
 
 /**
@@ -94,6 +95,7 @@ export function useDataGridLayout<T>(
     onColumnPinned,
     sortBy,
     sortDirection,
+    sortModel,
     onColumnSort,
     responsiveColumns,
     wrapperRef,
@@ -281,7 +283,8 @@ export function useDataGridLayout<T>(
   // Stabilize onColumnSort via ref
   const onColumnSortRef = useLatestRef(onColumnSort);
   const stableOnColumnSort = useCallback(
-    (columnKey: string, direction?: 'asc' | 'desc' | null) => onColumnSortRef.current?.(columnKey, direction),
+    (columnKey: string, direction?: 'asc' | 'desc' | null, options?: { additive?: boolean }) =>
+      options ? onColumnSortRef.current?.(columnKey, direction, options) : onColumnSortRef.current?.(columnKey, direction),
     [onColumnSortRef]
   );
 
@@ -301,6 +304,7 @@ export function useDataGridLayout<T>(
     onUnpinColumn: pinningResult.unpinColumn,
     sortBy,
     sortDirection: sortDirection ?? 'asc',
+    sortModel,
     onColumnSort: stableOnColumnSort,
     onColumnResized,
     onAutosizeColumn: handleAutosizeColumn,

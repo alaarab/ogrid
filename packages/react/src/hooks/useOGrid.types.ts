@@ -5,6 +5,7 @@ import type {
   IOGridDataGridProps,
   IColumnDefinition,
   IFilters,
+  ISortModelItem,
   RowId,
   PageSize,
 } from '../types';
@@ -66,6 +67,8 @@ export interface UseOGridFilters {
 export interface SheetScopedGridState {
   visibleColumns: Set<string> | undefined;
   sort: SortState;
+  /** Every sort level; when set it is restored instead of `sort`. */
+  sortModel?: ISortModelItem[];
   filters: IFilters;
   page: number;
   selectedRows: Set<RowId>;

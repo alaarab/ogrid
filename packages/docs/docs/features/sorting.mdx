@@ -5,12 +5,15 @@ description: Enable column sorting with click-to-toggle, custom comparators, and
 ---
 
 import SortingDemo from '@site/src/components/demos/SortingDemo';
+import MultiSortDemo from '@site/src/components/demos/MultiSortDemo';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 # Sorting
 
-Click a column header to sort. Click again to reverse. Use **Clear sort** in the column menu to remove it. An arrow shows the current direction. That's the whole interaction — no configuration beyond `sortable: true`.
+Click a column header to sort. Click again to reverse. **Shift+click** another header to sort by it as well. Use **Clear sort** in the column menu to remove it. An arrow shows the current direction. That's the whole interaction — no configuration beyond `sortable: true`.
+
+The column menu (⋮) has the same actions for keyboard users: **Sort ascending**, **Sort descending**, **Clear sort**, and **Add to sort**.
 
 <SortingDemo />
 
@@ -77,6 +80,35 @@ Use `defaultSortBy` and `defaultSortDirection` to pre-sort the grid on mount —
 />
 ```
 
+## Sort by several columns
+
+Sort by one column, then **Shift+click** another header (or pick **Add to sort** in its column menu) to break ties with it. Each sorted header shows its arrow and a small priority number: 1 for the primary sort, 2 for the next, and so on. Shift+click a sorted column again to flip its direction, and a third time to remove it from the sort. A plain click on any header goes back to sorting by that one column, the same as Excel and AG Grid.
+
+<MultiSortDemo />
+
+Rows that tie on every level keep their original order (the sort is stable). Every level honors the column's `type` and custom `compare`, and the Web Worker path (`workerSort`) sorts by all levels too. A `compare` on any level keeps that sort on the main thread.
+
+Start with several levels using `defaultSortModel`, or control them with `sortModel` and `onSortModelChange`:
+
+```tsx
+const [sortModel, setSortModel] = useState<ISortModelItem[]>([
+  { field: 'department', direction: 'asc' },
+  { field: 'salary', direction: 'desc' },
+]);
+
+<OGrid
+  columns={columns}
+  data={people}
+  getRowId={(item) => item.id}
+  sortModel={sortModel}
+  onSortModelChange={setSortModel}
+/>
+```
+
+`sortModel` takes precedence over `sort`. The single-level API keeps working unchanged: `sort`/`onSortChange` describe the primary level, so existing code doesn't need to change. To keep a secondary level when you control sorting, use `sortModel`; a controlled `sort` holds one level only.
+
+With `useHeadlessGrid`, call `toggleSort(columnId, { additive: event.shiftKey })` from your header and read `sortModel` and `sortPriority(columnId)`.
+
 ## Custom sort order
 
 By default, text columns sort alphabetically and numeric columns sort numerically. When that isn't right — priority levels, custom status orderings, anything domain-specific — provide a `compare` function:
@@ -133,7 +165,7 @@ function App() {
 }
 ```
 
-When `sort` and `onSortChange` are both present, the grid is fully controlled — it never manages sort state internally.
+When `sort` and `onSortChange` are both present, the grid is fully controlled — it never manages sort state internally. For multi-level sorting, control `sortModel` and `onSortModelChange` instead (see above).
 
 ## Server-side sorting
 
@@ -160,6 +192,15 @@ const dataSource: IDataSource<Project> = {
 };
 ```
 
+For multi-level sorts, read `sortModel`: every level, primary first (`sort` is its first item). Windowed sources get the same `sortModel` in `getRows` and `getRowCount`:
+
+```tsx
+fetchPage: async ({ sortModel = [], page, pageSize, filters }) => {
+  const orderBy = sortModel.map((s) => `${s.field} ${s.direction}`).join(', ');
+  // ...ORDER BY department asc, salary desc
+},
+```
+
 :::tip Pro tip
 Server-side sorting disables client-side sort entirely — the grid just re-fetches when the user clicks a header. This pairs perfectly with large datasets where you never want all rows in the browser at once. See [Server-Side Data](./server-side-data) for the full setup.
 :::
@@ -174,6 +215,9 @@ Server-side sorting disables client-side sort entirely — the grid just re-fetc
 | `onSortChange` | `(sort) => void` | — | Called when the user changes the sort. Required for controlled mode. |
 | `defaultSortBy` | `string` | — | Initial sort column (uncontrolled only). |
 | `defaultSortDirection` | `'asc' \| 'desc'` | `'asc'` | Initial sort direction (uncontrolled only). |
+| `sortModel` | `ISortModelItem[]` | — | Controlled multi-level sort, primary first. Takes precedence over `sort`. |
+| `onSortModelChange` | `(sortModel) => void` | — | Called with every level whenever the sort changes. |
+| `defaultSortModel` | `ISortModelItem[]` | — | Initial multi-level sort (uncontrolled only). Takes precedence over `defaultSortBy`. |
 
 ## Next steps
 

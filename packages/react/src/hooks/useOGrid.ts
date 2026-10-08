@@ -63,9 +63,10 @@ export function useOGrid<T>(
 ): UseOGridResult<T> {
   const {
     columns: columnsProp, data, dataSource, dataSourceKey,
-    page: controlledPage, pageSize: controlledPageSize, sort: controlledSort, filters: controlledFilters,
+    page: controlledPage, pageSize: controlledPageSize, sort: controlledSort, sortModel: controlledSortModel,
+    filters: controlledFilters,
     visibleColumns: controlledVisibleColumns, isLoading: controlledLoading, selectedRows, columnOrder,
-    defaultPageSize = DEFAULT_PAGE_SIZE, defaultSortBy, defaultSortDirection = 'asc',
+    defaultPageSize = DEFAULT_PAGE_SIZE, defaultSortBy, defaultSortDirection = 'asc', defaultSortModel,
     emptyState, entityLabelPlural = 'items', layoutMode = 'fill', suppressHorizontalScroll,
     editable, cellSelection, canUndo, canRedo, rowSelection = 'none', statusBar, pageSizeOptions,
     stickyHeader, columnReorder, responsiveColumns, virtualScroll, rowHeight, density = 'normal',
@@ -102,7 +103,8 @@ export function useOGrid<T>(
   });
   const { page, pageSize, setPage } = paginationState;
   const sortingState = useOGridSorting({
-    controlledSort, defaultSortField, defaultSortDirection, columns, onSortChange: props.onSortChange, setPage,
+    controlledSort, controlledSortModel, defaultSortField, defaultSortDirection, defaultSortModel, columns,
+    onSortChange: props.onSortChange, onSortModelChange: props.onSortModelChange, setPage,
   });
   const filtersState = useOGridFilters({
     controlledFilters, onFiltersChange: props.onFiltersChange, setPage,
@@ -116,7 +118,8 @@ export function useOGrid<T>(
   const structureVersionRef = useRef(0);
   const dataFetchingState = useOGridDataFetching({
     isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, structureVersionRef, columns: sortFilterColumns,
-    stableFilters: filtersState.stableFilters, sort: sortingState.sort, sortVersion: sortingState.sortVersion,
+    stableFilters: filtersState.stableFilters, sort: sortingState.sort, sortModel: sortingState.sortModel,
+    sortVersion: sortingState.sortVersion,
     page, pageSize, paginate: !fullyVirtualized,
     onError: props.onError, onFirstDataRendered: props.onFirstDataRendered, workerSort: props.workerSort,
     hiddenRowIds: hiddenRows.hiddenRowSet,
@@ -148,7 +151,7 @@ export function useOGrid<T>(
 
   // --- Per-sheet UI state (captured on leave, restored on return) ---
   useOGridSheetState(props, {
-    visibleColumns, sort: sortingState.sort, filters: filtersState.filters, page,
+    visibleColumns, sort: sortingState.sort, sortModel: sortingState.sortModel, filters: filtersState.filters, page,
     selectedRows: effectiveSelectedRows, columnOrder: effectiveColumnOrder,
     columnWidths: columnWidthOverrides, pinned: pinnedOverrides, hiddenRowIds: hiddenRows.hiddenRowIds,
   }, defaultSortField, defaultSortDirection, {
@@ -276,7 +279,8 @@ export function useOGrid<T>(
 
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
     scrollToRowRef, items: displayItems, windowed, columns: columnsProp, getRowId,
-    sortBy: sortingState.sort.field, sortDirection: sortingState.sort.direction, onColumnSort: sortingState.handleSort,
+    sortBy: sortingState.sort.field, sortDirection: sortingState.sort.direction, sortModel: sortingState.sortModel,
+    onColumnSort: sortingState.handleSort,
     visibleColumns, columnOrder: effectiveColumnOrder, onColumnOrderChange: handleColumnOrderChange,
     onColumnResized: handleColumnResized, onColumnPinned: handleColumnPinned,
     pinnedColumns: pinnedOverrides, initialColumnWidths: columnWidthOverrides,
@@ -299,7 +303,7 @@ export function useOGrid<T>(
     ...dgFormulaProps,
   }), [
     displayItems, windowed, columnsProp, getRowId,
-    sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
+    sortingState.sort.field, sortingState.sort.direction, sortingState.sortModel, sortingState.handleSort,
     visibleColumns, effectiveColumnOrder, handleColumnOrderChange, handleColumnResized,
     handleColumnPinned, pinnedOverrides, columnWidthOverrides,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo, onClipboardError,

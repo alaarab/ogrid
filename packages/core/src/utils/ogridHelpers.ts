@@ -1,5 +1,6 @@
 import type { IColumnDef, IColumnFilterDef, IFilters, FilterValue, FilterOption } from '../types';
 import { getCellValue } from './cellValue';
+import { normalizeConditionFilter } from './conditionFilter';
 
 export function getFilterOptionValue(option: FilterOption): string {
   return typeof option === 'string' ? option : option.value;
@@ -31,7 +32,8 @@ export function mergeFilter(
     (value.type === 'text' && value.value.trim() === '') ||
     (value.type === 'multiSelect' && value.value.length === 0) ||
     (value.type === 'date' && !value.value.from && !value.value.to) ||
-    (value.type === 'people' && !value.value);
+    (value.type === 'people' && !value.value) ||
+    (value.type === 'condition' && !normalizeConditionFilter(value.value));
   if (isEmpty) {
     const { [key]: _, ...rest } = prev;
     return rest;

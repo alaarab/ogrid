@@ -10,6 +10,8 @@ export type {
   UserLikeInput,
   FilterValue,
   IFilters,
+  ISortModelItem,
+  SortModel,
   IFetchParams,
   IPageResult,
   IRowWindowParams,
@@ -42,6 +44,7 @@ import type {
   RowId,
   UserLike,
   IFilters,
+  ISortModelItem,
   FilterValue,
   RowSelectionMode,
   IRowSelectionChangeEvent,
@@ -141,7 +144,15 @@ interface IOGridBaseProps<T> {
 
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: PageSize) => void;
+  /** Called with the primary sort level whenever the sort changes (`{ field: '' }` when cleared). */
   onSortChange?: (sort: { field: string; direction: 'asc' | 'desc' }) => void;
+  /**
+   * Controlled multi-level sort, primary first. Takes precedence over `sort`.
+   * Shift+click on a header (or "Add to sort" in the column menu) adds levels.
+   */
+  sortModel?: ISortModelItem[];
+  /** Called with every sort level whenever the sort changes (alongside `onSortChange`). */
+  onSortModelChange?: (sortModel: ISortModelItem[]) => void;
   onFiltersChange?: (filters: IFilters) => void;
   onVisibleColumnsChange?: (cols: Set<string>) => void;
   columnOrder?: string[];
@@ -174,6 +185,8 @@ interface IOGridBaseProps<T> {
   defaultPageSize?: PageSize;
   defaultSortBy?: string;
   defaultSortDirection?: 'asc' | 'desc';
+  /** Initial multi-level sort (uncontrolled). Takes precedence over `defaultSortBy`; `[]` starts unsorted. */
+  defaultSortModel?: ISortModelItem[];
 
   toolbar?: ReactNode;
   /** Secondary toolbar row rendered below the primary toolbar (e.g. active filter chips). */
@@ -463,7 +476,13 @@ export interface IOGridDataGridProps<T> {
   getRowId: (item: T) => RowId;
   sortBy?: string;
   sortDirection: 'asc' | 'desc';
-  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
+  /** Every sort level, primary first. Headers show priority numbers when it has more than one level. */
+  sortModel?: ISortModelItem[];
+  /**
+   * Sort request from a header click or the column menu. `direction` undefined toggles,
+   * `null` clears; `options.additive` (Shift+click, "Add to sort") adds or cycles a level.
+   */
+  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null, options?: { additive?: boolean }) => void;
   visibleColumns: Set<string>;
   /** Optional column display order (column ids). When set, visible columns are ordered by this array. */
   columnOrder?: string[];

@@ -12,7 +12,14 @@ import * as React from 'react';
 import type { ColumnFilterType } from '../types/columnTypes';
 import type { UserLike } from '../types/dataGridTypes';
 import type { UseColumnHeaderFilterStateResult } from '../hooks/useColumnHeaderFilterState';
-import { DateFilterContent, type DateFilterClassNames } from './ColumnHeaderFilterContent';
+import {
+  ConditionFilterContent,
+  DateFilterContent,
+  getConditionFilterContentProps,
+  type ConditionFilterClassNames,
+  type ConditionFilterContentProps,
+  type DateFilterClassNames,
+} from './ColumnHeaderFilterContent';
 
 /**
  * Framework-specific renderers for each filter type.
@@ -23,6 +30,8 @@ export interface FilterContentRenderers {
   renderText: (props: TextRendererProps) => React.ReactNode;
   renderPeople: (props: PeopleRendererProps) => React.ReactNode;
   renderDate: (props: DateRendererProps) => React.ReactNode;
+  /** Number / condition filters. Optional so existing renderer sets keep compiling; defaults to the unstyled ConditionFilterContent. */
+  renderCondition?: (props: ConditionFilterContentProps) => React.ReactNode;
 }
 
 export interface MultiSelectRendererProps {
@@ -83,8 +92,13 @@ export function renderFilterContent(
   options: FilterOption[],
   isLoadingOptions: boolean,
   selectedUser: UserLike | undefined,
-  renderers: FilterContentRenderers
+  renderers: FilterContentRenderers,
+  columnName?: string,
 ): React.ReactNode {
+  if (filterType === 'number' || filterType === 'condition') {
+    const props = getConditionFilterContentProps(state, undefined, columnName);
+    return renderers.renderCondition ? renderers.renderCondition(props) : <ConditionFilterContent {...props} />;
+  }
   if (filterType === 'multiSelect') {
     return renderers.renderMultiSelect({
       searchText: state.searchText,
@@ -146,9 +160,11 @@ export function createBaseFilterRenderers(
     TextFilterPopover: React.ComponentType<TextRendererProps>;
     PeopleFilterPopover: React.ComponentType<PeopleRendererProps>;
   },
-  dateClassNames?: DateFilterClassNames
+  dateClassNames?: DateFilterClassNames,
+  conditionClassNames?: ConditionFilterClassNames,
 ): FilterContentRenderers {
   return {
+    renderCondition: (p) => <ConditionFilterContent {...p} classNames={conditionClassNames ?? dateClassNames} />,
     renderMultiSelect: (p) => <components.MultiSelectFilterPopover {...p} />,
     renderText: (p) => <components.TextFilterPopover {...p} />,
     renderPeople: (p) => <components.PeopleFilterPopover {...p} />,

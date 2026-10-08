@@ -64,6 +64,16 @@ export const filteringColumns: IColumnDef<Person>[] = [
     valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
 ];
 
+export const conditionFilterColumns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name', sortable: true, filterable: { type: 'condition' } },
+  { columnId: 'age', name: 'Age', sortable: true, type: 'numeric', filterable: { type: 'number' } },
+  { columnId: 'department', name: 'Department', sortable: true,
+    filterable: { type: 'multiSelect', filterField: 'department' } },
+  { columnId: 'salary', name: 'Salary', sortable: true, type: 'numeric', filterable: { type: 'number' },
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
+  { columnId: 'startDate', name: 'Start Date', sortable: true, type: 'date', filterable: { type: 'condition' } },
+];
+
 export const paginationColumns: IColumnDef<Person>[] = [
   { columnId: 'name', name: 'Name' },
   { columnId: 'email', name: 'Email' },
