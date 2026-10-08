@@ -126,6 +126,7 @@ export interface DataGridPrimitives {
     onUndo: () => void; onRedo: () => void;
     onCopy: () => void; onCut: () => void; onPaste: () => void;
     onSelectAll: () => void; onClose: () => void;
+    structure?: import('./GridContextMenu').GridContextMenuStructure;
   }>;
   /** Empty-state component. */
   EmptyState: React.ComponentType<{ emptyState: NonNullable<ReturnType<typeof useDataGridTableOrchestration>['emptyState']> }>;

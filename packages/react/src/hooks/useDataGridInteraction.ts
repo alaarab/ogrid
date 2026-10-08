@@ -11,7 +11,7 @@ import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useFillHandleInternal } from './useFillHandleInternal';
 import { useUndoRedo } from './useUndoRedo';
-import type { UseUndoRedoFormulaCells } from './useUndoRedo';
+import type { UseUndoRedoFormulaCells, UndoableAction } from './useUndoRedo';
 import { useLatestRef } from './useLatestRef';
 import { cellFocusOptions } from './useGridCellFocus';
 import { resolveUndoAvailability, usesHostFormulaHistory } from './undoRouting';
@@ -137,6 +137,19 @@ export interface UseDataGridInteractionResult<T> {
    */
   setFormula?: (col: number, row: number, formula: string | null) => void;
   hasFormula?: (col: number, row: number) => boolean;
+  /**
+   * Set or clear a formula by (flat column, sheet row), recorded for undo like
+   * an edit. `displayRow` is the displayed row (-1 when it is not displayed).
+   */
+  writeSheetFormula?: (col: number, sheetRow: number, formula: string | null, displayRow: number) => void;
+  /** Group the following changes into one undo step until endBatch(). */
+  beginBatch: () => void;
+  endBatch: () => void;
+  /**
+   * Record an already-applied change (structure edit) in the grid's undo
+   * history. No-op when the host owns undo (`onUndo`), whose history the grid can't write to.
+   */
+  recordAction: (action: UndoableAction) => void;
 }
 
 /**
@@ -294,6 +307,21 @@ export function useDataGridInteraction<T>(
       newValue: newFormula ?? plain,
     });
   }, [formulaCellsRef, itemsRef, flatColumnsRef, onCellValueChangedPropRef]);
+  const writeSheetFormula = useMemo(() => {
+    if (!formulas) return undefined;
+    return hostFormulaHistory
+      ? hostSetFormula
+      : hasFormulaCells ? (col: number, r: number, formula: string | null) => undoSetFormula(col, r, formula)
+      : setFormula ? (col: number, r: number, formula: string | null) => setFormula(col, r, formula)
+      : undefined;
+  }, [formulas, hostFormulaHistory, hostSetFormula, hasFormulaCells, undoSetFormula, setFormula]);
+  const internalRecordAction = undoRedo.recordAction;
+  const recordAction = useCallback(
+    (action: UndoableAction) => {
+      if (!hasHostUndo) internalRecordAction(action);
+    },
+    [hasHostUndo, internalRecordAction]
+  );
   const viewFormulas = useMemo(() => {
     if (!formulas) return undefined;
     const toRow = (row: number) => formulaRowRef.current?.(row) ?? row;
@@ -457,5 +485,9 @@ export function useDataGridInteraction<T>(
     canRedo,
     setFormula: viewFormulas?.setFormula,
     hasFormula: viewFormulas?.hasFormula,
+    writeSheetFormula,
+    beginBatch: undoRedo.beginBatch,
+    endBatch: undoRedo.endBatch,
+    recordAction,
   };
 }

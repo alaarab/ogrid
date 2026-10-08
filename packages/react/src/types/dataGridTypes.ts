@@ -31,6 +31,7 @@ export type {
   IVirtualScrollConfig,
   IColumnReorderConfig,
   IOGridApi,
+  IRowsChangeEvent,
 } from '@alaarab/ogrid-core';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from '@alaarab/ogrid-core';
@@ -49,7 +50,61 @@ import type {
   ISheetDef,
   IVirtualScrollConfig,
   IMergedCell,
+  IRowsChangeEvent,
 } from '@alaarab/ogrid-core';
+
+// --- Structure edits ---
+
+/**
+ * Event payload when a column is inserted or deleted (the `insertColumn` /
+ * `deleteColumn` API, the context or column header menu, or undo/redo).
+ */
+export interface IColumnsChangeEvent<T> {
+  /** Whether the column was inserted or deleted. */
+  type: 'insert' | 'delete';
+  /** The inserted or deleted column. */
+  column: IColumnDef<T>;
+  /**
+   * Flat (leaf) index of the column: where it now sits for an insert, where it
+   * sat before a delete. Formula column letters follow this index.
+   */
+  index: number;
+  /** The complete `columns` value after the change. Pass it to your state setter. */
+  columns: (IColumnDef<T> | IColumnGroupDef<T>)[];
+}
+
+/**
+ * Structure-edit actions the table's menus call (OGrid builds these when
+ * `allowStructureEdits` is on). Rows are addressed by record, columns by id.
+ */
+export interface IGridStructureActions<T> {
+  /** True when rows can be inserted from the menu (client-side data and a `createRow` prop). */
+  canInsertRows: boolean;
+  /** True when rows can be deleted (client-side data). */
+  canDeleteRows: boolean;
+  /** True when columns can be inserted and deleted (an `onColumnsChange` handler). */
+  canEditColumns: boolean;
+  /** Insert `count` new rows before (`above`) or after (`below`) `item` in the data. */
+  insertRowsNear: (item: T, position: 'above' | 'below', count: number) => void;
+  /** Delete these rows. */
+  deleteRows: (rowIds: RowId[]) => void;
+  /** Insert `count` blank columns left or right of `columnId`. */
+  insertColumnsNear: (columnId: string, side: 'left' | 'right', count: number) => void;
+  /** Delete these columns (one undo step). */
+  deleteColumns: (columnIds: string[]) => void;
+}
+
+/** @internal The grid's edit path and undo history, handed to OGrid's imperative API. */
+export interface IGridEditBridge<T> {
+  /**
+   * Commit `value` to a cell as an edit (value parser, onCellValueChanged,
+   * undo, formulas). `sheetRow` is the record's formula row, or -1 when unknown.
+   * Returns false when the column is unknown or the value parser rejects it.
+   */
+  setCellValue: (item: T, columnId: string, value: unknown, sheetRow: number) => boolean;
+  /** Add a step to the grid's undo history. No-op when the host owns undo (`onUndo`). */
+  recordUndoable: (action: { undo: () => void; redo: () => void }) => void;
+}
 
 // --- OGrid / useOGrid ---
 
@@ -204,6 +259,45 @@ interface IOGridBaseProps<T> {
   formulaLimits?: IFormulaLimits;
   /** Sheet accessors for cross-sheet formula references (e.g. { Sheet2: accessor }). */
   sheets?: Record<string, IGridDataAccessor>;
+
+  /**
+   * Spreadsheet-style structure editing from the UI: the cell context menu gets
+   * "Insert row above/below", "Delete row", "Insert column left/right" and
+   * "Delete column", and the column header menu gets the column items.
+   * Changes are reported through `onRowsChange` / `onColumnsChange` and are
+   * undoable. The `insertRows`/`deleteRows`/`insertColumn`/`deleteColumn` API
+   * works without this flag. Default: false.
+   */
+  allowStructureEdits?: boolean;
+  /**
+   * Called when rows are inserted or deleted. `event.data` is the complete new
+   * data array: `onRowsChange={(e) => setData(e.data)}`. Required to apply row
+   * changes when you pass `data` (without `data`, rows set through
+   * `setRowData` update in place).
+   */
+  onRowsChange?: (event: IRowsChangeEvent<T>) => void;
+  /**
+   * Called when a column is inserted or deleted. `event.columns` is the
+   * complete new `columns` value: `onColumnsChange={(e) => setColumns(e.columns)}`.
+   */
+  onColumnsChange?: (event: IColumnsChangeEvent<T>) => void;
+  /**
+   * Builds a blank row for "Insert row" and `insertRows(index)` without rows.
+   * It must give the row a new unique id. `index` is where the row goes in `data`.
+   */
+  createRow?: (index: number) => T;
+
+  /**
+   * Let users resize individual rows by dragging the bottom edge of a row
+   * number (needs `showRowNumbers` or `cellReferences`). Not available with
+   * virtual scrolling or a windowed data source, which need fixed row heights.
+   * Default: false.
+   */
+  rowResize?: boolean;
+  /** Row heights in pixels by row id. When set, the grid uses these (controlled) and reports drags through `onRowResized`. */
+  rowHeights?: Record<string, number>;
+  /** Called when the user finishes resizing a row. */
+  onRowResized?: (rowId: RowId, height: number) => void;
 
   /** Sheet definitions for bottom tab bar. When set, renders Excel-style sheet tabs. */
   sheetDefs?: ISheetDef[];
@@ -372,6 +466,16 @@ export interface IOGridDataGridProps<T> {
   virtualScroll?: IVirtualScrollConfig;
   /** Fixed row height in pixels. Overrides default row height (36px). */
   rowHeight?: number;
+  /** Let users resize rows by dragging the bottom edge of a row number (row numbers shown, no virtual scrolling). */
+  rowResize?: boolean;
+  /** Controlled row heights (px) by row id. */
+  rowHeights?: Record<string, number>;
+  /** Called when the user finishes resizing a row. */
+  onRowResized?: (rowId: RowId, height: number) => void;
+  /** Structure-edit actions for the context and column header menus. Omit to hide those menu items. */
+  structureActions?: IGridStructureActions<T>;
+  /** @internal Filled by the grid with its edit path and undo history (OGrid's cell API uses it). */
+  gridEditBridgeRef?: React.MutableRefObject<IGridEditBridge<T> | null>;
   /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */
   density?: 'compact' | 'normal' | 'comfortable';
   /** Called when a cell renderer or custom editor throws an error. */

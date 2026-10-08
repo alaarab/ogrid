@@ -29,6 +29,11 @@ export interface BaseColumnHeaderMenuProps {
   currentSort: 'asc' | 'desc' | null;
   isSortable: boolean;
   isResizable: boolean;
+  /** Show "Insert column left/right" and "Delete column" (`allowStructureEdits`). */
+  canEditStructure?: boolean;
+  onInsertColumnLeft?: () => void;
+  onInsertColumnRight?: () => void;
+  onDeleteColumn?: () => void;
   classNames?: ColumnHeaderMenuClassNames;
   /** Column name, used for the menu's accessible name. */
   columnName?: string;
@@ -60,6 +65,10 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     currentSort,
     isSortable,
     isResizable,
+    canEditStructure = false,
+    onInsertColumnLeft,
+    onInsertColumnRight,
+    onDeleteColumn,
     classNames,
     columnName,
     getPortalTarget,
@@ -145,13 +154,14 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       currentSort,
       isSortable,
       isResizable,
+      canEditStructure,
     }),
-    [canPinLeft, canPinRight, canUnpin, currentSort, isSortable, isResizable]
+    [canPinLeft, canPinRight, canUnpin, currentSort, isSortable, isResizable, canEditStructure]
   );
 
   const items = React.useMemo(() => getColumnHeaderMenuItems(menuInput), [menuInput]);
 
-  const handlers: Record<string, () => void> = React.useMemo(
+  const handlers: Record<string, (() => void) | undefined> = React.useMemo(
     () => ({
       pinLeft: onPinLeft,
       pinRight: onPinRight,
@@ -161,8 +171,11 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       clearSort: onClearSort,
       autosizeThis: onAutosizeThis,
       autosizeAll: onAutosizeAll,
+      insertColumnLeft: onInsertColumnLeft,
+      insertColumnRight: onInsertColumnRight,
+      deleteColumn: onDeleteColumn,
     }),
-    [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAutosizeThis, onAutosizeAll]
+    [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAutosizeThis, onAutosizeAll, onInsertColumnLeft, onInsertColumnRight, onDeleteColumn]
   );
 
   const getRestoreTarget = React.useCallback(() => anchorElement, [anchorElement]);

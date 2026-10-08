@@ -79,6 +79,10 @@ export interface UseFormulaEngineResult {
   getDependents: (col: number, row: number) => IAuditEntry[];
   /** Get full audit trail for a cell. */
   getAuditTrail: (col: number, row: number) => IAuditTrail | null;
+  /** Every formula the engine holds (sheet coordinates). */
+  getAllFormulas: () => Array<{ col: number; row: number; formula: string }>;
+  /** Replace every formula with `formulas` and recalculate (structure edits and their undo). */
+  loadFormulas: (formulas: Array<{ col: number; row: number; formula: string }>) => void;
   /** Whether formula support is active. */
   enabled: boolean;
 }
@@ -93,6 +97,8 @@ const NOOP_RESULT: UseFormulaEngineResult = {
   getPrecedents: () => [],
   getDependents: () => [],
   getAuditTrail: () => null,
+  getAllFormulas: () => [],
+  loadFormulas: () => {},
   enabled: false,
 };
 
@@ -372,6 +378,16 @@ export function useFormulaEngine<T>(
     return engineRef.current?.getAuditTrail(col, row) ?? null;
   }, []);
 
+  const getAllFormulas = useCallback(
+    (): Array<{ col: number; row: number; formula: string }> => engineRef.current?.getAllFormulas() ?? [],
+    []
+  );
+
+  const loadFormulas = useCallback((list: Array<{ col: number; row: number; formula: string }>): void => {
+    if (!engineRef.current) return;
+    report(engineRef.current.loadFormulas(list, createAccessor()));
+  }, [createAccessor, report]);
+
   // Memoized so consumers' memos keyed on the result don't rebuild every render.
   const result = useMemo<UseFormulaEngineResult>(() => ({
     getFormulaValue,
@@ -383,8 +399,10 @@ export function useFormulaEngine<T>(
     getPrecedents,
     getDependents,
     getAuditTrail,
+    getAllFormulas,
+    loadFormulas,
     enabled: true,
-  }), [getFormulaValue, hasFormula, getFormula, setFormula, onCellChanged, onCellsChanged, getPrecedents, getDependents, getAuditTrail]);
+  }), [getFormulaValue, hasFormula, getFormula, setFormula, onCellChanged, onCellsChanged, getPrecedents, getDependents, getAuditTrail, getAllFormulas, loadFormulas]);
 
   return formulas ? result : NOOP_RESULT;
 }

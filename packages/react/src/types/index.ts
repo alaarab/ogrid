@@ -49,6 +49,10 @@ export type {
   IColumnReorderConfig,
   ISheetDef,
   IFormulaCellWriter,
+  IRowsChangeEvent,
+  IColumnsChangeEvent,
+  IGridStructureActions,
+  IGridEditBridge,
 } from './dataGridTypes';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './dataGridTypes';

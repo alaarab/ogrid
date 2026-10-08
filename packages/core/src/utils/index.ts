@@ -10,6 +10,17 @@ export { getCellValue, isColumnEditable, createGridDataAccessor, createFormulaRo
 export type { IFormulaRowMap } from './cellValue';
 export { flattenColumns, buildHeaderRows } from './columnUtils';
 export {
+  insertRowsAt,
+  removeRowsById,
+  restoreRemovedRows,
+  countLeafColumns,
+  insertColumnAt,
+  removeColumnById,
+  createStructureColumn,
+  remapMergedCells,
+} from './structureEdits';
+export type { IRemovedRow } from './structureEdits';
+export {
   isFilterConfig,
   getFilterField,
   mergeFilter,
@@ -26,10 +37,10 @@ export {
   MAX_PAGE_BUTTONS,
 } from './paginationHelpers';
 export type { PaginationViewModel, PageSize } from './paginationHelpers';
-export { GRID_CONTEXT_MENU_ITEMS, COLUMN_HEADER_MENU_ITEMS, getContextMenuHandlers, getColumnHeaderMenuItems, formatShortcut } from './gridContextMenuHelpers';
+export { GRID_CONTEXT_MENU_ITEMS, COLUMN_HEADER_MENU_ITEMS, getContextMenuHandlers, getColumnHeaderMenuItems, getStructureMenuItems, formatShortcut } from './gridContextMenuHelpers';
 export type { CsvColumn, CsvEscapeOptions, FormulaExportOptions } from './exportToCsv';
 export type { StatusBarPart, StatusBarPartsInput } from './statusBarHelpers';
-export type { GridContextMenuItem, IColumnHeaderMenuItem, GridContextMenuHandlerProps, ColumnHeaderMenuInput, ColumnHeaderMenuHandlers } from './gridContextMenuHelpers';
+export type { GridContextMenuItem, IColumnHeaderMenuItem, GridContextMenuHandlerProps, ColumnHeaderMenuInput, ColumnHeaderMenuHandlers, StructureMenuInput } from './gridContextMenuHelpers';
 export {
   parseValue,
   numberParser,

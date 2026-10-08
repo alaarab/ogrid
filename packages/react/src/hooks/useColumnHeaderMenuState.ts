@@ -12,6 +12,10 @@ export interface UseColumnHeaderMenuStateParams {
   onColumnResized?: (columnId: string, width: number) => void;
   onAutosizeColumn?: (columnId: string, width: number) => void;
   columns: Array<{ columnId: string; name?: string; width?: number | string; minWidth?: number; sortable?: boolean; resizable?: boolean }>;
+  /** Insert a blank column left or right of a column. Set to show the structure items. */
+  onInsertColumn?: (columnId: string, side: 'left' | 'right') => void;
+  /** Delete a column. */
+  onDeleteColumn?: (columnId: string) => void;
 }
 
 export interface UseColumnHeaderMenuStateResult {
@@ -30,6 +34,11 @@ export interface UseColumnHeaderMenuStateResult {
   handleClearSort: () => void;
   handleAutosizeThis: () => void;
   handleAutosizeAll: () => void;
+  handleInsertColumnLeft: () => void;
+  handleInsertColumnRight: () => void;
+  handleDeleteColumn: () => void;
+  /** Whether the insert/delete column items show. */
+  canEditStructure: boolean;
   canPinLeft: boolean;
   canPinRight: boolean;
   canUnpin: boolean;
@@ -56,6 +65,8 @@ export function useColumnHeaderMenuState(
     onColumnResized,
     onAutosizeColumn,
     columns,
+    onInsertColumn,
+    onDeleteColumn,
   } = params;
 
   const [isOpen, setIsOpen] = useState(false);
@@ -147,6 +158,21 @@ export function useColumnHeaderMenuState(
     close();
   }, [columns, onAutosizeColumn, onColumnResized, close, wrapperRef]);
 
+  const handleInsertColumnLeft = useCallback(() => {
+    if (openForColumn) onInsertColumn?.(openForColumn, 'left');
+    close();
+  }, [openForColumn, onInsertColumn, close]);
+
+  const handleInsertColumnRight = useCallback(() => {
+    if (openForColumn) onInsertColumn?.(openForColumn, 'right');
+    close();
+  }, [openForColumn, onInsertColumn, close]);
+
+  const handleDeleteColumn = useCallback(() => {
+    if (openForColumn) onDeleteColumn?.(openForColumn);
+    close();
+  }, [openForColumn, onDeleteColumn, close]);
+
   return {
     isOpen,
     openForColumn,
@@ -162,6 +188,10 @@ export function useColumnHeaderMenuState(
     handleClearSort,
     handleAutosizeThis,
     handleAutosizeAll,
+    handleInsertColumnLeft,
+    handleInsertColumnRight,
+    handleDeleteColumn,
+    canEditStructure: onInsertColumn != null && onDeleteColumn != null,
     canPinLeft,
     canPinRight,
     canUnpin,
@@ -189,6 +219,10 @@ export function getColumnHeaderMenuProps(headerMenu: UseColumnHeaderMenuStateRes
     onClearSort: headerMenu.handleClearSort,
     onAutosizeThis: headerMenu.handleAutosizeThis,
     onAutosizeAll: headerMenu.handleAutosizeAll,
+    onInsertColumnLeft: headerMenu.handleInsertColumnLeft,
+    onInsertColumnRight: headerMenu.handleInsertColumnRight,
+    onDeleteColumn: headerMenu.handleDeleteColumn,
+    canEditStructure: headerMenu.canEditStructure,
     canPinLeft: headerMenu.canPinLeft,
     canPinRight: headerMenu.canPinRight,
     canUnpin: headerMenu.canUnpin,

@@ -7,6 +7,8 @@ import { useRenderCellContent } from '../hooks/useRenderCellContent';
 import { usePortalTheme } from '../hooks/usePortalTheme';
 import { useGridCellFocus } from '../hooks/useGridCellFocus';
 import { useFrozenRowOffsets } from '../hooks/useFrozenRowOffsets';
+import { useStructureContextMenu } from '../hooks/useStructureContextMenu';
+import { useRowResize } from '../hooks/useRowResize';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
 import {
   GRID_ROOT_STYLE,
@@ -118,6 +120,30 @@ export function BaseDataGridTableInner<T>(
         ? items.length
         : -1;
   const ariaRowCount = knownTotalRows >= 0 ? headerRowCount + knownTotalRows : -1;
+  // Per-row resize from the row-number gutter. Virtual scrolling and windowed
+  // sources assume one fixed row height, so resizing is off there.
+  const rowResizeEnabled = !!gridProps.rowResize && hasRowNumbersCol && !virtualScrollEnabled && !windowed;
+  const rowResize = useRowResize({
+    enabled: rowResizeEnabled,
+    rowHeights: gridProps.rowHeights,
+    onRowResized: gridProps.onRowResized,
+  });
+
+  // Insert/delete rows and columns (allowStructureEdits), acting on the selected cells.
+  const structureMenu = useStructureContextMenu({
+    actions: gridProps.structureActions,
+    open: menuPosition != null,
+    items,
+    visibleCols,
+    selectionRange,
+    activeCell: interaction.activeCell,
+    colOffset,
+    getRowId,
+    clearSelection: () => {
+      interaction.setSelectionRange(null);
+      interaction.setActiveCell(null);
+    },
+  });
   // Theme tokens for the portaled context menu (it renders outside the grid).
   const contextMenuTheme = usePortalTheme(wrapperRef, menuPosition != null);
   // Roving tabindex: one body cell is the tab stop and holds DOM focus; the
@@ -134,7 +160,9 @@ export function BaseDataGridTableInner<T>(
     colCount: gridProps.cellSelection === false ? 0 : visibleCols.length,
   });
   const { mergeLayout, frozenRows } = o.viewModels;
-  useFrozenRowOffsets(tableContainerRef, frozenRows, o.stickyHeader, windowed ?? items);
+  // Resized rows move the frozen rows below them, so their heights are part of the key.
+  const frozenRowsKey = React.useMemo(() => ({ rows: windowed ?? items, heights: rowResize.getRowHeight }), [windowed, items, rowResize.getRowHeight]);
+  useFrozenRowOffsets(tableContainerRef, frozenRows, o.stickyHeader, frozenRowsKey);
   // Windowed placeholders are aria-hidden; announce loading once for the grid instead.
   let windowedLoading = false;
   if (windowed) {
@@ -250,6 +278,8 @@ export function BaseDataGridTableInner<T>(
                     rowNumWidth={hasRowNumbersCol ? (columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH) : undefined}
                     mergeLayout={mergeLayout}
                     frozenRows={frozenRows}
+                    getRowHeight={rowResizeEnabled ? rowResize.getRowHeight : undefined}
+                    onRowResizeStart={rowResize.onRowResizeStart}
                     styles={styles}
                     primitives={primitives}
                   />
@@ -306,6 +336,7 @@ export function BaseDataGridTableInner<T>(
               onPaste={handlePasteVoid}
               onSelectAll={o.interaction.handleSelectAllCells}
               onClose={closeContextMenu}
+              structure={structureMenu}
             />
             </div>,
             getContextMenuPortalTarget ? getContextMenuPortalTarget(wrapperRef.current) : document.body
