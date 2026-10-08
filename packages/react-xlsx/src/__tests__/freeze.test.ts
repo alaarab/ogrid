@@ -104,4 +104,23 @@ describe('react-xlsx freeze panes export', () => {
     doc.setFreeze('Sheet', 0, 0);
     expect(doc.sheet('Sheet')?.frozen).toEqual({ rows: 0, columns: 0 });
   });
+
+  test('command-set panes follow structural edits and restore with workbook undo', async () => {
+    const doc = new XlsxWorkbookDocument(await freezeWorkbook());
+    doc.setFreeze('Sheet', 2, 2);
+    doc.insertRows('Sheet', 0);
+    doc.insertColumns('Sheet', 0);
+    expect(doc.sheet('Sheet')?.frozen).toEqual({ rows: 3, columns: 3 });
+    expect((await reload(await doc.toWorkbook())).views[0]).toMatchObject({ xSplit: 3, ySplit: 4, topLeftCell: 'D5' });
+    doc.deleteRows('Sheet', [0, 1]);
+    expect(doc.sheet('Sheet')?.frozen).toEqual({ rows: 1, columns: 3 });
+    doc.undo('Sheet');
+    expect(doc.sheet('Sheet')?.frozen).toEqual({ rows: 3, columns: 3 });
+    doc.undo('Sheet');
+    expect(doc.sheet('Sheet')?.frozen).toEqual({ rows: 3, columns: 2 });
+    doc.undo('Sheet');
+    expect(doc.sheet('Sheet')?.frozen).toEqual({ rows: 2, columns: 2 });
+    doc.redo('Sheet');
+    expect((await reload(await doc.toWorkbook())).views[0]).toMatchObject({ xSplit: 2, ySplit: 4, topLeftCell: 'C5' });
+  });
 });
