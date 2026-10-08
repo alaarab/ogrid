@@ -48,11 +48,11 @@ function SalesGrid() {
     <OGrid
       columns={salesColumns}
       data={data}
-      getRowId={(r) => r.id}
+      getRowId={(r: SalesRow) => r.id}
       conditionalFormats={rules}
       editable
       onCellValueChanged={(e) =>
-        setData((prev) => prev.map((r) => (r.id === e.item.id ? { ...r, [e.columnId]: Number(e.newValue) } : r)))
+        setData((prev) => prev.map((r) => (r.id === (e.item as SalesRow).id ? { ...r, [e.columnId]: Number(e.newValue) } : r)))
       }
       defaultSortBy=""
       defaultPageSize={25}

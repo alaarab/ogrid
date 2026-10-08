@@ -54,11 +54,11 @@ function Inner() {
         {readout && <span className="live-demo__readout">= {readout}</span>}
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>
-        <OGrid<Item>
+        <OGrid
           ref={apiRef}
           columns={columns}
           data={data}
-          getRowId={(r) => r.id}
+          getRowId={(r: Item) => r.id}
           editable
           cellReferences
           formulas
@@ -67,10 +67,10 @@ function Inner() {
           rowResize
           createRow={() => ({ id: nextId++ })}
           onCellValueChanged={(e) =>
-            setData((prev) => prev.map((r) => (r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r)))
+            setData((prev) => prev.map((r) => (r.id === (e.item as Item).id ? { ...r, [e.columnId]: e.newValue } : r)))
           }
-          onRowsChange={(e) => setData(e.data)}
-          onColumnsChange={(e) => setColumns(e.columns)}
+          onRowsChange={(e) => setData(e.data as Item[])}
+          onColumnsChange={(e) => setColumns(e.columns as ColumnTree)}
           defaultPageSize={25}
         />
       </div>
