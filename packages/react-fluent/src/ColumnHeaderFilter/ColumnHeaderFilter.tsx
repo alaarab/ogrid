@@ -180,7 +180,9 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
             <Popover
               open={isFilterOpen}
               onOpenChange={(_: OpenPopoverEvents, data: OnOpenChangeData) => { if (!data.open) setFilterOpen(false); }}
-              positioning={{ target: filterBtnRef.current ?? undefined, position: 'below', align: 'start', offset: 4 }}
+              positioning={{ target: filterBtnRef.current ?? undefined, position: 'below', align: 'start', offset: 4, overflowBoundaryPadding: 12, autoSize: 'height' }}
+              // Keep collision-positioned bounds stable while opening.
+              surfaceMotion={null}
               trapFocus={false}
             >
               <PopoverSurface

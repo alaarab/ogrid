@@ -146,9 +146,12 @@
 // =====================
 
 .filterPopover {
-  min-width: 280px;
-  max-width: 320px;
-  overflow: hidden;
+  box-sizing: border-box;
+  min-width: min(280px, calc(100vw - 24px));
+  max-width: min(320px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  overscroll-behavior: contain;
   padding: 0;
   // Explicit background + shadow + font so the popover renders correctly
   // even when portaled outside the FluentProvider (e.g. SPFx web parts).
