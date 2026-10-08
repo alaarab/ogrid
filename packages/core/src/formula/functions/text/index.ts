@@ -2,6 +2,7 @@ import type { IFormulaFunction } from '../../types';
 import { registerBasicTextFunctions } from './basic';
 import { registerTextSearchFunctions } from './search';
 import { registerTextFormatFunctions } from './format';
+import { registerTextSplitFunctions } from './split';
 
 /**
  * Registers all text/string formula functions (CONCATENATE, LEFT, FIND, TEXT, ...).
@@ -9,9 +10,11 @@ import { registerTextFormatFunctions } from './format';
  *  - basic:  core string manipulation (case, slice, trim, length, repeat)
  *  - search: substring find/replace (SUBSTITUTE, FIND, SEARCH, REPLACE)
  *  - format: char/number conversion and number-to-text formatting
+ *  - split:  delimiter splitting (TEXTSPLIT, TEXTBEFORE, TEXTAFTER)
  */
 export function registerTextFunctions(registry: Map<string, IFormulaFunction>): void {
   registerBasicTextFunctions(registry);
   registerTextSearchFunctions(registry);
   registerTextFormatFunctions(registry);
+  registerTextSplitFunctions(registry);
 }

@@ -1,10 +1,35 @@
-import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
+import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode, ICellAddress } from '../../types';
 import { FormulaError } from '../../types';
 import { toNumber, flattenArgs, evalArg } from '../../evaluator';
 
+const SUBTOTAL_FUNCTIONS: Record<number, string> = {
+  1: 'AVERAGE', 2: 'COUNT', 3: 'COUNTA', 4: 'MAX', 5: 'MIN', 6: 'PRODUCT',
+  7: 'STDEV', 8: 'STDEVP', 9: 'SUM', 10: 'VAR', 11: 'VARP',
+};
+
+const SUBTOTAL_FORMULA = /\bSUBTOTAL\s*\(/i;
+
+/** A context whose reads treat cells containing a SUBTOTAL formula as blank. */
+function withoutSubtotalCells(context: IFormulaContext): IFormulaContext {
+  const getFormula = context.getCellFormula?.bind(context);
+  if (!getFormula) return context;
+  const isSubtotal = (address: ICellAddress) => SUBTOTAL_FORMULA.test(getFormula(address) ?? '');
+  return {
+    ...context,
+    getCellValue: address => isSubtotal(address) ? null : context.getCellValue(address),
+    getRangeValues: range => {
+      const data = context.getRangeValues(range);
+      const top = Math.min(range.start.row, range.end.row);
+      const left = Math.min(range.start.col, range.end.col);
+      return data.map((row, r) => row.map((value, c) =>
+        isSubtotal({ col: left + c, row: top + r, absCol: false, absRow: false, sheet: range.start.sheet }) ? null : value));
+    },
+  };
+}
+
 /**
  * Aggregation and ranking over value lists/ranges: SUM, AVERAGE, MIN, MAX,
- * COUNT, COUNTA, PRODUCT, SUMPRODUCT, MEDIAN, LARGE, SMALL, RANK.
+ * COUNT, COUNTA, PRODUCT, SUMPRODUCT, SUMSQ, SUBTOTAL, MEDIAN, LARGE, SMALL, RANK.
  */
 export function registerMathAggregationFunctions(registry: Map<string, IFormulaFunction>): void {
   registry.set('SUM', {
@@ -249,6 +274,64 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
       if (ki < 1 || ki > nums.length) return new FormulaError('#NUM!', 'SMALL k out of range');
       nums.sort((a, b) => a - b);
       return nums[ki - 1];
+    },
+  });
+
+  // SUMSQ: references contribute only their numbers; direct arguments are
+  // coerced (TRUE, "3"), and non-numeric direct text is #VALUE!, as in Excel.
+  registry.set('SUMSQ', {
+    minArgs: 1,
+    maxArgs: -1,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      let sum = 0;
+      for (const arg of args) {
+        if (arg.kind === 'range' || arg.kind === 'cellRef') {
+          for (const value of flattenArgs([arg], context, evaluator)) {
+            if (value instanceof FormulaError) return value;
+            if (typeof value === 'number') sum += value * value;
+          }
+          continue;
+        }
+        const value = evaluator.evaluate(arg, context);
+        if (value instanceof FormulaError) return value;
+        if (Array.isArray(value)) {
+          for (const row of value as unknown[][]) for (const cell of row) {
+            if (cell instanceof FormulaError) return cell;
+            if (typeof cell === 'number') sum += cell * cell;
+          }
+          continue;
+        }
+        const n = toNumber(value);
+        if (n instanceof FormulaError) return n;
+        sum += n * n;
+      }
+      return sum;
+    },
+  });
+
+  // SUBTOTAL(function_num, ref1, ...): 1-11 and 101-111 map to AVERAGE, COUNT,
+  // COUNTA, MAX, MIN, PRODUCT, STDEV, STDEVP, SUM, VAR, VARP. Cells holding
+  // their own SUBTOTAL formula are skipped so nested subtotals don't double
+  // count. The engine has no row-visibility information, so 101-111 (Excel's
+  // "ignore hidden rows" variants) behave like 1-11.
+  registry.set('SUBTOTAL', {
+    minArgs: 2,
+    maxArgs: -1,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const rawCode = evalArg(evaluator, args[0], context);
+      if (rawCode instanceof FormulaError) return rawCode;
+      const code = toNumber(rawCode);
+      if (code instanceof FormulaError) return code;
+      const n = Math.trunc(code);
+      const name = n >= 1 && n <= 11 ? SUBTOTAL_FUNCTIONS[n] : n >= 101 && n <= 111 ? SUBTOTAL_FUNCTIONS[n - 100] : undefined;
+      const fn = name === undefined ? undefined : registry.get(name);
+      if (fn === undefined) return new FormulaError('#VALUE!', 'SUBTOTAL function_num must be 1-11 or 101-111');
+      const refs = args.slice(1);
+      for (const ref of refs) {
+        const isReference = ref.kind === 'range' || ref.kind === 'cellRef' || ref.kind === 'functionCall' && (ref.name === 'OFFSET' || ref.name === 'INDIRECT');
+        if (!isReference) return new FormulaError('#VALUE!', 'SUBTOTAL arguments must be references');
+      }
+      return fn.evaluate(refs, withoutSubtotalCells(context), evaluator);
     },
   });
 
