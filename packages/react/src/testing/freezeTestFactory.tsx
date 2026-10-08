@@ -127,5 +127,46 @@ export function createFreezeTests(OGrid: OGridComponent): void {
       fireEvent.click(screen.getByText('Freeze top row'));
       expect(frozenRowIds(container)).toEqual(['1']);
     });
+
+    it('restores each sheet\'s uncontrolled panes without changing explicit column pins', async () => {
+      const sheetColumns = columns.map((col) => col.columnId === 'total' ? { ...col, pinned: 'right' as const } : col);
+      const props: IOGridProps<Row> = { columns: sheetColumns, data: rows, getRowId: (r) => r.id, allowFreeze: true,
+        defaultFrozenRows: 1, defaultFrozenColumns: 1, activeSheet: 'A' };
+      const { container, rerender } = render(<OGrid {...props} />);
+      await openContextMenu(container, 3, 'total');
+      fireEvent.click(screen.getByText('Freeze panes'));
+      expect(frozenRowIds(container)).toEqual(['1', '2']);
+      expect(pinnedCell(container, 3, 'qty')?.style.left).not.toBe('');
+      rerender(<OGrid {...props} activeSheet="B" />);
+      expect(frozenRowIds(container)).toEqual(['1']);
+      expect(pinnedCell(container, 3, 'qty')?.style.left).toBe('');
+      await openContextMenu(container, 3, 'qty');
+      fireEvent.click(screen.getByText('Unfreeze panes'));
+      expect(frozenRowIds(container)).toEqual([]);
+      expect(pinnedCell(container, 3, 'name')?.style.left).toBe('');
+      expect(pinnedCell(container, 3, 'total')?.style.right).not.toBe('');
+      rerender(<OGrid {...props} />);
+      expect(frozenRowIds(container)).toEqual(['1', '2']);
+      expect(pinnedCell(container, 3, 'qty')?.style.left).not.toBe('');
+      rerender(<OGrid {...props} activeSheet="B" />);
+      expect(frozenRowIds(container)).toEqual([]);
+      expect(pinnedCell(container, 3, 'name')?.style.left).toBe('');
+    });
+
+    it('sheet switches leave controlled freeze axes with the host and do not notify', () => {
+      const onFrozenRowsChange = jest.fn();
+      const onFrozenColumnsChange = jest.fn();
+      const props: IOGridProps<Row> = { columns, data: rows, getRowId: (r) => r.id, activeSheet: 'A',
+        frozenRows: 2, frozenColumns: 2, onFrozenRowsChange, onFrozenColumnsChange };
+      const { container, rerender } = render(<OGrid {...props} />);
+      rerender(<OGrid {...props} activeSheet="B" frozenRows={1} frozenColumns={1} />);
+      expect(frozenRowIds(container)).toEqual(['1']);
+      expect(pinnedCell(container, 3, 'qty')?.style.left).toBe('');
+      rerender(<OGrid {...props} />);
+      expect(frozenRowIds(container)).toEqual(['1', '2']);
+      expect(pinnedCell(container, 3, 'qty')?.style.left).not.toBe('');
+      expect(onFrozenRowsChange).not.toHaveBeenCalled();
+      expect(onFrozenColumnsChange).not.toHaveBeenCalled();
+    });
   });
 }

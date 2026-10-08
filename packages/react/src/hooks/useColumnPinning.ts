@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import type { IColumnDef } from '@alaarab/ogrid-core';
 import { columnIdsOf, sameColumnIds } from './columnSetIdentity';
 import { reconcilePinned, seedPinned } from './useOGridColumnLayout';
@@ -7,6 +7,8 @@ export interface UseColumnPinningParams<T = unknown> {
   columns: IColumnDef<T>[];
   /** Controlled pinned columns state. If provided, component is controlled. */
   pinnedColumns?: Record<string, 'left' | 'right'>;
+  /** Displayed columns frozen by count, kept separate from explicit user pins. */
+  frozenColumnIds?: string[];
   /** Called when user pins/unpins a column via UI. */
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
 }
@@ -44,7 +46,7 @@ export interface UseColumnPinningResult {
  * Initializes from column.pinned definitions and pinnedColumns prop.
  */
 export function useColumnPinning<T = unknown>(params: UseColumnPinningParams<T>): UseColumnPinningResult {
-  const { columns, pinnedColumns: controlledPinnedColumns, onColumnPinned } = params;
+  const { columns, pinnedColumns: controlledPinnedColumns, onColumnPinned, frozenColumnIds } = params;
 
   // Initialize internal state from column.pinned definitions
   const [internalPinnedColumns, setInternalPinnedColumns] = useState<Record<string, 'left' | 'right'>>(
@@ -63,12 +65,18 @@ export function useColumnPinning<T = unknown>(params: UseColumnPinningParams<T>)
   }
 
   // Use controlled state if provided, otherwise internal
-  const pinnedColumns = controlledPinnedColumns ?? internalPinnedColumns;
+  const userPins = controlledPinnedColumns ?? internalPinnedColumns;
+  const pinnedColumns = useMemo(() => {
+    if (!frozenColumnIds?.length) return userPins;
+    const next = { ...userPins };
+    for (const id of frozenColumnIds) next[id] = 'left';
+    return next;
+  }, [userPins, frozenColumnIds]);
 
   // Latest pin state, advanced synchronously by pinColumn/unpinColumn so several
   // calls in one tick build on each other instead of on the same render's value.
-  const pinnedColumnsRef = useRef(pinnedColumns);
-  pinnedColumnsRef.current = pinnedColumns;
+  const pinnedColumnsRef = useRef(userPins);
+  pinnedColumnsRef.current = userPins;
 
   const pinColumn = useCallback(
     (columnId: string, side: 'left' | 'right') => {

@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import { describe, expect, test } from 'bun:test';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ExcelJS from 'exceljs';
 import { XlsxWorkbookGrid } from '../XlsxWorkbookGrid';
 import { workbookFromBlob, cellKey } from '../sheetMapper';
@@ -115,7 +115,7 @@ describe('react-xlsx formatting toolbar: borders and fonts', () => {
     let doc: XlsxWorkbookDocument | undefined;
     const wb = await gridWorkbook();
     const source = wb.getWorksheet('Sheet') as ExcelJS.Worksheet;
-    source.getCell('A2').font = { name: 'Georgia', size: 18 };
+    source.getCell('A2').font = { name: 'Georgia', size: 18, scheme: 'minor', bold: true };
     const loaded = await workbookFromBlob(new Blob([await wb.xlsx.writeBuffer()]));
     const { container } = render(
       <XlsxWorkbookGrid workbook={loaded} height={400} editable onDocument={(d) => { doc = d; }} />,
@@ -140,7 +140,9 @@ describe('react-xlsx formatting toolbar: borders and fonts', () => {
     for (const address of ['A2', 'B2']) {
       expect(ws.getCell(address).font?.name).toBe('Times New Roman');
       expect(ws.getCell(address).font?.size).toBe(24);
+      expect(ws.getCell(address).font?.scheme).toBeUndefined();
     }
+    expect(ws.getCell('A2').font?.bold).toBe(true);
     // The untouched cell keeps its font.
     expect(ws.getCell('C2').font?.name).not.toBe('Times New Roman');
   });
@@ -157,6 +159,34 @@ describe('react-xlsx formatting toolbar: borders and fonts', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Font' }));
     expect(screen.getByRole('menuitemradio', { name: 'Fira Code' })).toBeInTheDocument();
     expect(screen.getByRole('menuitemradio', { name: 'Calibri' })).toBeInTheDocument();
+  });
+
+  test.each([
+    ['Font size', 'spinbutton', 'Font size value'],
+    ['Borders', 'combobox', 'Border line style'],
+    ['Borders', 'input', 'Border color'],
+  ])('%s native control %s %s keeps mouse and navigation defaults', async (menu, role, name) => {
+    const { container } = render(<XlsxWorkbookGrid workbook={await gridWorkbook()} height={400} editable />);
+    await waitFor(() => expect(screen.getByText('a1')).toBeInTheDocument());
+    fireEvent.pointerDown(cell(container, 0, 'A'));
+    await flush();
+    fireEvent.click(screen.getByRole('button', { name: menu }));
+    const control = role === 'input' ? screen.getByLabelText(name) : screen.getByRole(role, { name });
+    const mouse = createEvent.mouseDown(control, { cancelable: true });
+    fireEvent(control, mouse);
+    expect(mouse.defaultPrevented).toBe(false);
+    control.focus();
+    for (const key of ['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End']) {
+      const event = createEvent.keyDown(control, { key, cancelable: true });
+      fireEvent(control, event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(control).toHaveFocus();
+    }
+    // Button navigation still works when focus leaves the native control.
+    const button = screen.getByRole('button', { name: menu === 'Borders' ? 'All borders' : 'Apply' });
+    button.focus();
+    fireEvent.keyDown(button, { key: 'ArrowRight' });
+    expect(button).not.toHaveFocus();
   });
 
   test('font size can be typed into the menu input, clamped to 8–72', async () => {
