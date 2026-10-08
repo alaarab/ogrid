@@ -1,0 +1,169 @@
+// OGrid Radix – Find & Replace panel (floats at the grid's top-right)
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 380px;
+  max-width: 100%;
+  padding: 6px;
+  color: var(--ogrid-fg, #242424);
+  font-family: var(--ogrid-font, inherit);
+  font-size: 13px;
+  background: var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border-radius: var(--ogrid-radius-xl, 8px);
+  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.indent {
+  flex: 0 0 28px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, #242424);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 4px 8px;
+  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border-radius: var(--ogrid-radius, 4px);
+  box-sizing: border-box;
+  &:focus {
+    outline: none;
+    border-color: var(--ogrid-primary, #0066cc);
+  }
+}
+
+.status {
+  flex-shrink: 0;
+  min-width: 56px;
+  font-size: 12px;
+  color: var(--ogrid-muted, #616161);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ogrid-radius, 4px);
+  background: transparent;
+  color: var(--ogrid-fg, #424242);
+  font-size: 13px;
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.06));
+  }
+  &:disabled {
+    color: var(--ogrid-muted, #a0a0a0);
+    cursor: default;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-primary, #0066cc);
+    outline-offset: -2px;
+  }
+}
+
+.iconButtonActive {
+  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.06));
+}
+
+.button {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--ogrid-border, #ccc);
+  border-radius: var(--ogrid-radius, 4px);
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, #333);
+  font-family: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+  }
+  &:disabled {
+    color: var(--ogrid-muted, #a0a0a0);
+    cursor: default;
+  }
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 2px 2px 0;
+  font-size: 12px;
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  label {
+    cursor: pointer;
+  }
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--ogrid-border-strong, rgba(0, 0, 0, 0.5));
+  border-radius: var(--ogrid-radius-sm, 3px);
+  background: var(--ogrid-bg, #fff);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  &[data-state='checked'] {
+    background: var(--ogrid-primary, #0066cc);
+    border-color: var(--ogrid-primary, #0066cc);
+  }
+}
+
+.checkboxIndicator {
+  color: var(--ogrid-primary-fg, #fff);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.select {
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, #242424);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 2px 4px;
+  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border-radius: var(--ogrid-radius, 4px);
+}
+
+@media (pointer: coarse) {
+  .iconButton {
+    width: 44px;
+    height: 44px;
+  }
+  .input,
+  .button {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}

@@ -152,6 +152,8 @@ export interface UseDataGridInteractionResult<T> {
    * history. No-op when the host owns undo (`onUndo`), whose history the grid can't write to.
    */
   recordAction: (action: UndoableAction) => void;
+  /** Formula of a cell by (flat column, display row). Undefined when formulas are off. */
+  getFormula?: (col: number, row: number) => string | undefined;
 }
 
 /**
@@ -506,5 +508,6 @@ export function useDataGridInteraction<T>(
     beginBatch: undoRedo.beginBatch,
     endBatch: undoRedo.endBatch,
     recordAction,
+    getFormula: viewFormulas?.getFormula,
   };
 }

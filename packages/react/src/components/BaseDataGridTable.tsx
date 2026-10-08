@@ -32,6 +32,7 @@ export type {
   HeaderSelectAllRenderProps,
   BooleanCellRenderProps,
   PopoverEditorRenderProps,
+  FindReplacePanelProps,
 } from './BaseDataGridTable.types';
 
 const VISUALLY_HIDDEN_STYLE: React.CSSProperties = {
@@ -44,6 +45,15 @@ const VISUALLY_HIDDEN_STYLE: React.CSSProperties = {
   clip: 'rect(0 0 0 0)',
   whiteSpace: 'nowrap',
   border: 0,
+};
+
+/** Floats the Find & Replace panel over the grid's top-right corner. */
+const FIND_PANEL_HOST_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  top: 4,
+  right: 4,
+  zIndex: 'var(--ogrid-z-find, 30)' as unknown as number,
+  maxWidth: 'calc(100% - 8px)',
 };
 
 /**
@@ -86,8 +96,15 @@ export function BaseDataGridTableInner<T>(
   const {
     TableEl,
     ColumnHeaderMenu, GridContextMenu, EmptyState, LoadingOverlay, DropIndicator, StatusBar,
-    getContextMenuPortalTarget,
+    getContextMenuPortalTarget, FindReplacePanel,
   } = primitives;
+
+  // Ctrl+F / Ctrl+H open Find & Replace; everything else goes to keyboard navigation.
+  const { findReplace } = o;
+  const findKeyDown = findReplace.handleKeyDown;
+  const handleWrapperKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if (!findKeyDown(e)) handleGridKeyDown(e);
+  }, [findKeyDown, handleGridKeyDown]);
 
   // Pre-compute column styles and classNames via shared hook (avoids per-cell object creation)
   const columnMeta = useColumnMeta({
@@ -204,7 +221,8 @@ export function BaseDataGridTableInner<T>(
         data-min-table-width={Math.round(minTableWidth)}
         data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
         onContextMenu={PREVENT_DEFAULT}
-        onKeyDown={handleGridKeyDown}
+        onKeyDown={findReplace.enabled ? handleWrapperKeyDown : handleGridKeyDown}
+        data-ogrid-find={findReplace.enabled ? findReplace.scopeId : undefined}
         onPaste={interaction.handleGridPaste}
         onCopy={interaction.handleGridCopy}
         onCut={interaction.handleGridCut}
@@ -345,6 +363,12 @@ export function BaseDataGridTableInner<T>(
 
         <ColumnHeaderMenu {...getColumnHeaderMenuProps(headerMenu)} />
       </div>
+      {findReplace.highlightCss && <style>{findReplace.highlightCss}</style>}
+      {findReplace.enabled && findReplace.find.isOpen && FindReplacePanel && (
+        <div style={FIND_PANEL_HOST_STYLE} data-ogrid-find-panel="">
+          <FindReplacePanel find={findReplace.find} onClose={findReplace.close} focusRequest={findReplace.focusRequest} />
+        </div>
+      )}
       {statusBarConfig && (
         <StatusBar
           totalCount={statusBarConfig.totalCount}

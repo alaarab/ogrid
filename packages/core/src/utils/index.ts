@@ -113,6 +113,27 @@ export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, appl
 export type { ArrowNavigationContext, ArrowNavigationResult } from './keyboardNavigation';
 export { resolveMergedCells, isCoveredCell, expandRangeToMerges, isSingleMergeRange } from './mergedCells';
 export type { IResolvedMerge, IMergeLayout, ResolveMergedCellsParams } from './mergedCells';
+export {
+  DEFAULT_FIND_OPTIONS,
+  getFindCellText,
+  cellTextMatches,
+  replaceInCellText,
+  findMatches,
+  findNextMatchIndex,
+  planReplace,
+  formatFindStatus,
+} from './findReplace';
+export type {
+  FindLookIn,
+  FindSearchOrder,
+  FindScope,
+  IFindOptions,
+  IFindMatch,
+  IFindSource,
+  IFindFormulaEdit,
+  IReplacePlan,
+  IPlanReplaceParams,
+} from './findReplace';
 export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, computeAutoScrollDelta, getSelectAllRange, applyRangeRowSelection, computeRowSelectionState } from './selectionHelpers';
 export {
   formatCellValueForTsv,
