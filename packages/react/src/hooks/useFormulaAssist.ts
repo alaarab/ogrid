@@ -111,7 +111,11 @@ export function useFormulaAssist(params: UseFormulaAssistParams): UseFormulaAssi
     const el = getInputRef.current();
     if (!el) return;
     const onBlur = () => setFocused(false);
-    const events = ['keyup', 'mouseup', 'input', 'focus', 'select', 'selectionchange'] as const;
+    // No 'input' listener: a state update there renders the controlled editor
+    // with its old value before React's onChange runs (browsers flush the
+    // microtask queue between listeners), reverting the typed text. Text
+    // changes re-read the caret in the layout effect above instead.
+    const events = ['keyup', 'mouseup', 'focus', 'select', 'selectionchange'] as const;
     for (const type of events) el.addEventListener(type, syncCaret);
     el.addEventListener('blur', onBlur);
     syncCaret();
