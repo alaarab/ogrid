@@ -4,6 +4,13 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Clicking a cell whose text is wider than its fixed-width column no longer
+  paints the text over the neighbouring cells. The active cell clips its
+  content like Excel does. The fill handle now renders next to the cell
+  content inside the `<td>`, so clipping no longer hides it.
+
 ## [2.18.0] - 2026-10-06
 
 ### Added
