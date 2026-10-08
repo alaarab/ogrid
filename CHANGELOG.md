@@ -6,6 +6,16 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- `@alaarab/ogrid-react-xlsx`: progressive XLSX value previews in a Web Worker
+  for Blobs of at least 1 MiB (`streaming` opts smaller files in or disables
+  it), with loading percentage, Cancel, bounded ZIP inflation and shared
+  strings, and a cooperative fallback when Workers are unavailable.
+  `streamWorkbook` exposes chunk/progress callbacks and lazy document loading;
+  Enable editing prepares ExcelJS off-thread, then transfers rows and mapped
+  data in bounded batches. Unedited export returns the original ZIP bytes;
+  edited export retains existing ExcelJS round-trip fidelity. Streaming code
+  and the self-contained worker ship as separate lazy assets; no-bundler
+  consumers must copy every JS file from the browser package's `dist/`.
 - `@alaarab/ogrid-react-xlsx`: editable row/column insertion and deletion in
   grid menus and `XlsxWorkbookDocument.insertRows`, `deleteRows`,
   `insertColumns`, `deleteColumns`. Structural edits shift local/cross-sheet

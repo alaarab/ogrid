@@ -9,6 +9,7 @@ import TabItem from '@theme/TabItem';
 
 import XlsxImportDemo from '@site/src/components/demos/XlsxImportDemo';
 import XlsxMediaDemo from '@site/src/components/demos/XlsxMediaDemo';
+import XlsxStreamingDemo from '@site/src/components/demos/XlsxStreamingDemo';
 
 # XLSX Import & Export
 
@@ -67,6 +68,10 @@ function SingleSheet({ file }: { file: Blob }) {
 |---|---|---|---|
 | `blob` | `Blob` | — | The raw `.xlsx`/CSV/TSV file. Parsed inside the component. Use this OR `workbook`. |
 | `workbook` | `ExcelJS.Workbook` | — | A pre-parsed workbook. Use this OR `blob`. |
+| `streaming` | `boolean` | `true` for Blobs ≥ 1 MiB | Progressive value preview, progress and cancellation; `false` uses the eager formatted view. CSV/TSV use the existing loader. |
+| `streamOptions` | `{ workerFactory?, chunkSize?, maxSharedStringsBytes? }` | 256 rows / 32 MiB shared strings | Override worker hosting or the streaming budgets. `workerFactory: null` uses the fallback. |
+| `onLoadProgress` | `(percent: number) => void` | — | Worksheet compressed bytes consumed, from 0 to 100. Metadata and shared-string parsing precede worksheet progress. |
+| `onStreamedWorkbook` | `(workbook: StreamedXlsxWorkbook) => void` | — | Completed preview, with `toBlob()` and `loadDocument()` for lazy editing. |
 | `height` | `number \| string` | `'100%'` | Container height. |
 | `initialSheet` | `string` | first sheet | Which sheet to show on mount. |
 | `density` | `'compact' \| 'normal' \| 'comfortable'` | `'compact'` | Row height. |
@@ -77,7 +82,7 @@ function SingleSheet({ file }: { file: Blob }) {
 | `editable` | `boolean` | `false` | Allow editing values, formulas, rows and columns through the grid menus. Off, the grid is a read-only preview. |
 | `toolbar` | `boolean` | `editable` | Show the formatting toolbar above the grid. |
 | `exportFileName` | `string` | — | Adds an **Export .xlsx** button to the toolbar that downloads the edited workbook under this name. |
-| `onDocument` | `(doc: XlsxWorkbookDocument) => void` | — | Receives the editable document once the workbook loads. Keep it to export from your own UI. |
+| `onDocument` | `(doc: XlsxWorkbookDocument) => void` | — | Receives the editable document after eager loading or **Enable editing**. Keep it to export from your own UI. |
 
 `XlsxGrid` takes the same `editable`, `toolbar` and `exportFileName` props, plus an optional `document` to share one `XlsxWorkbookDocument` between grids.
 
@@ -176,26 +181,60 @@ Known gaps:
 - Text that starts with `=` in the source file is treated as a formula.
 - Sheets cut down by `limits` save the loaded part's edits; the rest of the sheet is kept as it was.
 - Structural edits also move the unloaded part of a truncated sheet, but the grid remains subject to its load caps. Structured table references, table extents, 3D references and drawing/chart anchors are not structurally rewritten. Use Excel for structural edits in workbooks that depend on these features.
-- XLSX parsing, export and structural snapshots use ExcelJS's full in-memory workbook. Virtual scrolling bounds rendered rows, not workbook memory. Structural undo retains workbook snapshots and can be expensive on dense sheets.
+- The eager path, editing, edited export and structural snapshots use ExcelJS's full in-memory workbook. Streaming preview avoids that model. Structural undo retains workbook snapshots and can be expensive on dense sheets.
 - Excel's locale short date (`m/d/yyyy`, built-in format 14) displays as `YYYY-MM-DD`. Other number formats render in en-US style.
 
 ### Untrusted files
 
 Only populated cells are read, and each sheet is capped by `limits`. `sheetToGridData(sheet, { maxRows, maxCols, maxCells })` applies the same caps and returns `truncated: { rowCount, columnCount }` (the full size) when it cut the sheet.
 
-### Large sheets
+### Large files
 
-The default cell cap allows 100,000 data rows × 50 columns plus a header. Rows are virtualized without pagination; sheets wider than 100 columns also virtualize columns. Mapping builds grid rows directly rather than allocating an intermediate cell matrix. The document copies only formula-bearing rows when it initializes editable state.
+Blobs of at least 1 MiB open as a progressive value preview by default. Use `streaming` to opt smaller files in. Rows become visible as chunks arrive, with **Loading… 42%** and **Cancel**. Changing the Blob or unmounting terminates the worker. Without Workers, or if construction is blocked by CSP, the same SAX reader runs in small tasks on the main thread. SSR renders the loading state; parsing begins on the client.
 
-Limits describe the mapped rectangle, including blank cells between populated cells and the promoted header. A file with one far-away cell can therefore hit a cap. ZIP byte checks happen before ExcelJS parses, but ExcelJS parsing is not streaming. Dense files with long strings or many styles may require more memory and may exceed the 200 MiB uncompressed-byte default even when their dimensions fit. Lower the limits for mobile or memory-constrained hosts.
+<XlsxStreamingDemo />
 
-Run the repeatable dense numeric benchmark with `bun packages/react-xlsx/scripts/benchmark-large-sheet.mjs`. The unit suite separately opens a real sparse 100k × 50 `.xlsx`, verifies the last cell and full dimensions, and guards mapping against accidental quadratic work.
+Preview shows text, numbers, dates, booleans and cached formula results. Formatting, merges, validations, notes, live recalculation and sorting become available after **Enable editing** when `editable` is set. This prepares the full ExcelJS document in the worker and transfers rows and pre-mapped data back in batches. `onDocument` then receives that document. Set `streaming={false}` when you need the complete formatted view immediately. Pre-parsed `workbook` and `XlsxGrid` retain their existing behavior.
 
-Measured on Linux x64 with Bun 1.4.0 and ExcelJS 4.4.0: a dense numeric 100k × 50 file was 14.06 MiB. Opening it in a fresh process took 33.6 seconds to parse and 3.37 seconds to initialize the editable document, with peak RSS of 3,900 MiB. These are one machine's measurements under shared load, not browser guarantees; formula-heavy or styled files can cost more. To separate opening from fixture creation:
+An unedited streamed export returns the original Blob byte-for-byte, preserving every ZIP part, including media and features ExcelJS cannot interpret. After editing, export uses the existing document path, preserving styles, merges, validations, conditional formatting, notes and ExcelJS-supported media. Loading and editing a full document still require memory proportional to that workbook; edited serialization and structural operations retain ExcelJS's existing costs. Streaming preview does not promise constant memory for retained grid values.
+
+The parser reads the ZIP directory and 8 KiB compressed slices, without retaining an inflated worksheet string or creating ExcelJS cells. The main thread acknowledges each chunk before delivery continues and supplies only the viewport to OGrid. Shared strings are retained for lookup, capped at 32 MiB of decoded UTF-16 text plus entry pointers by default; an oversized table is rejected. ZIP checks enforce both declared sizes and actual inflated bytes.
+
+The default mapping cap remains 1,048,576 worksheet rows, 1,000 columns and 5,100,000 rectangular cells **per sheet**, allowing 100,000 × 50 plus a header. Input is capped at 50 MiB and total uncompressed ZIP bytes at 200 MiB. A far-away cell can hit the rectangle cap; dense styles or long strings can hit byte/string budgets. Lower `limits` for memory-constrained devices. Truncation limits the preview and editable mapped area; unedited export preserves the complete original file. Rows and columns outside the edited area retain their original values on edited export.
+
+For non-React consumers:
+
+```ts
+import { streamWorkbook } from '@alaarab/ogrid-react-xlsx';
+const controller = new AbortController();
+const preview = await streamWorkbook(file, {
+  signal: controller.signal,
+  onProgress: (percent: number) => console.log(percent),
+  onChunk: async (chunk) => { /* append chunk.rows; awaited for backpressure */ },
+});
+const original = await preview.toBlob();
+const doc = await preview.loadDocument(); // lazy full load in the worker
+// doc.setCellValues(...); then preview.toBlob() includes those edits.
+```
+
+`preview.sheets` and chunk rows use zero-based **worksheet** coordinates, including row 1; header promotion applies when the document is mapped. `chunk.complete` marks a sheet's final extent. `workerFactory` supports custom CSP/hosting requirements; the normal package uses the literal `new Worker(new URL('./xlsxWorker.js', import.meta.url), { type: 'module' })` pattern for Vite, webpack 5 and Next.js client components. Keep the emitted worker and lazy chunks when copying the browser package.
+
+Measurements on the same Linux x64 laptop (Core i9-13900H, 32 GiB RAM), Chromium 153.0.8010.12, ExcelJS 4.4.0, 2026-10-08. Each row used a fresh browser process and identical input for both paths. Times start after downloading the fixture and importing the API, and include lazy preview/worker startup. First rows means DOM cells followed by an animation frame; total means the complete preview or full editable document. Peak RSS sums the browser process tree, sampled every 100 ms, including worker heaps and shared pages; it is not comparable to a single Node/Bun process RSS. These single runs under shared machine load are illustrative.
+
+| Workbook (data rows × columns) | File | Full: first / total | Stream: first / total | Full / stream peak browser RSS |
+|---|---|---|---|---|
+| Numeric 10k × 20 | 1.30 MiB | 1.00 / 1.00 s | 0.50 / 1.25 s | 508 / 495 MiB |
+| Numeric 100k × 50 | 14.06 MiB | 15.11 / 15.11 s | 1.14 / 22.63 s | 1,896 / 784 MiB |
+| Styled 20k × 30 (font, fill, number format on every cell) | 4.29 MiB | 4.05 / 4.05 s | 0.56 / 2.77 s | 717 / 585 MiB |
+
+Streaming favors early interaction and lower memory; total throughput can be slower, especially with dense numeric data. The dense full load's longest main-thread task was 8.47 s; the streamed run's was 0.26 s (including initial UI mounting). The prior Bun 1.4.0 dense baseline took 33.6 s to parse plus 3.37 s to map at 3,900 MiB RSS; the new parser-only run delivered its first chunk in 0.18 s, completed in 23.29 s and peaked at 405 MiB while discarding delivered rows. That parser-only memory figure excludes retained grid data.
+
+Reproduce with the benchmark script; generate fixtures once, then run each browser measurement separately after a build:
 
 ```bash
-bun packages/react-xlsx/scripts/benchmark-large-sheet.mjs --write /tmp/large.xlsx
-bun packages/react-xlsx/scripts/benchmark-large-sheet.mjs --read /tmp/large.xlsx
+bun packages/react-xlsx/scripts/benchmark-streaming.mjs --generate /tmp/ogrid-stream-fixtures
+node packages/react-xlsx/scripts/benchmark-streaming.mjs --browser full /tmp/ogrid-stream-fixtures/100k50.xlsx
+node packages/react-xlsx/scripts/benchmark-streaming.mjs --browser stream /tmp/ogrid-stream-fixtures/100k50.xlsx
 ```
 
 `@alaarab/ogrid-react-xlsx` requires React 18 or 19.
@@ -214,10 +253,13 @@ npm i @alaarab/ogrid-react-xlsx-browser
 
 Copy every `.js` and `.css` file from `dist/` into the same `vendor/` directory you serve statically:
 
+The worker is a separate self-contained asset with no external imports.
+
 ```
 vendor/
   ogrid-xlsx.js
   ogrid-xlsx.css
+  xlsxWorker.js
   ...other .js and .css chunks from dist/
 ```
 

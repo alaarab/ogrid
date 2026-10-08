@@ -6,8 +6,8 @@ import { defineConfig } from 'tsup';
 // synchronous; apps that want it off the initial bundle should lazy-load the
 // route or component that uses this package (React.lazy / dynamic import).
 // @alaarab/ogrid-react-xlsx-browser is the self-contained bundle.
-export default defineConfig({
-  entry: ['src/index.ts'],
+export default defineConfig([{
+  entry: ['src/index.ts', 'src/xlsxWorkerFactory.ts'],
   format: ['esm'],
   outDir: 'dist/esm',
   // XLSX media display and OOXML passthrough load on demand.
@@ -30,4 +30,17 @@ export default defineConfig({
     options.jsx = 'automatic';
   },
   outExtension: () => ({ js: '.js' }),
-});
+}, {
+  entry: ['src/xlsxWorker.ts'],
+  format: ['esm'],
+  outDir: 'dist/esm',
+  splitting: false,
+  clean: false,
+  dts: false,
+  target: 'es2020',
+  platform: 'browser',
+  minify: true,
+  noExternal: [/.*/],
+  esbuildOptions(options) { options.define = { 'process.env.NODE_ENV': '"production"' }; },
+  outExtension: () => ({ js: '.js' }),
+}]);
