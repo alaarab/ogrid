@@ -240,6 +240,26 @@ export function createDragDropTests(OGrid: React.ComponentType<IOGridProps<Row>>
       expect(onEdit.mock.calls[onEdit.mock.calls.length - 1][0].item.id).toBe(2);
     });
 
+    it('keeps formula results with controlled records across host updates and undo/redo', async () => {
+      const { container, grid, refresh } = await renderGrid({ rowDragging: true, formulas: true,
+        initialFormulas: [{ col: 0, row: 0, formula: '=1+2' }, { col: 0, row: 1, formula: '=4+4' }] });
+      await dragRow(container, 0, 1);
+      await waitFor(() => expect(rowOrder(container)).toEqual(['2', '1', '3', '4']));
+      expect(bodyCell(container, 0, 0).textContent).toBe('8');
+      expect(bodyCell(container, 1, 0).textContent).toBe('3');
+      refresh([{ ...rows[1]!, b: 'updated' }, rows[0]!, rows[2]!, rows[3]!]);
+      await waitFor(() => expect(bodyCell(container, 0, 1).textContent).toBe('updated'));
+      expect(bodyCell(container, 0, 0).textContent).toBe('8');
+      fireEvent.keyDown(grid, { key: 'z', ctrlKey: true });
+      await waitFor(() => expect(rowOrder(container)).toEqual(['1', '2', '3', '4']));
+      expect(bodyCell(container, 0, 0).textContent).toBe('3');
+      expect(bodyCell(container, 1, 0).textContent).toBe('8');
+      fireEvent.keyDown(grid, { key: 'y', ctrlKey: true });
+      await waitFor(() => expect(rowOrder(container)).toEqual(['2', '1', '3', '4']));
+      expect(bodyCell(container, 0, 0).textContent).toBe('8');
+      expect(bodyCell(container, 1, 0).textContent).toBe('3');
+    });
+
     it('keeps formula coordinates on their records after uncontrolled reorder', async () => {
       const { container } = await renderGrid({ rowDragging: true, formulas: true,
         initialFormulas: [{ col: 0, row: 0, formula: '=1+2' }, { col: 0, row: 1, formula: '=4+4' }] }, { emitOrder: false });
@@ -464,6 +484,38 @@ export function createDragDropTests(OGrid: React.ComponentType<IOGridProps<Row>>
     fireEvent.keyDown(grid, { key: 'y', ctrlKey: true });
     await waitFor(() => expect(bodyCell(container, 3, 1).textContent).toBe('2'));
     expect(bodyCell(container, 1, 0).textContent).toBe('');
+  });
+
+  it('keeps the range handle on a frozen cell across scroll and resize, and cleans up', async () => {
+    const { container, grid, unmount } = await renderGrid({ rangeMove: true, rowDragging: true, frozenRows: 1, frozenColumns: 1 });
+    await waitFor(() => expect(container.querySelector('[data-ogrid-row-drag-handle]')).not.toBeNull());
+    const cell = bodyCell(container, 0, 0);
+    const anchor = container.querySelector('table')!.parentElement!;
+    let scroll = 0;
+    let cellLeft = 60;
+    const rect = (left: number, top: number) => ({ left, top, right: left + 80, bottom: top + 30, width: 80, height: 30, x: left, y: top, toJSON() {} });
+    const cellRect = jest.spyOn(cell, 'getBoundingClientRect').mockImplementation(() => rect(cellLeft, 50));
+    const anchorRect = jest.spyOn(anchor, 'getBoundingClientRect').mockImplementation(() => rect(-scroll, -scroll));
+    fireEvent.pointerDown(cell);
+    const handle = await waitFor(() => {
+      const el = container.querySelector<HTMLElement>('[data-ogrid-range-move-handle]');
+      expect(el).toBeInTheDocument();
+      return el!;
+    });
+    expect([handle.style.left, handle.style.top]).toEqual(['60px', '50px']);
+    scroll = 100;
+    fireEvent.scroll(grid);
+    await waitFor(() => expect([handle.style.left, handle.style.top]).toEqual(['160px', '150px']));
+    cellLeft = 90;
+    fireEvent(window, new Event('resize'));
+    await waitFor(() => expect(handle.style.left).toBe('190px'));
+    unmount();
+    const calls = cellRect.mock.calls.length;
+    fireEvent.scroll(grid);
+    fireEvent(window, new Event('resize'));
+    expect(cellRect.mock.calls.length).toBe(calls);
+    cellRect.mockRestore();
+    anchorRect.mockRestore();
   });
 
   describe('cell range move', () => {

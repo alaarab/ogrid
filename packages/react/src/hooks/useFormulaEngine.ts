@@ -45,6 +45,8 @@ export interface UseFormulaEngineParams<T> {
   formulaLimits?: IFormulaLimits;
   /** Sheet accessors for cross-sheet references. Pass a new accessor when a sheet's data changes. */
   sheets?: Record<string, IGridDataAccessor>;
+  /** Full local worksheet access, supplementing loaded rows and columns. */
+  formulaDataAccessor?: IGridDataAccessor;
   /**
    * Treat a data value that is a string starting with '=' as that cell's
    * formula. Every such cell is loaded when the engine starts, and after that
@@ -189,8 +191,14 @@ function adoptDataFormulas<T>(
   const updatedCells: IRecalcResult['updatedCells'] = [];
   let result: IRecalcResult = { updatedCells };
   for (const f of set) {
+    const oldValue = engine.getValue(f.col, f.row);
     result = engine.setFormula(f.col, f.row, f.formula, accessor);
     updatedCells.push(...result.updatedCells);
+    // A different formula may have the same result. The document still needs
+    // its current cache after invalidating the previous formula's output.
+    if (f.formula && !result.updatedCells.some(cell => cell.col === f.col && cell.row === f.row)) {
+      updatedCells.push({ cellKey: `${f.col},${f.row}`, col: f.col, row: f.row, oldValue, newValue: engine.getValue(f.col, f.row) });
+    }
   }
   return { ...result, updatedCells };
 }
@@ -218,6 +226,7 @@ export function useFormulaEngine<T>(
     formulasFromData = false,
     isRowHidden,
     isCellMerged,
+    formulaDataAccessor,
   } = params;
 
   // Refs for stable access in callbacks
@@ -226,6 +235,7 @@ export function useFormulaEngine<T>(
   const onFormulaRecalcRef = useLatestRef(onFormulaRecalc);
   const isRowHiddenRef = useLatestRef(isRowHidden);
   const isCellMergedRef = useLatestRef(isCellMerged);
+  const formulaDataAccessorRef = useLatestRef(formulaDataAccessor);
 
   // Lazy engine instance  -  persists across renders, created once when formulas is enabled
   const engineRef = useRef<FormulaEngine | null>(null);
@@ -253,9 +263,19 @@ export function useFormulaEngine<T>(
   const createAccessor = useCallback(
     (): IGridDataAccessor => {
       const accessor = createGridDataAccessor(itemsRef.current, flatColumnsRef.current);
-      return { ...accessor, isRowHidden: isRowHiddenRef.current, isCellMerged: isCellMergedRef.current };
+      const full = formulaDataAccessorRef.current;
+      return {
+        ...accessor,
+        getCellValue: (col, row) => row < itemsRef.current.length && col < flatColumnsRef.current.length
+          ? accessor.getCellValue(col, row) : full?.getCellValue(col, row),
+        getRowCount: () => Math.max(accessor.getRowCount(), full?.getRowCount() ?? 0),
+        getColumnCount: () => Math.max(accessor.getColumnCount(), full?.getColumnCount() ?? 0),
+        isCellOccupied: full?.isCellOccupied,
+        isRowHidden: isRowHiddenRef.current,
+        isCellMerged: (col, row) => !!(isCellMergedRef.current?.(col, row) || full?.isCellMerged?.(col, row)),
+      };
     },
-    [itemsRef, flatColumnsRef, isRowHiddenRef, isCellMergedRef],
+    [itemsRef, flatColumnsRef, isRowHiddenRef, isCellMergedRef, formulaDataAccessorRef],
   );
 
   const reportedSpillsRef = useRef<ISpillRange[]>([]);
@@ -393,7 +413,7 @@ export function useFormulaEngine<T>(
     if (dataChanged) {
       const result = current.recalcAll(createAccessor());
       // Adopted formulas already changed their values, so the recalc alone would not report them.
-      report({ ...result, updatedCells: [...adopted.updatedCells, ...result.updatedCells].filter((c) => !sameValue(c.oldValue, c.newValue)) });
+      report({ ...result, updatedCells: [...adopted.updatedCells, ...result.updatedCells.filter((c) => !sameValue(c.oldValue, c.newValue))] });
     } else if (pending.length > 0) {
       report(current.onCellsChanged(pending, createAccessor()));
     }

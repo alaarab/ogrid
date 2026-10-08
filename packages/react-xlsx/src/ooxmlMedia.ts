@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import type ExcelJS from 'exceljs';
-import type { ChartAnchor, SourceArchive } from './sourceArchive';
+import { markDynamicArray, type ChartAnchor, type SourceArchive } from './sourceArchive';
 import { EMUS_PER_PIXEL, nativeMediaPoint } from './mediaGeometry';
 import { pivotStyleRemapper } from './pivotStyles';
 import {
@@ -45,12 +45,20 @@ function marker(anchor: XmlElement, name: string, worksheet: ExcelJS.Worksheet):
 /** Read chart placeholders while the original ZIP is still available. */
 export async function readSourceArchive(bytes: ArrayBuffer, workbook: ExcelJS.Workbook): Promise<SourceArchive | undefined> {
   const zip = await JSZip.loadAsync(bytes);
-  if (!zip.file(/^xl\/(charts|pivotTables|pivotCache)\/[^/]+\.xml$/).length) return undefined;
+  const workbookRels = await relationships(zip, 'xl/workbook.xml');
+  const metadataRel = children(workbookRels).find(r => r.attrs.Type?.endsWith('/sheetMetadata'));
+  const metadataPath = metadataRel && resolvePart('xl/workbook.xml', metadataRel.attrs.Target ?? '');
+  if (!metadataPath && !zip.file(/^xl\/(charts|pivotTables|pivotCache)\/[^/]+\.xml$/).length) return undefined;
   const charts = new Map<string, ChartAnchor[]>();
   for (const [name, path] of await sheets(zip)) {
     const worksheet = workbook.getWorksheet(name);
     if (!worksheet) continue;
     const sheet = await read(zip, path);
+    if (metadataPath) {
+      for (const cell of descendants(sheet, 'c')) {
+        if (cell.attrs.cm && cell.attrs.r && worksheet.getCell(cell.attrs.r).formula) markDynamicArray(worksheet, cell.attrs.r, cell.attrs.cm);
+      }
+    }
     const rels = await relationships(zip, path);
     const rel = findRel(rels, relId(children(sheet, 'drawing')[0] ?? element('drawing')));
     if (!rel) continue;
@@ -75,7 +83,7 @@ export async function readSourceArchive(bytes: ArrayBuffer, workbook: ExcelJS.Wo
     if (anchors.length) charts.set(name, anchors);
   }
   return {
-    bytes, charts,
+    bytes, charts, metadataPath,
     sheets: new Map(workbook.worksheets.map((ws) => [ws.name, { rows: ws.rowCount, columns: ws.columnCount }])),
   };
 }

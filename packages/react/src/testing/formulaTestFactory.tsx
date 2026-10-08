@@ -73,6 +73,17 @@ export function createFormulaTests(OGrid: React.ComponentType<IOGridProps<Row>>)
     return { ...utils, rerender };
   }
 
+  it('sorts numeric formula columns by computed values on initial sort and explicit re-sort', async () => {
+    const { container } = renderGrid({ defaultSortBy: 'qty',
+      initialFormulas: [{ col: 1, row: 0, formula: '=SUM(B2:B3)/2' }] });
+    const order = () => Array.from(container.querySelectorAll('tbody tr[data-row-id]')).map(r => r.getAttribute('data-row-id'));
+    await waitFor(() => expect(text(container, 1, 'qty')).toBe('1.5'));
+    await waitFor(() => expect(order()).toEqual(['2', '1', '3']));
+    const header = container.querySelector('th[data-column-id="qty"]') as HTMLElement;
+    fireEvent.click(header.querySelector('[data-header-label]')!);
+    await waitFor(() => expect(order()).toEqual(['3', '1', '2']));
+  });
+
   function td(container: HTMLElement, rowId: number, columnId: string): HTMLElement {
     const el = container.querySelector(`tr[data-row-id="${rowId}"] td[data-column-id="${columnId}"]`);
     if (!el) throw new Error(`No cell for row ${rowId}, column ${columnId}`);

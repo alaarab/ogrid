@@ -438,17 +438,30 @@ export function useGridDragDrop<T>(params: UseGridDragDropParams<T>): UseGridDra
       setRangeMoveHandle(null);
       return;
     }
-    const norm = normalizeSelectionRange(selectionRange);
-    const cell = wrapper.querySelector<HTMLElement>(
-      `[data-row-index="${norm.startRow}"][data-col-index="${norm.startCol + colOffset}"]`,
-    );
-    if (!cell) {
-      setRangeMoveHandle(null);
-      return;
-    }
-    const cRect = container.getBoundingClientRect();
-    const r = cell.getBoundingClientRect();
-    setRangeMoveHandle({ top: Math.round(r.top - cRect.top), left: Math.round(r.left - cRect.left) });
+    const update = () => {
+      const norm = normalizeSelectionRange(selectionRange);
+      const cell = wrapper.querySelector<HTMLElement>(
+        `[data-row-index="${norm.startRow}"][data-col-index="${norm.startCol + colOffset}"]`,
+      );
+      const cRect = container.getBoundingClientRect();
+      const r = cell?.getBoundingClientRect();
+      const next = r ? { top: Math.round(r.top - cRect.top), left: Math.round(r.left - cRect.left) } : null;
+      setRangeMoveHandle(previous => previous?.top === next?.top && previous?.left === next?.left ? previous : next);
+    };
+    update();
+    wrapper.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    const resize = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(update);
+    resize?.observe(wrapper);
+    resize?.observe(container);
+    const mutation = typeof MutationObserver === 'undefined' ? undefined : new MutationObserver(update);
+    mutation?.observe(container, { childList: true, subtree: true });
+    return () => {
+      wrapper.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+      resize?.disconnect();
+      mutation?.disconnect();
+    };
   }, [rangeMove, selectionRange, colOffset, wrapperRef, containerRef]);
 
   const wrapperHandlers = useMemo(

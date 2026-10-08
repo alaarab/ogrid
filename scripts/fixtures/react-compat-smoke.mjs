@@ -43,18 +43,32 @@ const props = {
   getRowId: row => row.id,
 };
 for (const name of ['@alaarab/ogrid-react-radix', '@alaarab/ogrid-react-fluent']) {
-  const { OGrid } = await import(name);
-  const component = React.createElement(OGrid, props);
+  const { OGrid, FindReplacePanel } = await import(name);
+  const component = React.createElement(OGrid, { ...props, defaultSortBy: '', showRowNumbers: true, rowDragging: true, rangeMove: true, cellDrop: true, findReplace: true });
+  const panel = React.createElement(FindReplacePanel, { find: { isOpen: true, mode: 'replace' }, onClose() {}, focusRequest: 1 });
+  assert.match(renderToString(panel), /aria-busy/, `${name}: a directly rendered lazy panel is server safe`);
   assert.match(renderToString(component), /Compatibility row/, `${name}: SSR must render data`);
   const container = document.createElement('div');
   document.body.append(container);
+  container.innerHTML = renderToString(component);
   let root;
   if (React.version.startsWith('18.')) {
-    root = (await import('react-dom/client')).createRoot(container);
-    ReactDOM.flushSync(() => root.render(component));
-  } else ReactDOM.render(component, container);
+    root = (await import('react-dom/client')).hydrateRoot(container, component);
+  } else ReactDOM.hydrate(component, container);
   await new Promise(resolve => setTimeout(resolve, 100));
-  assert.match(container.textContent, /Compatibility row/, `${name}: mount must render data`);
+  assert.match(container.textContent, /Compatibility row/, `${name}: hydration must render data`);
+  assert.ok(container.querySelector('[data-ogrid-row-drag-handle]'), `${name}: drag enhances after hydration`);
+  const region = container.querySelector('[role="region"]');
+  region.querySelector('tbody [data-row-index]').dispatchEvent(new window.PointerEvent('pointerdown', { bubbles: true }));
+  region.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true }));
+  region.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'x', bubbles: true }));
+  assert.equal(region.querySelector('tbody input'), null, `${name}: loading Replace protects the selected cell`);
+  await new Promise(resolve => setTimeout(resolve, 400));
+  const findInput = container.querySelector('[role="search"] input');
+  assert.ok(findInput, `${name}: lazy Find input mounts`);
+  assert.equal(document.activeElement, findInput, `${name}: lazy Find input receives focus`);
+  findInput.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await new Promise(resolve => setTimeout(resolve, 50));
   const cell = container.querySelector('td[data-column-id="name"]');
   assert.ok(cell, `${name}: editable cell exists`);
   const cellContent = cell.querySelector('[data-row-index][data-col-index]');

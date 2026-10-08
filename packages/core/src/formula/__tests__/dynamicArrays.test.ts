@@ -58,6 +58,18 @@ describe('dynamic array evaluation', () => {
 });
 
 describe('spill lifecycle', () => {
+  it('honors source occupancy even when the cell value is empty, then spills when it is cleared', () => {
+    const { engine, accessor } = fixture([[], [], []]);
+    let occupied = true;
+    const fullSheet = { ...accessor, isCellOccupied: (col: number, row: number) => occupied && col === 0 && row === 2 };
+    engine.setFormula(0, 0, '=SEQUENCE(3)', fullSheet);
+    expect((engine.getValue(0, 0) as FormulaError).type).toBe('#SPILL!');
+    expect(engine.getSpillRange(0, 0)).toBeUndefined();
+    occupied = false;
+    engine.recalcAll(fullSheet);
+    expect(engine.getValue(0, 2)).toBe(3);
+  });
+
   it('does not spend the range budget again for nested scalar functions', () => {
     const { accessor } = fixture([[1, ''], [2], [3]]);
     const engine = new FormulaEngine({ limits: { maxRangeCells: 3 } });

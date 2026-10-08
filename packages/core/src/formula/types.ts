@@ -281,6 +281,8 @@ export interface IGridDataAccessor {
   getCellValue(col: number, row: number): unknown;
   getRowCount(): number;
   getColumnCount(): number;
+  /** Source occupancy independent of a cached value (e.g. an unloaded formula returning an empty string). */
+  isCellOccupied?(col: number, row: number): boolean;
   /** True for every cell in a merged block, including its master. */
   isCellMerged?(col: number, row: number): boolean;
   /** Successful spill at this anchor, in this accessor's sheet coordinates. */

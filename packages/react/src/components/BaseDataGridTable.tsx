@@ -77,9 +77,12 @@ const LazyDragDataGridTable = React.lazy(() => import('./DragDataGridTable.js'))
 
 /** Mount the optional drag hooks only for opted-in grids. */
 export function BaseDataGridTableInner<T>(props: BaseDataGridTableProps<T>): React.ReactElement {
-  if (props.rowDragging || props.rangeMove || props.cellDrop || props.onCellDrop) {
+  const [mounted, setMounted] = React.useState(false);
+  const enabled = !!(props.rowDragging || props.rangeMove || props.cellDrop || props.onCellDrop);
+  React.useEffect(() => { if (enabled) setMounted(true); }, [enabled]);
+  if (mounted && enabled) {
     const DragTable = LazyDragDataGridTable as React.ComponentType<BaseDataGridTableProps<T> & { renderTable: typeof BaseDataGridTableContent<T> }>;
-    return <React.Suspense fallback={null}><DragTable {...props} renderTable={BaseDataGridTableContent} /></React.Suspense>;
+    return <React.Suspense fallback={<BaseDataGridTableContent {...props} />}><DragTable {...props} renderTable={BaseDataGridTableContent} /></React.Suspense>;
   }
   return <BaseDataGridTableContent {...props} />;
 }
@@ -178,8 +181,15 @@ export function BaseDataGridTableContent<T>(
 
   // Ctrl+F / Ctrl+H open Find & Replace; Ctrl/Cmd+Shift+Up/Down reorders rows.
   const handleWrapperKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    if (!findKeyDown(e)) handleGridKeyDown(e);
-  }, [findKeyDown, handleGridKeyDown]);
+    if (findKeyDown(e)) return;
+    if (findReplace.find.isOpen && !e.ctrlKey && !e.metaKey && (e.target as Element).closest('tbody, [role="region"]') && !(e.target as Element).closest('[role="search"]')) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === 'Escape') findReplace.close();
+      return;
+    }
+    handleGridKeyDown(e);
+  }, [findKeyDown, handleGridKeyDown, findReplace]);
 
   // ARIA grid geometry. aria-rowindex counts header rows and earlier pages;
   // aria-rowcount is -1 ("unknown") when the grid can't see the full total.
@@ -391,7 +401,7 @@ export function BaseDataGridTableContent<T>(
                     popoverAnchorEl={o.editing.popoverAnchorEl}
                     pendingEditorValue={o.editing.pendingEditorValue}
                     onRowHeaderPointerDown={o.handleRowHeaderPointerDown}
-                    rowDragging={!!gridProps.rowDragging && !sorted && !windowed}
+                    rowDragging={!!gridProps.rowDragging && useDragDrop !== useDisabledDragDrop && !sorted && !windowed}
                     onRowDragStart={dragDrop.handleRowDragStart}
                     formulaVersion={gridProps.formulaVersion}
                     conditionalFormat={gridProps.conditionalFormat}

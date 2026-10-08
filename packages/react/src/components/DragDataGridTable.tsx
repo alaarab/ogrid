@@ -36,12 +36,16 @@ export default function DragDataGridTable<T>(props: DragDataGridTableProps<T>): 
     () => order && !sorted && !props.windowed ? applyRowOrder(items, order, getRowId) : items,
     [items, order, getRowId, sorted, props.windowed],
   );
+  const formulaRows = React.useRef(new Map<RowId, number>());
+  for (const item of items) {
+    const id = getRowId(item);
+    if (!formulaRows.current.has(id)) formulaRows.current.set(id, formulaRows.current.size);
+  }
   const formulaRowMap = React.useMemo(() => {
-    if (orderedItems === items) return props.formulaRowMap;
     const originalIndex = new Map(items.map((item, i) => [getRowId(item), i]));
     const sheetRows = orderedItems.map((item) => {
       const i = originalIndex.get(getRowId(item)) ?? -1;
-      return i < 0 ? -1 : (props.formulaRowMap?.toSheetRow(i) ?? i);
+      return i < 0 ? -1 : (props.formulaRowMap?.toSheetRow(i) ?? formulaRows.current.get(getRowId(item)) ?? i);
     });
     const displayRows = new Map(sheetRows.map((row, i) => [row, i]));
     return {

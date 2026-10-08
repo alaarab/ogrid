@@ -6,5 +6,8 @@ const Panel = React.lazy(() => import('./FindReplacePanelContent').then(m => ({ 
 
 /** Load the panel controls when Find or Replace is opened. */
 export function FindReplacePanel(props: FindReplacePanelProps): React.ReactElement {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  if (!mounted) return <div className={styles.panel} aria-busy="true" />;
   return <React.Suspense fallback={<div className={styles.panel} aria-busy="true" />}><Panel {...props} /></React.Suspense>;
 }

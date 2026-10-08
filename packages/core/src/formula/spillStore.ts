@@ -67,7 +67,7 @@ export class SpillStore {
       if (accessor.isCellMerged?.(c, r)) return new FormulaError('#SPILL!', 'Spill intersects merged cells');
       if (child === key) continue;
       const raw = c < accessor.getColumnCount() && r < accessor.getRowCount() ? accessor.getCellValue(c, r) : undefined;
-      if (hasFormula(child) || this.owners.has(child) || (raw !== undefined && raw !== null && raw !== '')) return new FormulaError('#SPILL!', 'Spill range is blocked');
+      if (hasFormula(child) || accessor.isCellOccupied?.(c, r) || this.owners.has(child) || (raw !== undefined && raw !== null && raw !== '')) return new FormulaError('#SPILL!', 'Spill range is blocked');
     }
     this.ranges.set(key, range);
     this.arrays.set(key, array);

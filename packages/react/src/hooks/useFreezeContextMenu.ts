@@ -27,7 +27,7 @@ export function useFreezeContextMenu(params: UseFreezeContextMenuParams): GridCo
       ? { startRow: activeCell.rowIndex, endRow: activeCell.rowIndex, startCol: activeCell.columnIndex, endCol: activeCell.columnIndex }
       : null);
     const rowsAbove = range ? Math.max(0, Math.min(range.startRow, range.endRow)) : 0;
-    const columnsLeft = range ? Math.max(0, Math.min(range.startCol, range.endCol) - colOffset) : 0;
+    const columnsLeft = range ? Math.max(0, Math.min(range.startCol, range.endCol) - (selectionRange ? 0 : colOffset)) : 0;
     return {
       frozenRows: actions.frozenRows,
       frozenColumns: actions.frozenColumns,

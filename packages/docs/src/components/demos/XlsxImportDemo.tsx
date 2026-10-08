@@ -50,7 +50,7 @@ export default function XlsxImportDemo() {
           if (!workbook) return <div style={{ padding: 16 }}>Building workbook…</div>;
           return (
             <>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: 8 }}>
+              <div className="live-demo__controls">
                 <button type="button" disabled={!doc} onClick={() => doc?.insertRows('Orders', 0)}>Insert order row</button>
                 <button type="button" disabled={!doc} onClick={() => doc?.deleteRows('Orders', 0)}>Delete first order row</button>
                 <button type="button" disabled={!doc} onClick={() => doc?.insertColumns('Orders', 2)}>Insert column before Amount</button>

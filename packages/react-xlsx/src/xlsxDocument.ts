@@ -13,7 +13,7 @@ import { UndoRedoStack, triggerBlobDownload, type ICellNote, type IColumnDef, ty
 import { createBuiltInFunctions, tokenize, parseRange, type IGridDataAccessor, type IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { applyBorderSides, applyStyleEdit, borderSidesForCell, styleHas, type BorderOptions, type StyleEdit, type XlsxCellStyle } from './cellStyles';
 import { xlsxBlobFromWorkbook } from './exportToXlsx';
-import { attachSourceArchive, sourceArchiveOf } from './sourceArchive';
+import { attachSourceArchive, copyDynamicArrays, markDynamicArray, sourceArchiveOf } from './sourceArchive';
 import { readSheetNotes, writeSheetNotes } from './cellNotes';
 import { rebaseFormulaRows, toFileFormula } from './formulaReferences';
 import { cloneWorkbook, editWorkbookStructure } from './workbookStructure';
@@ -36,7 +36,14 @@ type Op =
   | { t: 'style'; key: string; before: XlsxCellStyle | undefined; after: XlsxCellStyle | undefined }
   | { t: 'merges'; before: IMergedCell[]; after: IMergedCell[] }
   | { t: 'notes'; before: ICellNote[]; after: ICellNote[] }
+  | { t: 'outputs'; before: OutputSnapshot; after: OutputSnapshot }
   | { t: 'structure'; before: DocumentSnapshot; after: DocumentSnapshot };
+
+interface OutputSnapshot {
+  formulaResults: Map<string, unknown>;
+  outputResults: Map<string, unknown>;
+  spillRanges: ISpillRange[];
+}
 
 interface DocumentSnapshot {
   workbook: ExcelJS.Workbook | undefined;
@@ -314,6 +321,11 @@ export class XlsxWorkbookDocument {
       this.extents = new Map(snapshot.extents);
       this.sheets.clear();
       for (const [name, sheet] of snapshot.sheets) this.sheets.set(name, this.copyState(sheet));
+    } else if (op.t === 'outputs') {
+      const cache = op[direction];
+      state.formulaResults = new Map(cache.formulaResults);
+      state.outputResults = new Map(cache.outputResults);
+      state.spillRanges = cache.spillRanges.slice();
     } else if (op.t === 'cell') {
       const index = this.rowIndexOf(state, op.rowId);
       const row = state.rows[index];
@@ -346,9 +358,35 @@ export class XlsxWorkbookDocument {
     // The formula hook compares the previous render's row identities. Keep
     // that snapshot intact while applying edits, including subsequent edits.
     state.rows = state.rows.slice();
-    for (const op of ops) this.applyOp(state, op, 'after');
+    const before = this.copyOutputs(state);
+    for (const op of ops) {
+      this.applyOp(state, op, 'after');
+      if (op.t === 'cell') this.invalidateOutput(state, op.rowId, op.columnId);
+    }
+    if (ops.some(op => op.t === 'cell')) ops.push({ t: 'outputs', before, after: this.copyOutputs(state) });
     this.record(state, ops);
     this.emit();
+  }
+
+  private copyOutputs(state: MutableSheetState): OutputSnapshot {
+    return { formulaResults: new Map(state.formulaResults), outputResults: new Map(state.outputResults), spillRanges: state.spillRanges.slice() };
+  }
+
+  private invalidateOutput(state: MutableSheetState, rowId: number, columnId: string): void {
+    const row = this.rowIndexOf(state, rowId), col = state.columnIndex.get(columnId);
+    if (col === undefined) return;
+    state.formulaResults.delete(cellKey(rowId, columnId));
+    state.outputResults.delete(`${col},${row}`);
+    state.spillRanges = state.spillRanges.filter(range => {
+      if (range.anchorCol !== col || range.anchorRow !== row) return true;
+      // Null tombstones clear the former spill's children on export, including
+      // children outside the loaded view. The anchor itself keeps the edit.
+      for (const key of state.outputResults.keys()) {
+        const [c = -1, r = -1] = key.split(',').map(Number);
+        if (c >= range.anchorCol && c <= range.endCol && r >= range.anchorRow && r <= range.endRow) state.outputResults.set(key, null);
+      }
+      return false;
+    });
   }
 
   /** Write cell values (the grid's onCellValueChanged lands here). Formula text starts with "=". */
@@ -668,6 +706,52 @@ export class XlsxWorkbookDocument {
     this.emit();
   }
 
+  private localAccessors = new Map<string, IGridDataAccessor>();
+
+  /** Raw local sheet access in grid coordinates, including unloaded cells. */
+  formulaDataAccessor(sheetName: string): IGridDataAccessor {
+    const previous = this.localAccessors.get(sheetName);
+    if (previous) return previous;
+    const accessor: IGridDataAccessor = {
+      getCellValue: (col, row) => {
+        const state = this.sheets.get(sheetName);
+        const column = state?.columns[col], item = state?.rows[row];
+        if (item && column) return item[column.columnId];
+        // Imported array children are caches owned by their anchor, not obstructions.
+        if (state?.source.arrayRanges?.some(r => col >= r.anchorCol && col <= r.endCol && row >= r.anchorRow && row <= r.endRow && (col !== r.anchorCol || row !== r.anchorRow))) return '';
+        const offset = state?.source.formatting.headerPromoted ? 1 : 0;
+        const cell = this.worksheet(sheetName)?.findRow(row + 1 + offset)?.findCell(col + 1);
+        return normalizeCellValue(cell?.value);
+      },
+      isCellOccupied: (col, row) => {
+        const state = this.sheets.get(sheetName);
+        const value = accessor.getCellValue(col, row);
+        if (state?.rows[row] && state.columns[col]) return value !== '' && value != null;
+        if (state?.source.arrayRanges?.some(r => col >= r.anchorCol && col <= r.endCol && row >= r.anchorRow && row <= r.endRow && (col !== r.anchorCol || row !== r.anchorRow))) return false;
+        const offset = state?.source.formatting.headerPromoted ? 1 : 0;
+        const cell = this.worksheet(sheetName)?.findRow(row + 1 + offset)?.findCell(col + 1);
+        return cell?.type === ExcelJS.ValueType.Formula || (value !== '' && value != null);
+      },
+      isCellMerged: (col, row) => {
+        const state = this.sheets.get(sheetName);
+        const offset = state?.source.formatting.headerPromoted ? 1 : 0;
+        if (state?.merges !== state?.initialMerges && state) {
+          const contains = (merge: IMergedCell) => {
+            const b = this.mergeBounds(state, merge);
+            return col >= b.left && col <= b.right && row >= b.top && row <= b.bottom;
+          };
+          if (state.merges.some(contains)) return true;
+          if (state.initialMerges.some(contains)) return false;
+        }
+        return !!this.worksheet(sheetName)?.findRow(row + 1 + offset)?.findCell(col + 1)?.isMerged;
+      },
+      getRowCount: () => (this.worksheet(sheetName)?.rowCount ?? 0) - (this.sheets.get(sheetName)?.source.formatting.headerPromoted ? 1 : 0),
+      getColumnCount: () => this.worksheet(sheetName)?.columnCount ?? 0,
+    };
+    this.localAccessors.set(sheetName, accessor);
+    return accessor;
+  }
+
   // ---- Cross-sheet reads -------------------------------------------------------
 
   /**
@@ -729,6 +813,7 @@ export class XlsxWorkbookDocument {
   async toWorkbook(): Promise<ExcelJS.Workbook> {
     const out = new ExcelJS.Workbook();
     await out.xlsx.load(await (this.editedWorkbook ?? this.workbook).xlsx.writeBuffer());
+    copyDynamicArrays(this.editedWorkbook ?? this.workbook, out);
     let valuesChanged = false;
     for (const state of this.sheets.values()) {
       const ws = out.getWorksheet(state.name);
@@ -825,7 +910,9 @@ export class XlsxWorkbookDocument {
       const columnId = state.columns[col]?.columnId;
       const raw = columnId ? state.rows[row]?.[columnId] : undefined;
       const output = ws.getCell(sheetRowOf(row), col + 1);
-      if (!output.isMerged && !isFormulaText(raw) && (raw === '' || raw == null)) output.value = resultValue(cached) ?? null;
+      const unloaded = !state.rows[row] || !state.columns[col];
+      if (!output.isMerged && !isFormulaText(raw) && (raw === '' || raw == null)
+        && (!unloaded || !this.formulaDataAccessor(state.name).isCellOccupied?.(col, row))) output.value = resultValue(cached) ?? null;
       // A recalculated array can become a scalar or #SPILL!. Its old file
       // extent must no longer claim the child cells (including obstructions).
       if (isFormulaText(raw) && !state.spillRanges.some(r => r.anchorCol === col && r.anchorRow === row)) {
@@ -851,6 +938,10 @@ export class XlsxWorkbookDocument {
         shareType: 'array', ref: `${anchor.address}:${end.address}`,
         ...(cached !== undefined ? { result: cached } : {}),
       } as ExcelJS.CellFormulaValue;
+      // Unedited imported legacy arrays retain their identity. New spill
+      // formulas receive dynamic metadata; imported dynamic markers are copied.
+      const importedArray = state.source.arrayRanges?.some(range => range.anchorCol === spill.anchorCol && range.anchorRow === spill.anchorRow);
+      if (!importedArray || formula !== state.initialRows[spill.anchorRow]?.[column.columnId]) markDynamicArray(ws, anchor.address);
     }
 
     // Styles: rewrite only cells whose style object changed.

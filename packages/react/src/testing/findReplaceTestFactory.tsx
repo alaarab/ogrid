@@ -72,6 +72,20 @@ export function createFindReplaceTests(OGrid: React.ComponentType<IOGridProps<Fr
   }
 
   describe('Find & Replace', () => {
+    it.each(['f', 'h'] as const)('protects the selected cell while the lazy Ctrl+%s panel mounts and focuses Find', async (key) => {
+      const { container, grid } = renderGrid();
+      focusGrid(container, grid);
+      fireEvent.keyDown(grid, { key, ctrlKey: true });
+      // A keystroke can arrive before the deferred panel commits.
+      fireEvent.keyDown(grid, { key: 'x' });
+      expect(container.querySelector('tbody input')).toBeNull();
+      const input = await screen.findByRole('textbox', { name: 'Find' });
+      await waitFor(() => expect(input).toHaveFocus());
+      fireEvent.change(input, { target: { value: 'apple' } });
+      expect(bodyCell(container, 0, 0).textContent).toBe('Apple');
+      expect((input as HTMLInputElement).value).toBe('apple');
+    });
+
     it('Ctrl+F on the focused grid opens Find and focuses its input', async () => {
       const { container, grid } = renderGrid();
       const input = await openFind(container, grid);

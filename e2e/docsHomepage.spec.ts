@@ -75,3 +75,37 @@ test('docs homepage hero grid stays clipped and edit height stays stable', async
   expect(after?.width).toBe(before?.width);
   expect(after?.height).toBe(before?.height);
 });
+
+test('XLSX demo toolbar fits 790px with keyboard access to every group', async ({ page }) => {
+  await page.goto('docs/features/xlsx-import');
+  const demo = page.locator('.live-demo').first();
+  await demo.evaluate(el => { (el as HTMLElement).style.width = '790px'; });
+  const toolbar = demo.getByRole('toolbar', { name: 'Cell formatting' });
+  await expect(toolbar).toBeVisible();
+  await expect.poll(async () => toolbar.evaluate(el => {
+    const buttons = Array.from(el.querySelectorAll<HTMLElement>('[data-xtb-item]'));
+    return Math.max(...buttons.map(b => b.getBoundingClientRect().top)) - Math.min(...buttons.map(b => b.getBoundingClientRect().top));
+  })).toBeLessThan(2);
+  const cell = demo.locator('tbody [data-row-index][data-col-index]').first();
+  await cell.click();
+  const font = toolbar.getByRole('button', { name: 'Font', exact: true });
+  await font.focus();
+  await font.press('Enter');
+  await expect(page.getByRole('menuitemradio', { name: 'Default font', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(font).toBeFocused();
+  await font.press('ArrowRight');
+  await expect(toolbar.getByRole('button', { name: 'Font size', exact: true })).toBeFocused();
+  await expect(demo.getByRole('button', { name: 'Insert order row' })).toHaveCSS('border-radius', '6px');
+});
+
+test('drag demo instructions use the shared controls typography', async ({ page }) => {
+  await page.goto('docs/features/drag-and-drop');
+  const instructions = page.getByText(/Drag the row handle to reorder/);
+  await expect(instructions).toBeVisible();
+  expect(await instructions.evaluate(el => {
+    const controls = el.closest('.live-demo__controls');
+    if (!controls) return false;
+    return getComputedStyle(el).color === getComputedStyle(controls).color && getComputedStyle(el).fontFamily === getComputedStyle(controls).fontFamily;
+  })).toBe(true);
+});
