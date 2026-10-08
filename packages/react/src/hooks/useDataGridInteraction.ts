@@ -303,7 +303,6 @@ export function useDataGridInteraction<T>(
     const oldFormula = fc.getFormula(col, row) || null;
     const newFormula = formula || null;
     if (oldFormula === newFormula) return;
-    fc.setFormula(col, row, newFormula);
     const item = itemsRef.current[displayRow];
     const colDef = flatColumnsRef.current?.[col];
     if (item === undefined || !colDef) return;
@@ -317,6 +316,9 @@ export function useDataGridInteraction<T>(
       oldValue: oldFormula ?? plain,
       newValue: newFormula ?? plain,
     });
+    // Let the host invalidate its previous output before publishing the new
+    // formula's result; document edits and their cache snapshots stay atomic.
+    fc.setFormula(col, row, newFormula);
   }, [formulaCellsRef, itemsRef, flatColumnsRef, onCellValueChangedPropRef]);
   const writeSheetFormula = useMemo(() => {
     if (!formulas) return undefined;

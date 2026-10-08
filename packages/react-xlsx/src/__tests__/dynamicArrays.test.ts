@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
+import { dynamicArrayFixture } from './fixtures/dynamicArrayWorkbook';
+import { children, descendants, parseXml } from '../xmlParts';
 import { FormulaEngine, FormulaError } from '@alaarab/ogrid-core/formula';
 import { XlsxWorkbookDocument } from '../xlsxDocument';
 import { sheetToGridData, workbookFromBlob } from '../sheetMapper';
@@ -11,15 +14,41 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { useFormulaEngine } from '../../../react/src/hooks/useFormulaEngine';
 
-async function rereadFile(blob: Blob): Promise<ExcelJS.Workbook> {
+async function fileBytes(blob: Blob): Promise<Uint8Array> {
   const directory = await mkdtemp(join(tmpdir(), 'ogrid-spill-'));
   try {
     const path = join(directory, 'arrays.xlsx');
     await writeFile(path, new Uint8Array(await blob.arrayBuffer()));
-    return await workbookFromBlob(new Blob([await readFile(path)]));
+    return new Uint8Array(await readFile(path));
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+}
+
+async function rereadFile(blob: Blob): Promise<ExcelJS.Workbook> {
+  return workbookFromBlob(new Blob([await fileBytes(blob)]));
+}
+
+async function dynamicIdentity(blob: Blob, address: string, sheet = 'sheet1.xml') {
+  const zip = await JSZip.loadAsync(await fileBytes(blob));
+  const xml = parseXml(await zip.file(`xl/worksheets/${sheet}`)!.async('string'));
+  const anchor = descendants(xml, 'c').find(c => c.attrs.r === address)!;
+  const metadata = zip.file('xl/metadata.xml');
+  expect(metadata).not.toBeNull();
+  const meta = parseXml(await metadata!.async('string'));
+  const types = children(children(meta, 'metadataTypes')[0]!, 'metadataType');
+  const record = children(children(meta, 'cellMetadata')[0]!, 'bk')[Number(anchor.attrs.cm) - 1];
+  expect(record).toBeDefined();
+  const rc = children(record!, 'rc')[0]!;
+  expect(types[Number(rc.attrs.t) - 1]?.attrs.name).toBe('XLDAPR');
+  const future = children(meta, 'futureMetadata').find(f => f.attrs.name === 'XLDAPR')!;
+  const block = children(future, 'bk')[Number(rc.attrs.v)]!;
+  expect(descendants(block, 'dynamicArrayProperties')[0]?.attrs).toMatchObject({ fDynamic: '1', fCollapsed: '0' });
+  const relationships = parseXml(await zip.file('xl/_rels/workbook.xml.rels')!.async('string'));
+  expect(children(relationships).some(r => r.attrs.Type?.endsWith('/sheetMetadata') && r.attrs.Target === 'metadata.xml')).toBe(true);
+  const contentTypes = parseXml(await zip.file('[Content_Types].xml')!.async('string'));
+  expect(children(contentTypes).some(t => t.attrs.PartName === '/xl/metadata.xml' && t.attrs.ContentType?.endsWith('sheetMetadata+xml'))).toBe(true);
+  return { anchor, meta, zip };
 }
 
 function renderDocument(doc: XlsxWorkbookDocument, name: string) {
@@ -27,11 +56,94 @@ function renderDocument(doc: XlsxWorkbookDocument, name: string) {
   return renderHook(({ rows, functions }) => useFormulaEngine({
     formulas: true, formulasFromData: true, items: rows, flatColumns: state.columns,
     sheets: doc.sheetAccessors(), formulaFunctions: functions,
+    formulaDataAccessor: doc.formulaDataAccessor(name),
     onFormulaRecalc: result => doc.recordFormulaResults(name, result),
   }), { initialProps: { rows: state.rows, functions: {} as Parameters<typeof useFormulaEngine>[0]['formulaFunctions'] } });
 }
 
 describe('dynamic arrays in real XLSX files', () => {
+  test.each(['row', 'column'].flatMap(axis => ['text', 'formula', 'merge'].map(kind => ({ axis, kind }))))('blocks spills on unloaded %j cells without damaging the source', async ({ axis, kind }) => {
+    const source = new ExcelJS.Workbook();
+    const ws = source.addWorksheet('Arrays');
+    ws.getCell('A1').value = 5;
+    ws.getCell('B1').value = { formula: axis === 'row' ? '_xlfn.SEQUENCE(A1)' : '_xlfn.SEQUENCE(1,A1)', result: 1 };
+    const obstruction = axis === 'row' ? 'B5' : 'F1';
+    if (kind === 'text') ws.getCell(obstruction).value = 'secret';
+    if (kind === 'formula') ws.getCell(obstruction).value = { formula: '1-1', result: 0 };
+    if (kind === 'merge') ws.mergeCells(axis === 'row' ? 'B5:C5' : 'F1:G1');
+    const doc = new XlsxWorkbookDocument(await rereadFile(await xlsxBlobFromWorkbook(source)), {
+      headerRow: 'none', ...(axis === 'row' ? { maxRows: 2 } : { maxCols: 2 }),
+    });
+    const hook = renderDocument(doc, 'Arrays');
+    const exported = (await rereadFile(await doc.toBlob())).getWorksheet('Arrays')!;
+    expect(exported.getCell('B1').value).toMatchObject({ result: { error: '#SPILL!' } });
+    if (kind === 'text') expect(exported.getCell(obstruction).value).toBe('secret');
+    if (kind === 'formula') expect(exported.getCell(obstruction).value).toMatchObject({ formula: '1-1' });
+    if (kind === 'merge') expect(exported.getCell(obstruction).isMerged).toBe(true);
+    hook.unmount();
+  });
+
+  test.each(['scalar', 'spill'])('clearing a %s formula exports immediately and undo/redo restores caches without a hook', async kind => {
+    const source = new ExcelJS.Workbook();
+    const ws = source.addWorksheet('Arrays');
+    ws.getCell('A1').value = kind === 'scalar' ? { formula: '1+1', result: 2 }
+      : { formula: '_xlfn.SEQUENCE(3)', shareType: 'array', ref: 'A1:A3', result: 1 };
+    if (kind === 'spill') { ws.getCell('A2').value = 2; ws.getCell('A3').value = 3; }
+    const doc = new XlsxWorkbookDocument(await rereadFile(await xlsxBlobFromWorkbook(source)), { headerRow: 'none' });
+    doc.setCellValues('Arrays', [{ rowId: 0, columnId: 'A', value: '' }]);
+    const values = async () => (await rereadFile(await doc.toBlob())).getWorksheet('Arrays')!;
+    let out = await values();
+    expect([null, '']).toContain(out.getCell('A1').value);
+    if (kind === 'spill') expect([out.getCell('A2').value, out.getCell('A3').value]).toEqual([null, null]);
+    doc.undo('Arrays');
+    out = await values();
+    expect(out.getCell('A1').value).toMatchObject({ result: kind === 'scalar' ? 2 : 1 });
+    if (kind === 'spill') expect(out.getCell('A3').value).toBe(3);
+    doc.redo('Arrays');
+    expect([null, '']).toContain((await values()).getCell('A1').value);
+  });
+
+  test('preserves real dynamic-array metadata without edits and updates it on resize, structure edits and deletion', async () => {
+    const doc = new XlsxWorkbookDocument(await rereadFile(await dynamicArrayFixture()), { headerRow: 'none' });
+    let identity = await dynamicIdentity(await doc.toBlob(), 'B1');
+    expect(identity.anchor.attrs.cm).toBe('2'); // retain the original index, not a generated replacement
+    expect(descendants(identity.meta, 'metadataType').some(t => t.attrs.name === 'OTHER')).toBe(true);
+    const hook = renderDocument(doc, 'Arrays');
+    act(() => { doc.setCellValues('Arrays', [{ rowId: 0, columnId: 'A', value: 2 }]); hook.rerender({ rows: doc.sheet('Arrays')!.rows, functions: {} }); });
+    identity = await dynamicIdentity(await doc.toBlob(), 'B1');
+    expect(children(identity.anchor, 'f')[0]?.attrs.ref).toBe('B1:B2');
+    hook.unmount();
+    doc.insertRows('Arrays', 0);
+    doc.insertColumns('Arrays', 0);
+    identity = await dynamicIdentity(await doc.toBlob(), 'C2');
+    expect(children(identity.anchor, 'f')[0]?.attrs.ref).toBe('C2:C3');
+    doc.setCellValues('Arrays', [{ rowId: 1, columnId: 'C', value: '' }]);
+    const blob = await doc.toBlob();
+    const zip = await JSZip.loadAsync(await fileBytes(blob));
+    const sheet = parseXml(await zip.file('xl/worksheets/sheet1.xml')!.async('string'));
+    expect(descendants(sheet, 'c').find(c => c.attrs.r === 'C2')?.attrs.cm).toBeUndefined();
+    doc.undo('Arrays');
+    await dynamicIdentity(await doc.toBlob(), 'C2');
+  });
+
+  test('new document spills and grid-export spills emit dynamic identity while legacy arrays remain legacy', async () => {
+    const source = new ExcelJS.Workbook();
+    const ws = source.addWorksheet('Arrays');
+    ws.addRows([[3, '', ''], [null, '', ''], [null, '', '']]);
+    ws.getCell('C1').value = { formula: 'A1:A3', shareType: 'array', ref: 'C1:C3', result: 3 };
+    const doc = new XlsxWorkbookDocument(await rereadFile(await xlsxBlobFromWorkbook(source)), { headerRow: 'none' });
+    const hook = renderDocument(doc, 'Arrays');
+    act(() => { doc.setCellValues('Arrays', [{ rowId: 0, columnId: 'B', value: '=SEQUENCE(A1)' }]); hook.rerender({ rows: doc.sheet('Arrays')!.rows, functions: {} }); });
+    const identity = await dynamicIdentity(await doc.toBlob(), 'B1');
+    expect(descendants(parseXml(await identity.zip.file('xl/worksheets/sheet1.xml')!.async('string')), 'c').find(c => c.attrs.r === 'C1')?.attrs.cm).toBeUndefined();
+    const grid = workbookFromGridData([{ n: 1 }, { n: 2 }], [{ columnId: 'n', name: 'Sequence' }], row => row.n, {
+      formulas: [{ col: 0, row: 0, formula: '=SEQUENCE(2)' }],
+      spillRanges: [{ anchorCol: 0, anchorRow: 0, endCol: 0, endRow: 1 }],
+    });
+    await dynamicIdentity(await xlsxBlobFromWorkbook(grid), 'A2');
+    hook.unmount();
+  });
+
   test('hook adoption, edits, undo and rebuilds export current spill metadata even when only the shape changes', async () => {
     const source = new ExcelJS.Workbook();
     const ws = source.addWorksheet('Arrays');

@@ -119,7 +119,7 @@ export function useOGridFormulaBar<T>(
 export function useOGridFormulas<T>(
   props: Pick<
     IOGridProps<T>,
-    'formulas' | 'initialFormulas' | 'onFormulaRecalc' | 'formulaFunctions' | 'namedRanges' | 'formulaLimits' | 'sheets' | 'onUndo' | 'mergedCells' | 'getRowId'
+    'formulas' | 'initialFormulas' | 'onFormulaRecalc' | 'formulaFunctions' | 'namedRanges' | 'formulaLimits' | 'sheets' | 'onUndo' | 'mergedCells' | 'getRowId' | 'formulaDataAccessor'
   >,
   sheetItems: T[],
   columns: IColumnDef<T>[],
@@ -158,6 +158,7 @@ export function useOGridFormulas<T>(
     formulasFromData: formulasFollowData(props.onUndo != null),
     isRowHidden,
     isCellMerged,
+    formulaDataAccessor: props.formulaDataAccessor,
   });
 
   const activeCell = useOGridActiveCell();

@@ -5,7 +5,7 @@
 import ExcelJS from 'exceljs';
 import { triggerBlobDownload, type CsvColumn, type ISpillRange } from '@alaarab/ogrid-core';
 import { rebaseFormulaRows, toFileFormula } from './formulaReferences';
-import { sourceArchiveOf } from './sourceArchive';
+import { dynamicCellsOf, markDynamicArray, sourceArchiveOf } from './sourceArchive';
 
 export const XLSX_MIME_TYPE =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -63,6 +63,7 @@ export function workbookFromGridData<T>(
         formula: toFileFormula(rebaseFormulaRows(f.formula, 1)),
         result,
       } as ExcelJS.CellFormulaValue;
+      if (spill) markDynamicArray(ws, ws.getCell(f.row + 2, f.col + 1).address);
     }
   }
 
@@ -71,8 +72,12 @@ export function workbookFromGridData<T>(
 
 /** Serialize a workbook to a Blob with the .xlsx MIME type. */
 export async function xlsxBlobFromWorkbook(wb: ExcelJS.Workbook): Promise<Blob> {
-  const buf = await wb.xlsx.writeBuffer();
+  let buf: ArrayBuffer | Uint8Array<ArrayBuffer> = await wb.xlsx.writeBuffer();
   const source = sourceArchiveOf(wb);
+  if (dynamicCellsOf(wb)?.size || source?.metadataPath) {
+    const { writeDynamicArrays } = await import('./ooxmlDynamicArrays');
+    buf = await writeDynamicArrays(wb, buf as ArrayBuffer);
+  }
   if (source) {
     const { preserveMedia } = await import('./ooxmlMedia');
     return new Blob([await preserveMedia(source, buf as ArrayBuffer, wb)], { type: XLSX_MIME_TYPE });

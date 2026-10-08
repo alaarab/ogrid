@@ -43,7 +43,7 @@ function Inner() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
       <div className="live-demo__controls">
-        <span className="live-demo__readout">
+        <span>
           Drag the row handle to reorder · drag a selected range's handle to move (Ctrl to copy) · drop text onto a cell
         </span>
         {readout && <span className="live-demo__readout">Dropped: {readout}</span>}

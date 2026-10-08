@@ -1,10 +1,31 @@
 import '@testing-library/jest-dom';
 import { expect, test } from 'bun:test';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ExcelJS from 'exceljs';
 import { XlsxWorkbookGrid } from '../XlsxWorkbookGrid';
 import { XlsxWorkbookDocument } from '../xlsxDocument';
 import { workbookFromBlob } from '../sheetMapper';
+
+test('hidden worksheet rows stay hidden through insert, delete and undo', async () => {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Data');
+  ws.addRows([['Name'], ['ordinary'], ['secret'], ['last']]);
+  ws.getRow(3).hidden = true;
+  let doc: XlsxWorkbookDocument | undefined;
+  render(<XlsxWorkbookGrid workbook={wb} height={400} editable onDocument={d => { doc = d; }} />);
+  await screen.findByText('ordinary');
+  expect(screen.queryByText('secret')).toBeNull();
+  await act(async () => { doc!.insertRows('Data', 1); });
+  expect(screen.queryByText('secret')).toBeNull();
+  expect(screen.getByText('ordinary')).toBeInTheDocument();
+  await act(async () => { doc!.deleteRows('Data', 0); });
+  expect(screen.queryByText('secret')).toBeNull();
+  expect(screen.queryByText('ordinary')).toBeNull();
+  expect(screen.getByText('last')).toBeInTheDocument();
+  await act(async () => { doc!.undo('Data'); doc!.undo('Data'); });
+  expect(screen.queryByText('secret')).toBeNull();
+  expect(screen.getByText('ordinary')).toBeInTheDocument();
+});
 
 test.each(['Insert 2 columns left', 'Insert 2 columns right', 'Delete 2 columns'])('%s exports as one Undo/Redo action', async (label) => {
   const wb = new ExcelJS.Workbook();

@@ -95,6 +95,7 @@ function App() {
           {...gridDataProps}
           editable={isPremiumExample || !projectScenario.serverSide}
           cellSelection
+          rangeMove={new URLSearchParams(window.location.search).has('rangeMove')}
           cellReferences={isPremiumExample ? undefined : projectScenario.cellReferences}
           rowSelection={isPremiumExample ? undefined : projectScenario.rowSelection}
           formulas={isPremiumExample ? undefined : projectScenario.formulas}

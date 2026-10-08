@@ -211,7 +211,7 @@ export function XlsxGrid({
   const sheets = useMemo(() => doc.sheetAccessors(), [doc]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<IOGridApi<SheetRow>>(null);
-  const worksheet = workbook.getWorksheet(sheetName);
+  const worksheet = doc.worksheet(sheetName);
   const hasMedia = !!worksheet?.getImages().length || !!sourceArchiveOf(workbook)?.charts.get(sheetName)?.length;
   const hiddenRows = useMemo(() => {
     const offset = sheetSource?.formatting.headerPromoted ? 1 : 0;
@@ -296,7 +296,8 @@ export function XlsxGrid({
     columns,
     data: rows,
     getRowId: (row: SheetRow) => row.__rowIdx,
-    defaultHiddenRowIds: hiddenRows,
+    hiddenRowIds: hiddenRows,
+    formulaDataAccessor: doc.formulaDataAccessor(sheetName),
     cellReferences: true,
     formulas: true,
     sheets,

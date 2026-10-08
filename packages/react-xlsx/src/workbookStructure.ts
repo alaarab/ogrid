@@ -1,11 +1,14 @@
 import ExcelJS from 'exceljs';
+import { copyDynamicArrays } from './sourceArchive';
 import { indexToColumnLetter } from '@alaarab/ogrid-core';
 import { adjustFormulaReferences, parseCellRef, shiftFormulaReferences, type StructureAxis } from '@alaarab/ogrid-core/formula';
 
 /** ExcelJS's model getter calls this `merges`, but its setter reads `mergeCells`. */
 export function cloneWorkbook(workbook: ExcelJS.Workbook): ExcelJS.Workbook {
   const model = structuredClone(workbook.model) as unknown as WorkbookModel;
-  return workbookFromModel(model);
+  const out = workbookFromModel(model);
+  copyDynamicArrays(workbook, out);
+  return out;
 }
 
 function workbookFromModel(model: WorkbookModel): ExcelJS.Workbook {
@@ -243,6 +246,7 @@ export function editWorkbookStructure(workbook: ExcelJS.Workbook, target: string
     ranges: name.ranges.map((ref) => shiftWorkbookReferences(ref, '', target, axis, at, count)).filter((ref) => !ref.includes('#REF!')),
   })).filter((name) => name.ranges.length > 0);
   const result = workbookFromModel(model);
+  copyDynamicArrays(workbook, result, (name, address) => shiftWorkbookReferences(address, name, target, axis, at, count));
   result.calcProperties = { ...result.calcProperties, fullCalcOnLoad: true };
   return result;
 }

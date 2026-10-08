@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   buildSheetRowIndex,
   resolveSheetItems,
@@ -30,16 +30,27 @@ export function useOGridSheetCoordinates<T>(
   dataFetching: Pick<UseOGridDataFetchingState<T>, 'displayItems' | 'windowed'>,
   pagination: { page: number; pageSize: PageSize },
   getRowId: (item: T) => RowId,
+  preserveRowOrder = false,
 ): UseOGridSheetCoordinatesState<T> {
   const { displayItems, windowed } = dataFetching;
   const pageOffset = resolveSheetPageOffset(isServerSide, pagination.page, pagination.pageSize);
+  const rowOrder = useRef<RowId[]>([]);
+  const formulaData = useMemo(() => {
+    if (!preserveRowOrder || isServerSide) { rowOrder.current = []; return displayData; }
+    const byId = new Map(displayData.map(item => [getRowId(item), item]));
+    const ids = rowOrder.current.filter(id => byId.has(id));
+    const seen = new Set(ids);
+    for (const item of displayData) { const id = getRowId(item); if (!seen.has(id)) { ids.push(id); seen.add(id); } }
+    rowOrder.current = ids;
+    return ids.map(id => byId.get(id) as T);
+  }, [displayData, getRowId, preserveRowOrder, isServerSide]);
   const sheetItems = useMemo(
-    () => resolveSheetItems(windowed, isServerSide, displayData, displayItems, pageOffset),
-    [windowed, isServerSide, displayData, displayItems, pageOffset]
+    () => resolveSheetItems(windowed, isServerSide, formulaData, displayItems, pageOffset),
+    [windowed, isServerSide, formulaData, displayItems, pageOffset]
   );
   const sheetRowById = useMemo(
-    () => (!spreadsheetMode || isServerSide ? null : buildSheetRowIndex(displayData, getRowId)),
-    [spreadsheetMode, isServerSide, displayData, getRowId]
+    () => (!spreadsheetMode || isServerSide ? null : buildSheetRowIndex(sheetItems, getRowId)),
+    [spreadsheetMode, isServerSide, sheetItems, getRowId]
   );
   const formulaRowMap = useMemo(
     () => selectFormulaRowMap(spreadsheetMode, windowed ? windowed.rowCount : null, sheetRowById, pageOffset, displayItems, getRowId),

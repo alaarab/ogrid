@@ -1,7 +1,7 @@
 import type * as React from 'react';
 import { useMemo, useCallback, useState, useRef } from 'react';
 
-import { flattenColumns } from '../utils';
+import { getCellValue, flattenColumns } from '../utils';
 import { useOGridPagination } from './useOGridPagination';
 import { useOGridSorting } from './useOGridSorting';
 import { useOGridFilters } from './useOGridFilters';
@@ -29,6 +29,7 @@ import { useOGridCellNotes } from './useOGridCellNotes';
 import { useSortFilterColumns } from './useSortFilterColumns';
 import {
   buildStatusBarConfig,
+  buildSheetRowIndex,
   isFullyVirtualized,
   resolveColumnChooserPlacement,
   resolveDefaultSortField,
@@ -101,6 +102,17 @@ export function useOGrid<T>(
   const displayData = data ?? internalData;
   const displayLoading = controlledLoading ?? internalLoading;
 
+  const formulaSort = useRef<{ value: (item: T, col: number) => unknown } | null>(null);
+  const [formulaSortReady, setFormulaSortReady] = useState(false);
+  const onSortedFormulaRecalc = useCallback((result: import('@alaarab/ogrid-core').IRecalcResult) => {
+    setFormulaSortReady(true);
+    props.onFormulaRecalc?.(result);
+  }, [props.onFormulaRecalc]);
+  const processingColumns = useMemo(() => !props.formulas ? sortFilterColumns : sortFilterColumns.map((column, col) => ({
+    ...column,
+    valueGetter: (item: T) => formulaSortReady ? formulaSort.current?.value(item, col) : getCellValue(item, column),
+  })), [sortFilterColumns, props.formulas, formulaSortReady]);
+
   // --- Sub-hooks ---
   const paginationState = useOGridPagination({
     controlledPage, controlledPageSize, defaultPageSize,
@@ -122,7 +134,7 @@ export function useOGrid<T>(
   });
   const structureVersionRef = useRef(0);
   const dataFetchingState = useOGridDataFetching({
-    isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, structureVersionRef, columns: sortFilterColumns,
+    isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, structureVersionRef, columns: processingColumns,
     stableFilters: filtersState.stableFilters, sort: sortingState.sort, sortModel: sortingState.sortModel,
     sortVersion: sortingState.sortVersion,
     page, pageSize, paginate: !fullyVirtualized,
@@ -213,7 +225,7 @@ export function useOGrid<T>(
   const { showRowNumbers: showRowNumbersResolved, showColumnLetters: showColumnLettersResolved, showNameBox } = chrome;
   const showActiveCellChange = chrome.reportActiveCell;
   const { sheetItems, formulaRowMap } = useOGridSheetCoordinates(
-    chrome.spreadsheetMode, isServerSide, displayData, dataFetchingState, paginationState, getRowId,
+    chrome.spreadsheetMode, isServerSide, displayData, dataFetchingState, paginationState, getRowId, !!rowDragging,
   );
   const nameBox = useOGridNameBox(props.namedRanges);
   const { hiddenRowSet } = hiddenRows;
@@ -225,7 +237,13 @@ export function useOGrid<T>(
     };
   }, [hiddenRowSet, props.formulas, sheetItems, getRowId]);
   const { dgFormulaProps, formulaBarEl, activeCellRef, onActiveCellChange, formulaEngine, formulasFollowData } =
-    useOGridFormulas(props, sheetItems, columns, formulaRowMap, nameBox, isSheetRowHidden);
+    useOGridFormulas({ ...props, onFormulaRecalc: onSortedFormulaRecalc }, sheetItems, columns, formulaRowMap, nameBox, isSheetRowHidden);
+  const formulaRowById = useMemo(() => props.formulas && !isServerSide ? buildSheetRowIndex(sheetItems, getRowId) : null, [sheetItems, getRowId, props.formulas, isServerSide]);
+  formulaSort.current = { value: (item, col) => {
+    const row = formulaRowById?.get(getRowId(item)) ?? -1;
+    const value = formulaEngine.getFormulaValue(col, row);
+    return value === undefined ? getCellValue(item, columns[col] as typeof columns[number]) : value;
+  } };
   // Stats cover hidden rows too (Excel semantics); hidden rows are simply not painted.
   const conditionalFormat = useConditionalFormatting({
     rules: props.conditionalFormats, items: sheetItems, columns, formulaEngine, formulaVersion: dgFormulaProps.formulaVersion,

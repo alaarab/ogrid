@@ -92,6 +92,20 @@ export function createFreezeTests(OGrid: OGridComponent): void {
       expect(pinnedCell(container, 3, 'qty')?.style.left).toBe('');
     });
 
+    it.each([
+      { showRowNumbers: true, rowSelection: 'none' as const },
+      { showRowNumbers: false, rowSelection: 'multiple' as const },
+      { showRowNumbers: true, rowSelection: 'multiple' as const },
+    ])('freezes A:B at C with special columns %j', async (special) => {
+      const onFrozenColumnsChange = jest.fn();
+      const { container } = renderGrid({ ...special, onFrozenColumnsChange });
+      await openContextMenu(container, 3, 'total');
+      fireEvent.click(screen.getByText('Freeze panes'));
+      expect(onFrozenColumnsChange).toHaveBeenLastCalledWith(2);
+      expect(pinnedCell(container, 3, 'qty')?.style.left).not.toBe('');
+      expect(pinnedCell(container, 3, 'total')?.style.left).toBe('');
+    });
+
     it('"Freeze panes" freezes rows above and columns left of the active cell', async () => {
       const onFrozenRowsChange = jest.fn();
       const onFrozenColumnsChange = jest.fn();

@@ -405,6 +405,8 @@ interface IOGridBaseProps<T> {
   formulaLimits?: IFormulaLimits;
   /** Sheet accessors for cross-sheet formula references (e.g. { Sheet2: accessor }). */
   sheets?: Record<string, IGridDataAccessor>;
+  /** Full local worksheet access in formula coordinates, including cells outside the loaded grid. */
+  formulaDataAccessor?: IGridDataAccessor;
 
   /**
    * Spreadsheet-style structure editing from the UI: the cell context menu gets

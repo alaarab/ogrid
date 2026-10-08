@@ -23,7 +23,7 @@ export const FORMAT_TOOLBAR_CSS = `
 .ogrid-xtb-sep {
   width: 1px;
   height: 18px;
-  margin: 0 5px;
+  margin: 0 3px;
   background: var(--ogrid-border, #e0e0e0);
   flex: 0 0 auto;
 }
@@ -34,7 +34,7 @@ export const FORMAT_TOOLBAR_CSS = `
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-width: 28px;
+  min-width: 26px;
   height: 28px;
   padding: 0 6px;
   margin: 0;
@@ -48,7 +48,7 @@ export const FORMAT_TOOLBAR_CSS = `
   white-space: nowrap;
   transition: background-color 80ms ease, opacity 80ms ease;
 }
-.ogrid-xtb-btn.ogrid-xtb-icon { width: 28px; padding: 0; }
+.ogrid-xtb-btn.ogrid-xtb-icon { width: 26px; padding: 0; }
 .ogrid-xtb-btn svg { display: block; flex: 0 0 auto; }
 .ogrid-xtb-btn:hover:not(:disabled) { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.05)); }
 .ogrid-xtb-btn:active:not(:disabled) { background: var(--ogrid-active-bg, rgba(0, 0, 0, 0.08)); }
@@ -76,7 +76,7 @@ export const FORMAT_TOOLBAR_CSS = `
   border-radius: 1px;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ogrid-fg, #242424) 22%, transparent);
 }
-.ogrid-xtb-format { min-width: 116px; justify-content: flex-start; padding: 0 6px 0 4px; }
+.ogrid-xtb-format { min-width: 90px; justify-content: flex-start; padding: 0 6px 0 4px; }
 .ogrid-xtb-format .ogrid-xtb-chevron { margin-left: auto; opacity: 0.6; }
 .ogrid-xtb-123 {
   display: inline-flex;
@@ -158,16 +158,16 @@ export const FORMAT_TOOLBAR_CSS = `
   border: 0;
   padding: 0;
 }
-.ogrid-xtb-font { min-width: 116px; justify-content: space-between; padding: 0 4px 0 6px; }
+.ogrid-xtb-font { min-width: 90px; justify-content: space-between; padding: 0 4px 0 6px; }
 .ogrid-xtb-font .ogrid-xtb-chevron { opacity: 0.6; }
 .ogrid-xtb-font-name {
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 96px;
+  max-width: 70px;
   white-space: nowrap;
 }
 .ogrid-xtb-font-pop { max-height: 320px; overflow-y: auto; min-width: 160px; }
-.ogrid-xtb-size { min-width: 56px; justify-content: space-between; padding: 0 4px 0 8px; }
+.ogrid-xtb-size { min-width: 44px; justify-content: space-between; padding: 0 4px 0 8px; }
 .ogrid-xtb-size .ogrid-xtb-chevron { opacity: 0.6; }
 .ogrid-xtb-font-size { font-variant-numeric: tabular-nums; }
 .ogrid-xtb-size-pop { min-width: 120px; }
