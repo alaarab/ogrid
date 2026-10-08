@@ -208,6 +208,18 @@ export function createFindReplaceTests(OGrid: React.ComponentType<IOGridProps<Fr
       expect(onChange).not.toHaveBeenCalled();
     });
 
+    it('skips cells hidden under a merged cell and lands on the anchor', async () => {
+      // r0's note spans rows 0-2, hiding "note 1" and "note 2".
+      const { container, grid } = renderGrid({ mergedCells: [{ rowId: 'r0', columnId: 'note', rowSpan: 3 }] });
+      const input = await openFind(container, grid);
+      fireEvent.change(input, { target: { value: 'note' } });
+      // 8 notes minus the 2 covered ones.
+      await waitFor(() => expect(screen.getByRole('status').textContent).toBe('1 of 6'));
+      await waitFor(() => expect(activeCellText(container)).toBe('note 0'));
+      fireEvent.keyDown(input, { key: 'Enter' });
+      await waitFor(() => expect(activeCellText(container)).toBe('note 3'));
+    });
+
     it('Ctrl+H on a read-only grid opens Find only', async () => {
       const { container, grid } = renderGrid({ editable: false });
       await openFind(container, grid, 'h');
