@@ -185,6 +185,8 @@ export interface DataGridPrimitives {
 }
 
 export interface DataValidationDialogProps {
+  /** Preserve grid-scoped theme tokens on the modal portal. */
+  theme?: React.CSSProperties;
   formulaOffset?: { col: number; row: number };
   rule?: import('@alaarab/ogrid-core').IDataValidationRule;
   alert?: import('@alaarab/ogrid-core').IDataValidationFailure | null;

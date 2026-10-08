@@ -6,6 +6,8 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Both React kits ship all lazy component styles in one `index.css` (also available at `styles/index.css`), while keeping JavaScript split. Radix validation uses themed buttons, fields and a modal backdrop; input messages use themed, collision-aware portals so they clear invalid circles and grid clipping. Built docs and consumer examples now check computed styles in both themes and kits.
+
 - Validation now checks paste, fill, and moves against their proposed values and formulas, including cleared cut sources and array/spill reads. Spill children appear in range-backed list dropdowns, and Find & Replace reports accepted and skipped writes after validation decisions.
 - XLSX structural commands shift validation once with one undo step; named validation sources follow the edited workbook and undo. Prompt-only rules and suppressed dropdowns survive import, editing, worker handover, and export.
 - Data validation displays a focused loading surface while its lazy dialog downloads. The docs demo controls use the shared styling.

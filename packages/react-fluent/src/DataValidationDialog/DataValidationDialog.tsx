@@ -4,7 +4,7 @@ import { DataValidationForm, type DataValidationDialogProps, type ValidationTab 
 /** Fluent modal and tabs, loaded only when validation needs a dialog. */
 export default function DataValidationDialog(p: DataValidationDialogProps) {
   return <Dialog open onOpenChange={(_e, data) => { if (!data.open) p.onClose(); }}>
-    <DialogSurface>
+    <DialogSurface style={p.theme}>
       <DialogBody>
         <DialogTitle>{p.alert?.title ?? 'Data validation'}</DialogTitle>
         <DialogContent>

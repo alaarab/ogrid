@@ -129,11 +129,11 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
   } as unknown as IOGridProps<unknown>;
   return (
     <div style={{ height, width: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div style={{ display: 'flex', gap: 12, padding: 8, alignItems: 'center' }}>
-        {loading && <><span role="status">Loading… {percent}%</span><progress aria-label="Workbook loading" max={100} value={percent} /><button type="button" onClick={cancel}>Cancel</button></>}
-        {preparing && <><span role="status">Preparing editable workbook…</span><button type="button" onClick={cancel}>Cancel</button></>}
-        {editable && !preparing && <button type="button" disabled={loading || !result} onClick={() => { void enableEditing(); }}>Enable editing</button>}
-        {exportFileName && <button type="button" disabled={loading || !result || preparing} onClick={() => { if (result) void result.toBlob().then((saved) => triggerBlobDownload(saved, exportFileName)).catch((reason) => setError(String(reason))); }}>Export</button>}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: 8, alignItems: 'center' }}>
+        {loading && <><span role="status">Loading… {percent}%</span><progress aria-label="Workbook loading" max={100} value={percent} style={{ width: 140, height: 8, accentColor: 'var(--ogrid-selection-color, #217346)' }} /><button type="button" style={STREAM_BUTTON_STYLE} onClick={cancel}>Cancel</button></>}
+        {preparing && <><span role="status">Preparing editable workbook…</span><button type="button" style={STREAM_BUTTON_STYLE} onClick={cancel}>Cancel</button></>}
+        {editable && !preparing && <button type="button" style={{ ...STREAM_BUTTON_STYLE, opacity: loading || !result ? 0.5 : 1 }} disabled={loading || !result} onClick={() => { void enableEditing(); }}>Enable editing</button>}
+        {exportFileName && <button type="button" style={{ ...STREAM_BUTTON_STYLE, opacity: loading || !result || preparing ? 0.5 : 1 }} disabled={loading || !result || preparing} onClick={() => { if (result) void result.toBlob().then((saved) => triggerBlobDownload(saved, exportFileName)).catch((reason) => setError(String(reason))); }}>Export</button>}
         {!loading && !preparing && <span>{rowCount.toLocaleString()} rows loaded{selected?.truncated ? ' (load limit reached)' : ''}</span>}
       </div>
       <WorkbookSheetTabs sheetNames={sheetNames} active={active} idBase={idBase} onSelect={(name) => { setActive(name); callbacks.current.onSheetChange?.(name); }} />
@@ -144,6 +144,13 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
     </div>
   );
 }
+
+// These themed styles travel with the lazy preview, like the sheet tabs.
+const STREAM_BUTTON_STYLE: React.CSSProperties = {
+  padding: '4px 12px', font: 'inherit', cursor: 'pointer',
+  color: 'var(--ogrid-fg, #242424)', background: 'var(--ogrid-bg, #fff)',
+  border: '1px solid var(--ogrid-border, #ccc)', borderRadius: 'var(--ogrid-radius, 4px)',
+};
 
 function previewColumns(sheet: XlsxStreamSheet, options: import('./streamingTypes').XlsxStreamOptions) {
   const workbook = new ExcelJS.Workbook();

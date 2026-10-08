@@ -13,6 +13,7 @@ import {
 } from '../utils';
 import { CURSOR_CELL_STYLE, CELL_EDITOR_ATTR } from '../constants/domHelpers';
 import { CellErrorBoundary } from '../components/CellErrorBoundary';
+import { ValidationInputMessage } from '../components/ValidationInputMessage';
 import type { UseDataGridTableOrchestrationResult } from './useDataGridTableOrchestration';
 import type { InlineCellEditorProps } from '../components/createOGrid';
 import type { DataGridStyles, DataGridPrimitives } from '../components/BaseDataGridTable.types';
@@ -190,9 +191,7 @@ export function useRenderCellContent<T>(
             <span role="img" data-validation-invalid="" aria-label="Invalid data" style={{ position: 'absolute', inset: 2, border: '2px solid #d13438', borderRadius: '50%', pointerEvents: 'none', zIndex: 2 }} />
           )}
           {descriptor.isActive && rule?.inputMessage && rule.inputMessage.show !== false && (
-            <span role="tooltip" style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100, width: 220, padding: 8, whiteSpace: 'normal', background: 'var(--ogrid-bg, #fffbe6)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #aaa)', boxShadow: '0 2px 6px #0003', pointerEvents: 'none' }}>
-              {rule.inputMessage.title && <strong style={{ display: 'block' }}>{rule.inputMessage.title}</strong>}{rule.inputMessage.text}
-            </span>
+            <ValidationInputMessage message={rule.inputMessage} styles={styles} primitives={primitives} />
           )}
           {descriptor.isActive && descriptor.mode === 'display' && descriptor.canEditAny && list && (
             <button type="button" aria-label="Show validation list" tabIndex={-1} style={{ position: 'absolute', right: 1, top: 1, bottom: 1, width: 20, padding: 0, zIndex: 3 }}

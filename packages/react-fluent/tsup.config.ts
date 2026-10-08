@@ -1,5 +1,6 @@
 import { defineConfig } from 'tsup';
 import { sassPlugin, postcssModules } from 'esbuild-sass-plugin';
+import { singleStylesheet } from '../../scripts/single-stylesheet.mjs';
 
 export default defineConfig({
   entry: ['src/index.ts'],
@@ -19,6 +20,6 @@ export default defineConfig({
     options.jsxImportSource = 'ogrid-react-jsx';
     options.alias = { ...options.alias, 'ogrid-react-jsx': '../../scripts/react-jsx' };
   },
-  esbuildPlugins: [sassPlugin({ transform: postcssModules({ generateScopedName: 'ogrid-fluent__[name]__[local]' }) })],
+  esbuildPlugins: [sassPlugin({ transform: postcssModules({ generateScopedName: 'ogrid-fluent__[name]__[local]' }) }), singleStylesheet()],
   outExtension: () => ({ js: '.js' }),
 });
