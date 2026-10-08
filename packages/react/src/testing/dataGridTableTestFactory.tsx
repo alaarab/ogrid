@@ -48,6 +48,31 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     expect(screen.getAllByTestId('cell-status').map((el) => el.textContent)).toEqual(['Active', 'Closed']);
   });
 
+  it('freezes leading visible columns on the bare table and preserves separate pins when reduced or cleared', () => {
+    const tableColumns: IColumnDef<FixtureRow>[] = [
+      { columnId: 'id', name: 'ID' },
+      ...twoColumnColumns,
+      { columnId: 'extra', name: 'Extra', pinned: 'right' },
+    ];
+    const props: IOGridDataGridProps<FixtureRow> = {
+      items: fixtureRows, columns: tableColumns, getRowId, visibleColumns: new Set(['name', 'status', 'extra']),
+      columnOrder: ['status', 'id', 'name', 'extra'], frozenColumns: 2,
+      filters: {}, onFilterChange: jest.fn(), filterOptions: {}, loadingFilterOptions: {},
+      sortDirection: 'asc', onColumnSort: jest.fn(),
+    };
+    const { container, rerender } = render(<DataGridTable {...props} />);
+    const cell = (id: string) => container.querySelector<HTMLElement>(`tbody td[data-column-id="${id}"]`)!;
+    expect(cell('status').style.left).not.toBe('');
+    expect(cell('name').style.left).not.toBe('');
+    expect(cell('extra').style.right).not.toBe('');
+    rerender(<DataGridTable {...props} frozenColumns={1} />);
+    expect(cell('status').style.left).not.toBe('');
+    expect(cell('name').style.left).toBe('');
+    rerender(<DataGridTable {...props} frozenColumns={0} />);
+    expect(cell('status').style.left).toBe('');
+    expect(cell('extra').style.right).not.toBe('');
+  });
+
   it('applies virtualScroll.rowHeight to the rendered rows', () => {
     const { container } = renderTable({ virtualScroll: { enabled: true, rowHeight: 48 } });
     const wrapper = container.querySelector<HTMLElement>('[data-ogrid-scroll-container]')!;

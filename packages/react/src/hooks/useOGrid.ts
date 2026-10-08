@@ -152,37 +152,20 @@ export function useOGrid<T>(
   } = columnLayout;
 
   // --- Frozen panes (allowFreeze) ---
-  // Frozen rows come straight from the resolved count; frozen columns pin the
-  // first N displayed columns left (Excel's Freeze First Column).
+  // Counts are sheet-scoped here; the shared table layout resolves column pins.
   const freeze = useOGridFreeze({
     allowFreeze, frozenRows, defaultFrozenRows, onFrozenRowsChange,
     frozenColumns, defaultFrozenColumns, onFrozenColumnsChange,
   });
-  const pinnedColumns = useMemo(() => {
-    if (freeze.frozenColumns <= 0) return pinnedOverrides;
-    const rank = new Map<string, number>();
-    effectiveColumnOrder?.forEach((id, i) => { rank.set(id, i); });
-    const ordered = effectiveColumnOrder?.length
-      ? [...columns].sort((a, b) => (rank.get(a.columnId) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.columnId) ?? Number.MAX_SAFE_INTEGER))
-      : columns;
-    const next: Record<string, 'left' | 'right'> = { ...pinnedOverrides };
-    let pinned = 0;
-    for (const col of ordered) {
-      if (pinned >= freeze.frozenColumns) break;
-      if (visibleColumns && !visibleColumns.has(col.columnId)) continue;
-      next[col.columnId] = 'left';
-      pinned++;
-    }
-    return next;
-  }, [freeze.frozenColumns, pinnedOverrides, columns, effectiveColumnOrder, visibleColumns]);
 
   // --- Per-sheet UI state (captured on leave, restored on return) ---
   useOGridSheetState(props, {
     visibleColumns, sort: sortingState.sort, sortModel: sortingState.sortModel, filters: filtersState.filters, page,
     selectedRows: effectiveSelectedRows, columnOrder: effectiveColumnOrder,
     columnWidths: columnWidthOverrides, pinned: pinnedOverrides, hiddenRowIds: hiddenRows.hiddenRowIds,
+    frozenRows: freeze.frozenRows, frozenColumns: freeze.frozenColumns,
   }, defaultSortField, defaultSortDirection, {
-    visibility, sorting: sortingState, filters: filtersState, pagination: paginationState, selection, columnLayout, hiddenRows,
+    visibility, sorting: sortingState, filters: filtersState, pagination: paginationState, selection, columnLayout, hiddenRows, freeze,
   });
 
   // --- Hide/unhide from the menus and gap markers (allowHiding) ---
@@ -310,7 +293,7 @@ export function useOGrid<T>(
     onColumnSort: sortingState.handleSort,
     visibleColumns, columnOrder: effectiveColumnOrder, onColumnOrderChange: handleColumnOrderChange,
     onColumnResized: handleColumnResized, onColumnPinned: handleColumnPinned,
-    pinnedColumns, initialColumnWidths: columnWidthOverrides,
+    pinnedColumns: pinnedOverrides, initialColumnWidths: columnWidthOverrides,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo, onClipboardError,
     rowSelection, selectedRows: effectiveSelectedRows, onSelectionChange: handleSelectionChange,
     showRowNumbers: showRowNumbersResolved, showColumnLetters: showColumnLettersResolved, showNameBox,
@@ -342,7 +325,7 @@ export function useOGrid<T>(
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, hidingActions, dgNoteProps,
-    freeze.frozenRows, freeze.frozenColumns, freeze.freezeActions, pinnedColumns,
+    freeze.frozenRows, freeze.frozenColumns, freeze.freezeActions, pinnedOverrides,
     findReplace, findRows, setPage,
     nameBox.cellNavigatorRef, dgEmptyState, dgFormulaProps,
   ]);

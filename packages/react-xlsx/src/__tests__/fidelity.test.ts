@@ -82,7 +82,7 @@ describe('import maps formatting into grid terms', () => {
     expect(formatting.tabColor).toBe('#FF0000');
 
     const [a, b, c] = sheet.columns;
-    expect(a?.pinned).toBe('left');
+    expect(a?.pinned).toBeUndefined();
     expect(b?.pinned).toBeUndefined();
     expect(a?.defaultWidth).toBe(columnWidthToPx(20));
     // Columns without an explicit width get Excel's default 64px, not a fixed 120.

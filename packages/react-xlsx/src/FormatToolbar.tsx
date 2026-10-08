@@ -678,6 +678,7 @@ function BorderMenu(props: BorderMenuProps) {
 
 /** Buttons keep focus (and the selection highlight) in the grid. */
 function keepFocus(e: React.MouseEvent) {
+  if (e.target instanceof Element && e.target.closest('input, select')) return;
   e.preventDefault();
 }
 
@@ -704,6 +705,7 @@ function navItems(root: HTMLElement | null, selector = '[data-xtb-nav]'): HTMLEl
  * in the next row. Returns whether the key was handled.
  */
 function moveFocus(root: HTMLElement | null, key: string, twoD: boolean, selector?: string): boolean {
+  if (document.activeElement?.matches('input, select')) return false;
   const items = navItems(root, selector);
   if (!items.length) return false;
   const active = items.indexOf(document.activeElement as HTMLElement);

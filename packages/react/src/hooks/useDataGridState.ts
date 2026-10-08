@@ -322,6 +322,7 @@ export function useDataGridState<T>(
 
   // --- 1. Layout, pinning, header menu ---
   const layoutResult = useDataGridLayout<T>({
+    frozenColumns: props.frozenColumns,
     onInsertColumn,
     onDeleteColumn,
     onHideColumns,

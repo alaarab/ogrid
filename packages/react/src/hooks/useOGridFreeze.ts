@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import type { IGridFreezeActions } from '../types';
 
 /** A frozen row/column count clamped to a whole, non-negative number. */
@@ -27,6 +27,9 @@ export interface UseOGridFreezeResult {
   frozenRows: number;
   /** Effective frozen column count (controlled or internal). */
   frozenColumns: number;
+  /** Raw setters for restoring uncontrolled per-sheet state without notifying. */
+  setInternalRows: Dispatch<SetStateAction<number>>;
+  setInternalColumns: Dispatch<SetStateAction<number>>;
   /** Context-menu actions, or undefined unless `allowFreeze` is on. */
   freezeActions: IGridFreezeActions | undefined;
 }
@@ -41,8 +44,8 @@ export function useOGridFreeze(params: UseOGridFreezeParams): UseOGridFreezeResu
   const { allowFreeze, frozenRows, defaultFrozenRows, onFrozenRowsChange, frozenColumns, defaultFrozenColumns, onFrozenColumnsChange } = params;
   const [internalRows, setInternalRows] = useState(() => clampCount(defaultFrozenRows));
   const [internalColumns, setInternalColumns] = useState(() => clampCount(defaultFrozenColumns));
-  const rows = frozenRows === undefined ? internalRows : clampCount(frozenRows);
-  const columns = frozenColumns === undefined ? internalColumns : clampCount(frozenColumns);
+  const rows = clampCount(frozenRows ?? internalRows);
+  const columns = clampCount(frozenColumns ?? internalColumns);
 
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
@@ -66,5 +69,5 @@ export function useOGridFreeze(params: UseOGridFreezeParams): UseOGridFreezeResu
     [allowFreeze, rows, columns, setFreeze],
   );
 
-  return { frozenRows: rows, frozenColumns: columns, freezeActions };
+  return { frozenRows: rows, frozenColumns: columns, freezeActions, setInternalRows, setInternalColumns };
 }

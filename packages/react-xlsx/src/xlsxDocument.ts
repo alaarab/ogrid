@@ -68,8 +68,8 @@ interface MutableSheetState {
   styles: Map<string, XlsxCellStyle>;
   initialMerges: IMergedCell[];
   merges: IMergedCell[];
-  initialFrozen: { rows: number; columns: number };
   frozen: { rows: number; columns: number };
+  freezeEdited: boolean;
   initialNotes: ICellNote[];
   notes: ICellNote[];
   initialWidths: Record<string, number>;
@@ -204,8 +204,8 @@ export class XlsxWorkbookDocument {
       styles: new Map(source.formatting.styles),
       initialMerges: source.formatting.merges,
       merges: source.formatting.merges,
-      initialFrozen: source.formatting.frozen,
       frozen: source.formatting.frozen,
+      freezeEdited: false,
       initialNotes: notes,
       notes,
       initialWidths: source.formatting.columnWidths,
@@ -435,6 +435,9 @@ export class XlsxWorkbookDocument {
     const state = this.state(sheetName);
     if (!state) return;
     const next = { rows: Math.max(0, Math.floor(rows)), columns: Math.max(0, Math.floor(columns)) };
+    // A header-only (or hidden-column-only) source pane can map to zero grid
+    // counts. An explicit unfreeze must still remove that source pane.
+    state.freezeEdited = true;
     if (state.frozen.rows === next.rows && state.frozen.columns === next.columns) return;
     state.frozen = next;
     this.emit();
@@ -651,20 +654,34 @@ export class XlsxWorkbookDocument {
     }
 
     // Frozen panes: ySplit counts sheet rows, so the promoted header is one of them.
-    if (state.frozen.rows !== state.initialFrozen.rows || state.frozen.columns !== state.initialFrozen.columns) {
-      const xSplit = state.frozen.columns;
-      const ySplit = state.frozen.rows + offset;
+    if (state.freezeEdited) {
+      let xSplit = 0;
+      let visible = 0;
+      for (let c = 0; c < state.columns.length && visible < state.frozen.columns; c++) {
+        xSplit = c + 1;
+        if (state.columns[c]?.defaultVisible !== false) visible++;
+      }
+      const unfreeze = state.frozen.rows === 0 && state.frozen.columns === 0;
+      const ySplit = unfreeze ? 0 : state.frozen.rows + offset;
+      const views = [...(ws.views ?? [])];
+      const frozenIndex = views.findIndex((view) => view.state === 'frozen');
+      const index = frozenIndex >= 0 ? frozenIndex : 0;
+      // Keep the selected view's settings and all sibling views. Only pane
+      // fields belong to the freeze command; the active cell is independent.
+      const { state: _state, xSplit: _x, ySplit: _y, topLeftCell: _topLeft, activePane: _pane, ...settings } =
+        (views[index] ?? {}) as Partial<ExcelJS.WorksheetViewCommon & ExcelJS.WorksheetViewSplit>;
       if (xSplit > 0 || ySplit > 0) {
-        ws.views = [{
+        views[index] = {
+          ...settings,
           state: 'frozen',
           xSplit,
           ySplit,
           topLeftCell: `${indexToColumnLetter(xSplit)}${ySplit + 1}`,
-          activeCell: 'A1',
-        } as ExcelJS.WorksheetViewFrozen];
+        } as ExcelJS.WorksheetView;
       } else {
-        ws.views = [];
+        views[index] = { ...settings, state: 'normal' };
       }
+      ws.views = views;
     }
     return valuesChanged;
   }

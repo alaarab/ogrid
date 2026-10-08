@@ -286,6 +286,7 @@ export function applyStyleEdit(style: XlsxCellStyle | undefined, edit: StyleEdit
       break;
     case 'fontFamily':
       sub('font', 'name', edit.value ?? undefined);
+      if (edit.value) sub('font', 'scheme', undefined);
       break;
     case 'fontSize':
       sub('font', 'size', typeof edit.value === 'number' ? edit.value : undefined);
