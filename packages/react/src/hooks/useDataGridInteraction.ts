@@ -34,7 +34,7 @@ export interface UseDataGridInteractionParams<T> {
   visibleColumnCount: number;
   getRowId: (item: T) => RowId;
   editable?: boolean;
-  validationBatch?: Pick<DataValidationState<T>, 'beginBatch' | 'endBatch' | 'afterBatch' | 'stage'>;
+  validationBatch?: Pick<DataValidationState<T>, 'beginBatch' | 'endBatch' | 'afterBatch' | 'previewClears' | 'stage'>;
   validationGuard?: (event: ICellValueChangedEvent<T>, apply: () => void, api?: boolean, sheetRow?: number) => boolean;
   onCellValueChangedProp?: (event: {
     item: T;
@@ -150,7 +150,7 @@ export interface UseDataGridInteractionResult<T> {
    * row and recorded for undo. Undefined when formulas are off.
    */
   // biome-ignore lint/suspicious/noConfusingVoidType: Existing void handlers remain compatible; false signals a rejected mutation.
-  setFormula?: (col: number, row: number, formula: string | null) => boolean | void;
+  setFormula?: (col: number, row: number, formula: string | null, onAccepted?: () => void) => boolean | void;
   hasFormula?: (col: number, row: number) => boolean;
   /**
    * Set or clear a formula by (flat column, sheet row), recorded for undo like
@@ -160,6 +160,7 @@ export interface UseDataGridInteractionResult<T> {
   /** Group the following changes into one undo step until endBatch(). */
   beginBatch: () => void;
   endBatch: () => void;
+  afterBatch: (action: () => void) => void;
   /**
    * Record an already-applied change (structure edit) in the grid's undo
    * history. No-op when the host owns undo (`onUndo`), whose history the grid can't write to.
@@ -296,8 +297,8 @@ export function useDataGridInteraction<T>(
     if (validationBatchRef.current) validationBatchRef.current.afterBatch(action);
     else action();
   }, [validationBatchRef]);
-  const stage = useCallback((action: () => void) => {
-    if (validationBatchRef.current) validationBatchRef.current.stage(action);
+  const stage = useCallback((action: () => void, event?: ICellValueChangedEvent<T>) => {
+    if (validationBatchRef.current) validationBatchRef.current.stage(action, event);
     else action();
   }, [validationBatchRef]);
   const rawOnCellValueChanged = hostValueChanged ?? undoRedo.onCellValueChanged;
@@ -366,7 +367,7 @@ export function useDataGridInteraction<T>(
     const item = itemsRef.current[displayRow], column = flatColumnsRef.current?.[col];
     if (formula !== null && item !== undefined && column && validationGuardRef.current) {
       return validationGuardRef.current({ item, columnId: column.columnId, rowIndex: displayRow, oldValue: getCellValue<T>(item, column), newValue: formula }, apply, false, row);
-    } else { stage(apply); return true; }
+    } else { stage(apply, item !== undefined && column ? { item, columnId: column.columnId, rowIndex: displayRow, oldValue: getCellValue<T>(item, column), newValue: formula } : undefined); return true; }
   } : undefined, [rawWriteSheetFormula, rawFormulaRef, itemsRef, flatColumnsRef, validationGuardRef, stage]);
   const internalRecordAction = undoRedo.recordAction;
   const recordAction = useCallback(
@@ -425,6 +426,7 @@ export function useDataGridInteraction<T>(
     onClipboardError,
     afterBatch,
     onCutClear: event => rawValueRef.current?.(event),
+    previewCutClears: read => validationBatchRef.current?.previewClears(read),
     visibleCols,
     colOffset,
     selectionRange,
@@ -483,7 +485,7 @@ export function useDataGridInteraction<T>(
         // Generation may write formulas; those and all value changes share
         // one history entry even if a parser or consumer callback throws.
         for (const event of generate()) {
-          if (isClear?.(event)) stage(() => rawValueRef.current?.(event));
+          if (isClear?.(event)) stage(() => rawValueRef.current?.(event), event);
           else onCellValueChanged?.(event);
         }
       } finally {
@@ -641,6 +643,7 @@ export function useDataGridInteraction<T>(
     rawWriteSheetFormula, rawOnCellValueChanged,
     beginBatch,
     endBatch,
+    afterBatch,
     recordAction,
     getFormula: viewFormulas?.getFormula,
   };

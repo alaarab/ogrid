@@ -7,6 +7,7 @@ import { createThemeToggle } from '../shared/themeToggle';
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 import { createProjectExampleScenario, VIRTUAL_GRID_HOST_STYLE } from '../shared/demoScenario';
 import { getExampleFeatureFlags } from '../shared/queryFlags';
+import { ValidationExample } from '../shared/ValidationExample';
 import { XlsxExample } from '../shared/xlsxExample';
 import { makePremiumInputColumns, makePremiumInputRows } from '../shared/premiumInputsData';
 import {
@@ -115,7 +116,9 @@ function App() {
 
 const rootEl = document.getElementById('root');
 if (rootEl) {
-  if (featureFlags.xlsx) {
+  if (new URLSearchParams(window.location.search).has('validation')) {
+    createRoot(rootEl).render(<ValidationExample Grid={OGrid} />);
+  } else if (featureFlags.xlsx) {
     createRoot(rootEl).render(<XlsxExample />);
   } else {
     createRoot(rootEl).render(<App />);

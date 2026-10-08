@@ -183,6 +183,15 @@ export interface NameNode {
 
 // --- Function Registry ---
 
+/** Candidate values used without changing the live formula engine. */
+export interface IDetachedEvaluationOptions {
+  /** Worksheet identity for qualified references; rowOffset accounts for promoted headers. */
+  sheet?: { name: string; rowOffset: number };
+  proposed?: { col: number; row: number; value: unknown; alias?: { sheet: string; col: number; row: number } };
+  changes?: readonly { col: number; row: number; value: unknown; alias?: { sheet: string; col: number; row: number } }[];
+  preserveArrays?: boolean;
+}
+
 /** Context passed to formula functions during evaluation. */
 export interface IFormulaContext {
   getCellValue(address: ICellAddress): unknown;

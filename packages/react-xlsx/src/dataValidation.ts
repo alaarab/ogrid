@@ -3,14 +3,14 @@
 // validation, then replace only rules on loaded data cells.
 import type ExcelJS from 'exceljs';
 import { indexToColumnLetter, replaceDataValidationRange, validationDateSerial } from '@alaarab/ogrid-core';
-import type { IDataValidationRule, DataValidationOperator, IGridDataAccessor } from '@alaarab/ogrid-core';
-import { adjustFormulaReferences, columnLetterToIndex, tokenize, FormulaEngine } from '@alaarab/ogrid-core/formula';
+import type { IDataValidationRule, IDataValidationChange, DataValidationOperator, IGridDataAccessor } from '@alaarab/ogrid-core';
+import { adjustFormulaReferences, columnLetterToIndex, tokenize, FormulaEngine, FormulaError } from '@alaarab/ogrid-core/formula';
 import { normalizeFormula, rebaseFormulaRows, toFileFormula } from './formulaReferences';
 import { normalizeCellValue } from './sheetMapper';
 import type { SheetRow } from './sheetMapper';
 
 /** Enumerable so workbook model clones and structural undo retain the original sqref anchor. */
-export type AnchoredValidation = ExcelJS.DataValidation & { _ogridOrigin?: { col: number; row: number } };
+export type AnchoredValidation = ExcelJS.DataValidation & { showDropDown?: boolean; _ogridOrigin?: { col: number; row: number } };
 export function validationOrigin(rule: ExcelJS.DataValidation): { col: number; row: number } | undefined {
   return (rule as AnchoredValidation)._ogridOrigin;
 }
@@ -70,7 +70,7 @@ function ruleOf(dv: ExcelJS.DataValidation, columnIds: string[], rows: { start: 
   const first: unknown = dv.formulae?.[0];
   if (dv.type === 'list') {
     const source = String(first ?? '');
-    return { ...base, type: 'list', ...(source.startsWith('"') ? { values: source.slice(1, -1).replace(/""/g, '"').split(',') } : { source }) };
+    return { ...base, type: 'list', inCellDropdown: !(dv as AnchoredValidation).showDropDown, ...(source.startsWith('"') ? { values: source.slice(1, -1).replace(/""/g, '"').split(',') } : { source }) };
   }
   if (dv.type === 'custom') return { ...base, type: 'custom', formula: fromFileFormula(String(first ?? ''), offset, sheetName) };
   const bound = (v: unknown): number | string => {
@@ -138,42 +138,27 @@ export function readDataValidations(sheet: ExcelJS.Worksheet, layout: Validation
 }
 
 /** Resolve list sources against live workbook accessors, including header rows and defined names. */
-export function validationSourceResolver(sheet: ExcelJS.Worksheet, accessors: Record<string, IGridDataAccessor>, rowOffset = 0): (source: string, anchor?: { col: number; row: number }, cell?: { col: number; row: number }) => unknown[] | undefined {
+export function validationSourceResolver(sheet: ExcelJS.Worksheet, accessors: Record<string, IGridDataAccessor>, rowOffset = 0): (source: string, anchor?: { col: number; row: number }, cell?: { col: number; row: number }, changes?: readonly IDataValidationChange[]) => unknown[] | undefined {
   let sourceEngine: FormulaEngine | undefined;
   const workbookAccessor = (target: ExcelJS.Worksheet): IGridDataAccessor => accessors[target.name] ?? {
     getCellValue: (col, row) => normalizeCellValue(target.findRow(row + 1)?.findCell(col + 1)?.value),
     getRowCount: () => target.rowCount, getColumnCount: () => target.columnCount,
   };
-  return (source, anchor, cell) => {
+  return (source, anchor, cell, changes) => {
     let ref = source.trim().replace(/^=/, '');
     const named = sheet.workbook.definedNames.getRanges(ref)?.ranges;
     if (named?.length) ref = named[0] ?? ref;
     else if (anchor && cell) ref = adjustFormulaReferences(ref, cell.col - anchor.col, cell.row - anchor.row);
-    const bang = ref.lastIndexOf('!');
-    const name = bang >= 0 ? ref.slice(0, bang).replace(/^'|'$/g, '').replace(/''/g, "'") : sheet.name;
-    const area = bang >= 0 ? ref.slice(bang + 1) : ref;
-    const b = boxOf(area);
-    if (!b) {
-      // List expressions (OFFSET, INDIRECT, etc.) stay in worksheet coordinates,
-      // just like literal list ranges, even when the header becomes column names.
-      if (!sourceEngine) {
-        sourceEngine = new FormulaEngine({ namedRanges: Object.fromEntries(sheet.workbook.definedNames.model.map((n) => [n.name, n.ranges[0] ?? ''])), limits: { maxRangeCells: 100000 } });
-        for (const target of sheet.workbook.worksheets) sourceEngine.registerSheet(target.name, workbookAccessor(target));
-      }
-      const position = { col: cell?.col ?? 0, row: (cell?.row ?? 0) + rowOffset };
-      const result = sourceEngine.createDetachedEvaluator(workbookAccessor(sheet), { preserveArrays: true })(`=${ref}`, position, position);
-      if (result && typeof result === 'object' && 'type' in result && String(result.type).startsWith('#')) return [];
-      return (Array.isArray(result) ? result.flat(Infinity) : [result]).filter((value) => value != null && value !== '');
+    // Lists retain worksheet coordinates, including promoted headers. The
+    // detached evaluator reads ranges and expressions through the same overlay.
+    if (!sourceEngine) {
+      sourceEngine = new FormulaEngine({ namedRanges: Object.fromEntries(sheet.workbook.definedNames.model.map((n) => [n.name, n.ranges[0] ?? ''])), limits: { maxRangeCells: 100000 } });
+      for (const target of sheet.workbook.worksheets) sourceEngine.registerSheet(target.name, workbookAccessor(target));
     }
-    if ((b.bottom - b.top + 1) * (b.right - b.left + 1) > 100000) return [];
-    const target = sheet.workbook.getWorksheet(name), accessor = accessors[name];
-    if (!target) return [];
-    const out: unknown[] = [];
-    for (let r = b.top; r <= b.bottom; r++) for (let c = b.left; c <= b.right; c++) {
-      const value = accessor ? accessor.getCellValue(c, r - 1) : normalizeCellValue(target.findRow(r)?.findCell(c + 1)?.value);
-      if (value != null && value !== '') out.push(value);
-    }
-    return out;
+    const position = { col: cell?.col ?? 0, row: (cell?.row ?? 0) + rowOffset };
+    const result = sourceEngine.createDetachedEvaluator(workbookAccessor(sheet), { preserveArrays: true, sheet: { name: sheet.name, rowOffset: 0 }, changes: changes?.map(change => ({ ...change, row: change.row + rowOffset })) })(`=${ref}`, position, position);
+    if (result instanceof FormulaError) return [];
+    return (Array.isArray(result) ? result.flat(Infinity) : [result]).filter((value) => value != null && value !== '');
   };
 }
 
@@ -256,6 +241,7 @@ export function writeDataValidations(sheet: ExcelJS.Worksheet, rules: IDataValid
       }
       const dv = {
         type: rule.type, formulae, _ogridOrigin: { col, row: start + offset },
+        ...(rule.type === 'list' ? { showDropDown: rule.inCellDropdown === false } : {}),
         allowBlank: rule.allowBlank === true,
         ...('operator' in rule ? { operator: rule.operator as DataValidationOperator } : {}),
         showInputMessage: rule.inputMessage?.show !== false && !!rule.inputMessage?.text,

@@ -410,6 +410,7 @@ export type {
   ASTNode,
   BinaryOp,
   IFormulaContext,
+  IDetachedEvaluationOptions,
   IFormulaFunction,
   IEvaluator,
   IRecalcResult,
@@ -434,4 +435,4 @@ export { cellNoteKey, indexCellNotes, upsertCellNote, removeCellNote, setCellNot
 
 export type * from './types/dataValidationTypes';
 export { createDataValidator, validationDateSerial, replaceDataValidationRange } from './utils/dataValidation';
-export type { IDataValidationContext } from './utils/dataValidation';
+export type { IDataValidationContext, IDataValidationChange } from './utils/dataValidation';

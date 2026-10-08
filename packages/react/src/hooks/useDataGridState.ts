@@ -619,6 +619,7 @@ export function useDataGridState<T>(
     onCellValueChanged,
     beginBatch: interactionResult.beginBatch,
     endBatch: interactionResult.endBatch,
+    afterBatch: interactionResult.afterBatch,
     getFormula: interactionResult.getFormula,
     setFormula: interactionResult.setFormula,
     getFormulaValue: props.getFormulaValue,

@@ -4,6 +4,12 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Validation now checks paste, fill, and moves against their proposed values and formulas, including cleared cut sources and array/spill reads. Spill children appear in range-backed list dropdowns, and Find & Replace reports accepted and skipped writes after validation decisions.
+- XLSX structural commands shift validation once with one undo step; named validation sources follow the edited workbook and undo. Prompt-only rules and suppressed dropdowns survive import, editing, worker handover, and export.
+- Data validation displays a focused loading surface while its lazy dialog downloads. The docs demo controls use the shared styling.
+
 ### Added
 
 - `@alaarab/ogrid-react-xlsx`: progressive XLSX value previews in a Web Worker

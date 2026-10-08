@@ -772,12 +772,12 @@ function readFormatting(sheet: ExcelJS.Worksheet, promoted: boolean, dataRows: n
     for (let c = 1; c <= colCount; c++) {
       const letter = indexToColumnLetter(c - 1);
       const first = validationAt(sheet, `${letter}${headerOffset + 1}`);
-      const formula = first?.type === 'list' ? first.formulae?.[0] : undefined;
+      const formula = first?.type === 'list' && !(first as { showDropDown?: boolean }).showDropDown ? first.formulae?.[0] : undefined;
       if (formula === undefined) continue;
       let covered = true;
       for (let r = headerOffset + 2; r <= lastSheetRow && covered; r++) {
         const dv = validationAt(sheet, `${letter}${r}`);
-        covered = dv?.type === 'list' && dv.formulae?.[0] === formula;
+        covered = dv?.type === 'list' && !(dv as { showDropDown?: boolean }).showDropDown && dv.formulae?.[0] === formula;
       }
       if (!covered) continue;
       const values = listValues(sheet, String(formula));

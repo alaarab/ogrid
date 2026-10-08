@@ -125,3 +125,24 @@ it('rejects direct, indirect and range candidate cycles without changing the liv
   expect(engine.getFormula(0, 0)).toBeUndefined();
   expect(engine.getValue(1, 0)).toBe(4);
 });
+
+it.each(['array arithmetic', 'spill shape'])('validates candidate %s without changing the sheet', kind => {
+  const data = [{ value: 2, limit: '' }, { value: 3, limit: '' }, { value: '', limit: '' }];
+  const accessor = { getCellValue: (col: number, row: number) => data[row]?.[col === 0 ? 'value' : 'limit'], getRowCount: () => 3, getColumnCount: () => 2 };
+  const engine = new FormulaEngine();
+  const validator = createDataValidator([], { items: data, columns, evaluateFormula: (f, a, c, proposed) => engine.createDetachedEvaluator(accessor, { preserveArrays: true, proposed: proposed ? { ...c, value: proposed.value } : undefined })(f, a, c) });
+  const rule: IDataValidationRule = { type: 'custom', columnIds: ['value'], formula: '=SUM(A1:A2*1)<=10' };
+  if (kind === 'array arithmetic') {
+    expect(validator.validate(rule, 99, 'value', 0)).toBe(false);
+    expect(validator.validate(rule, 4, 'value', 0)).toBe(true);
+    expect(data[0]!.value).toBe(2);
+    return;
+  }
+  engine.setFormula(1, 0, '=SEQUENCE(2)', accessor);
+  const spill: IDataValidationRule = { type: 'custom', columnIds: ['limit'], formula: '=AND(SUM(B1#)<=3,ROWS(B1#)=2)' };
+  expect(validator.validate(spill, '=SEQUENCE(3)', 'limit', 0)).toBe(false);
+  expect(validator.validate(spill, '=SEQUENCE(2)', 'limit', 0)).toBe(true);
+  expect(engine.getSpillRange(1, 0)).toMatchObject({ endRow: 1 });
+  expect(engine.getValue(1, 1)).toBe(2);
+  expect(data[0]!.value).toBe(2);
+});

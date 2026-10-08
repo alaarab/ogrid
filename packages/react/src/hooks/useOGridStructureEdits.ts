@@ -124,7 +124,9 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
       const columns = flattenColumns(columnsRef.current).map(c => c.columnId);
       for (const shift of shifts) {
         if (formulas) formulas = shiftFormulaCells(formulas, shift.axis, shift.at, shift.count);
-        rules = shiftValidationRules(rules, columns, shift.axis, shift.at, shift.count);
+        // A host whose formulas follow data owns the workbook metadata and
+        // structural undo too. It shifts validations in the same transaction.
+        if (!followData) rules = shiftValidationRules(rules, columns, shift.axis, shift.at, shift.count);
         if (shift.axis === 'col') {
           if (shift.count < 0) columns.splice(shift.at, -shift.count);
           else columns.splice(shift.at, 0, ...Array.from({ length: shift.count }, (_, i) => `__inserted_${i}`));

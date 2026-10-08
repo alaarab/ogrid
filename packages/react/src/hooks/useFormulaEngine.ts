@@ -21,6 +21,7 @@ import {
   type IAuditEntry,
   type IAuditTrail,
   type ISpillRange,
+  type IDetachedEvaluationOptions,
 } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '@alaarab/ogrid-core';
 import { FormulaEngine, FormulaError } from '@alaarab/ogrid-core/formula';
@@ -101,7 +102,7 @@ export interface UseFormulaEngineResult {
    * reading current values; see FormulaEngine.createDetachedEvaluator.
    * Undefined when formulas are off.
    */
-  createDetachedEvaluator: (options?: { proposed?: { col: number; row: number; value: unknown; alias?: { sheet: string; col: number; row: number } }; preserveArrays?: boolean }) => ((formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown) | undefined;
+  createDetachedEvaluator: (options?: IDetachedEvaluationOptions) => ((formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown) | undefined;
   /** Whether formula support is active. */
   enabled: boolean;
 }
@@ -471,7 +472,7 @@ export function useFormulaEngine<T>(
   }, [createAccessor, report]);
 
   const createDetachedEvaluator = useCallback(
-    (options?: { proposed?: { col: number; row: number; value: unknown; alias?: { sheet: string; col: number; row: number } }; preserveArrays?: boolean }) => engineRef.current?.createDetachedEvaluator(createAccessor(), options),
+    (options?: IDetachedEvaluationOptions) => engineRef.current?.createDetachedEvaluator(createAccessor(), options),
     [createAccessor]
   );
 

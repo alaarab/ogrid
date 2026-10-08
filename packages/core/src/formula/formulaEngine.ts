@@ -15,6 +15,7 @@ import type {
   IAuditEntry,
   IAuditTrail,
   ISpillRange,
+  IDetachedEvaluationOptions,
 } from './types';
 import { SpillStore } from './spillStore';
 import { FormulaError } from './types';
@@ -363,57 +364,101 @@ export class FormulaEngine {
    * engine's current values; stores nothing. Make a new evaluator after the
    * data or formulas change: it caches parsed formulas and volatile results.
    */
-  createDetachedEvaluator(accessor: IGridDataAccessor, options?: { proposed?: { col: number; row: number; value: unknown; alias?: { sheet: string; col: number; row: number } }; preserveArrays?: boolean }): (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown {
+  createDetachedEvaluator(accessor: IGridDataAccessor, options?: IDetachedEvaluationOptions): (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown {
     const baseContext = this.createContext(accessor);
     const proposed = options?.proposed;
-    const candidate = proposed && typeof proposed.value === 'string' && proposed.value.startsWith('=') ? this.parseFormula(proposed.value) : undefined;
-    const candidateKey = proposed ? toCellKey(proposed.col, proposed.row) : undefined;
-    const dependencies = candidate ? extractDependencies(candidate) : undefined;
-    if (dependencies && proposed?.alias && candidateKey) {
-      // Qualified references to the grid's worksheet address target the same candidate.
-      const aliasKey = toCellKey(proposed.alias.col, proposed.alias.row, proposed.alias.sheet);
-      if (dependencies.cells.delete(aliasKey)) dependencies.cells.add(candidateKey);
-      for (const range of dependencies.ranges) {
-        if (range.sheet === proposed.alias.sheet && proposed.alias.col >= range.minCol && proposed.alias.col <= range.maxCol && proposed.alias.row >= range.minRow && proposed.alias.row <= range.maxRow) dependencies.cells.add(candidateKey);
+    const changes = new Map([...(options?.changes ?? []), ...(proposed ? [proposed] : [])].map(change => [toCellKey(change.col, change.row), {
+      ...change, ast: typeof change.value === 'string' && change.value.startsWith('=') ? this.parseFormula(change.value) : undefined,
+    }] as const));
+    const aliased = options?.sheet ? undefined : proposed?.alias ? proposed : options?.changes?.find(change => change.alias);
+    const sheet = options?.sheet ?? (aliased?.alias && { name: aliased.alias.sheet, rowOffset: aliased.alias.row - aliased.row });
+    const rowOffset = sheet?.rowOffset ?? 0;
+    const localAddress = (addr: ICellAddress): ICellAddress => sheet && addr.sheet === sheet.name && addr.row >= rowOffset
+      ? { ...addr, sheet: undefined, row: addr.row - rowOffset } : addr;
+    const dependencies = (ast: ASTNode) => {
+      const deps = extractDependencies(ast);
+      if (sheet) {
+        deps.cells = new Set([...deps.cells].map(key => { const addr = localAddress({ ...fromCellKey(key), absCol: false, absRow: false }); return toCellKey(addr.col, addr.row, addr.sheet); }));
+        for (const range of deps.ranges) if (range.sheet === sheet.name) {
+          range.sheet = undefined;
+          range.minRow -= rowOffset; range.maxRow -= rowOffset;
+        }
+      }
+      return deps;
+    };
+    const graph = changes.size > 1 ? new DependencyGraph() : this.depGraph;
+    if (graph !== this.depGraph) {
+      for (const [key, ast] of new Map([...this.parsedFormulas, ...[...changes].map(([key, change]) => [key, change.ast] as const)])) if (ast) {
+        const deps = dependencies(ast);
+        graph.setDependencies(key, deps.cells, deps.ranges);
       }
     }
-    const circular = candidateKey && dependencies && this.depGraph.wouldCreateCycle(candidateKey, dependencies.cells, dependencies.ranges);
+    const circular = [...changes].some(([key, change]) => { if (!change.ast) return false; const deps = dependencies(change.ast); return graph.wouldCreateCycle(key, deps.cells, deps.ranges); });
     const localValues = new Map<string, unknown>();
+    const localSpills = new SpillStore();
     const active = new Set<string>();
-    const context: IFormulaContext = proposed ? {
-      ...baseContext,
-      getCellValue: (addr) => {
-        const target = (!addr.sheet && addr.col === proposed.col && addr.row === proposed.row) || (addr.sheet === proposed.alias?.sheet && addr.col === proposed.alias?.col && addr.row === proposed.alias?.row);
-        if (target && !candidate) return proposed.value;
-        if (addr.sheet && !target) return baseContext.getCellValue(addr);
-        const key = target ? candidateKey as string : toCellKey(addr.col, addr.row);
-        const ast = target ? candidate : this.parsedFormulas.get(key);
-        if (!ast) return baseContext.getCellValue(addr);
+    const rawAccessor: IGridDataAccessor = { ...accessor, isCellOccupied: (col, row) => !changes.has(toCellKey(col, row)) && !!accessor.isCellOccupied?.(col, row), getCellValue: (col, row) => {
+      const key = toCellKey(col, row);
+      return changes.has(key) ? changes.get(key)?.value : accessor.getCellValue(col, row);
+    } };
+    const readCell = (address: ICellAddress): unknown => {
+      const addr = localAddress(address);
+      if (addr.sheet) return baseContext.getCellValue(addr);
+      const key = toCellKey(addr.col, addr.row);
+      if (active.has(key)) return new FormulaError('#CIRC!');
+      const change = changes.get(key);
+      const ast = change ? change.ast : this.parsedFormulas.get(key);
+      if (change && !ast) return change.value;
+      if (ast) {
         if (localValues.has(key)) return localValues.get(key);
-        if (active.has(key)) return new FormulaError('#CIRC!');
         active.add(key);
         try {
-          const result = this.evaluator.evaluate(ast, { ...context, currentCell: target ? { col: proposed.col, row: proposed.row, absCol: false, absRow: false } : addr });
-          const value = Array.isArray(result) ? result[0]?.[0] ?? null : result;
+          const result = this.evaluator.evaluate(ast, { ...context, currentCell: addr });
+          const value = localSpills.put(key, result, rawAccessor, child => changes.get(child)?.ast != null || (!changes.has(child) && this.formulas.has(child)));
           localValues.set(key, value);
           return value;
         } finally { active.delete(key); }
-      },
-      getRangeValues: (range) => {
-        const source = range.start.sheet ? this.sheetAccessors.get(range.start.sheet) : accessor;
-        if (!source) return [[new FormulaError('#REF!')]];
-        const minRow = Math.min(range.start.row, range.end.row), minCol = Math.min(range.start.col, range.end.col);
-        const maxRow = Math.min(Math.max(range.start.row, range.end.row), source.getRowCount() - 1);
-        const maxCol = Math.min(Math.max(range.start.col, range.end.col), source.getColumnCount() - 1);
-        if ((maxRow - minRow + 1) * (maxCol - minCol + 1) > this.maxRangeCells) throw new FormulaError('#VALUE!', 'Range too large');
-        const values: unknown[][] = [];
-        for (let r = minRow; r <= maxRow; r++) {
-          const row: unknown[] = [];
-          for (let c = minCol; c <= maxCol; c++) row.push(context.getCellValue({ ...range.start, row: r, col: c }));
-          values.push(row);
-        }
-        return values;
-      },
+      }
+      const owner = localSpills.owners.get(key) ?? this.spills.owners.get(key);
+      if (owner) {
+        const origin = fromCellKey(owner);
+        readCell({ ...origin, absCol: false, absRow: false });
+        return localSpills.owners.has(key) ? localSpills.getValue(key) : rawAccessor.getCellValue(addr.col, addr.row);
+      }
+      return accessor.getCellValue(addr.col, addr.row);
+    };
+    const readRange = (range: ICellRange, preserveShape = false): unknown[][] => {
+      const source = range.start.sheet ? this.sheetAccessors.get(range.start.sheet) : accessor;
+      if (!source) return [[new FormulaError('#REF!')]];
+      const minRow = Math.min(range.start.row, range.end.row), minCol = Math.min(range.start.col, range.end.col);
+      let maxRow = Math.max(range.start.row, range.end.row), maxCol = Math.max(range.start.col, range.end.col);
+      if (!preserveShape) {
+        const extent = this.spillExtent();
+        for (const spill of localSpills.ranges.values()) { extent.row = Math.max(extent.row, spill.endRow); extent.col = Math.max(extent.col, spill.endCol); }
+        maxRow = Math.min(maxRow, Math.max(source.getRowCount() - 1, extent.row));
+        maxCol = Math.min(maxCol, Math.max(source.getColumnCount() - 1, extent.col));
+      }
+      if ((maxRow - minRow + 1) * (maxCol - minCol + 1) > this.maxRangeCells) throw new FormulaError('#VALUE!', 'Range too large');
+      const values: unknown[][] = [];
+      for (let r = minRow; r <= maxRow; r++) {
+        const row: unknown[] = [];
+        for (let c = minCol; c <= maxCol; c++) row.push(readCell({ ...range.start, row: r, col: c }));
+        values.push(row);
+      }
+      return values;
+    };
+    const spillRange = (address: ICellAddress): ICellRange | FormulaError => {
+      const addr = localAddress(address);
+      if (addr.sheet) return baseContext.getSpillRange?.(addr) ?? new FormulaError('#REF!');
+      const value = readCell(addr);
+      if (value instanceof FormulaError) return value;
+      const spill = localSpills.ranges.get(toCellKey(addr.col, addr.row));
+      return spill ? { start: { ...address, col: spill.anchorCol, row: address.row }, end: { ...address, col: spill.endCol, row: address.row + spill.endRow - spill.anchorRow } } : new FormulaError('#REF!', 'Cell has no spill range');
+    };
+    const context: IFormulaContext = changes.size ? {
+      ...baseContext, getCellValue: readCell, getRangeValues: range => readRange(range), getArrayRangeValues: range => readRange(range, true),
+      getSpillRange: spillRange, getSpillValues: addr => { const range = spillRange(addr); return range instanceof FormulaError ? range : readRange(range, true); },
+      getCellFormula: address => { const addr = localAddress(address), key = toCellKey(addr.col, addr.row); return !addr.sheet && changes.has(key) ? changes.get(key)?.ast ? String(changes.get(key)?.value) : undefined : baseContext.getCellFormula?.(addr); },
     } : baseContext;
     const parsed = new Map<string, ASTNode>();
     return (formula, anchor, cell) => {
@@ -425,13 +470,14 @@ export class FormulaEngine {
       }
       const shifted = shiftReferences(ast, cell.col - anchor.col, cell.row - anchor.row);
       try {
-        if (candidateKey && candidate && formula === proposed?.value) active.add(candidateKey);
+        for (const [key, change] of changes) if (change.ast) { const addr = fromCellKey(key); readCell({ ...addr, absCol: false, absRow: false }); }
+        for (const [key, change] of changes) if (formula === change.value && cell.col === change.col && cell.row === change.row) active.add(key);
         const result = this.evaluator.evaluate(shifted, { ...context, currentCell: { col: cell.col, row: cell.row, absCol: false, absRow: false } });
         return Array.isArray(result) && !options?.preserveArrays ? result[0]?.[0] ?? null : result;
       } catch (err) {
         if (err instanceof FormulaError) return err;
         return new FormulaError('#VALUE!', err instanceof Error ? err.message : String(err));
-      } finally { if (candidateKey) active.delete(candidateKey); }
+      } finally { active.clear(); }
     };
   }
 

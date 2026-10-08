@@ -53,9 +53,12 @@ export interface UseFindReplaceParams<T> {
   /**
    * Applies a replace. Called once per Replace / Replace all with every
    * accepted value change (already parsed by the column's `valueParser`), plus
-   * formula writes when `getFormula` is set. Omit to make the hook find-only.
+   * formula writes when `getFormula` is set. Return a committed count (or a
+   * promise of it) when writes can be rejected; void accepts the whole plan.
+   * Omit to make the hook find-only.
    */
-  onCellEdit?: (events: ICellValueChangedEvent<T>[], formulaEdits: IFindFormulaEdit<T>[]) => void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: void handlers accept the complete plan; counts can settle after validation
+  onCellEdit?: (events: ICellValueChangedEvent<T>[], formulaEdits: IFindFormulaEdit<T>[]) => number | Promise<number> | void;
   /** Called when a match becomes the current one: make it the active cell and scroll it into view. */
   onNavigate?: (match: IFindMatch) => void;
   /** Where the search starts (row/column indexes into `rows`/`columns`), usually the active cell. */
@@ -158,6 +161,7 @@ export function useFindReplace<T>(params: UseFindReplaceParams<T>): UseFindRepla
   const [scopeRange, setScopeRange] = useState<ISelectionRange | null>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<FindReplaceResult | null>(null);
+  const [replacing, setReplacing] = useState(false);
   /** Last visited cell; next/prev continue from here when the current match is gone. */
   const anchorRef = useRef<{ rowIndex: number; columnIndex: number } | null>(null);
   /** Set by a search change; the next render's matches jump to the first match at/after the active cell. */
@@ -255,9 +259,17 @@ export function useFindReplace<T>(params: UseFindReplaceParams<T>): UseFindRepla
     const edit = onCellEditRef.current;
     if (!canReplace || !edit || targets.length === 0) return EMPTY_RESULT;
     const plan = planReplace({ source, matches: targets, query, replacement, options, allowFormulas: getFormula != null });
-    if (plan.replaced > 0) edit(plan.events, plan.formulaEdits);
     const { replaced, skipped, skippedReadOnly, skippedInvalid, skippedFormula } = plan;
-    return { replaced, skipped, skippedReadOnly, skippedInvalid, skippedFormula };
+    const outcome = (committed: number): FindReplaceResult => ({ replaced: committed, skipped: skipped + replaced - committed, skippedReadOnly, skippedInvalid: skippedInvalid + replaced - committed, skippedFormula });
+    const committed = plan.replaced > 0 ? edit(plan.events, plan.formulaEdits) : 0;
+    if (committed instanceof Promise) {
+      setReplacing(true); setLastResult(null);
+      void committed.then(count => { setReplacing(false); setLastResult(outcome(count)); });
+      return EMPTY_RESULT;
+    }
+    const result = outcome(committed ?? replaced);
+    setLastResult(result);
+    return result;
   }, [canReplace, onCellEditRef, source, query, replacement, options, getFormula]);
 
   const replace = useCallback((): FindReplaceResult => {
@@ -269,15 +281,12 @@ export function useFindReplace<T>(params: UseFindReplaceParams<T>): UseFindRepla
     const n = effectiveMatches.length;
     // Move on to the next match; the replaced cell may still match (e.g. "a" -> "aa").
     if (n > 1) goTo(effectiveMatches[(activeIndex + 1) % n]);
-    setLastResult(result);
     return result;
   }, [activeMatch, activeIndex, apply, effectiveMatches, goTo, step]);
 
   const replaceAll = useCallback((): FindReplaceResult => {
-    const result = apply(effectiveMatches);
     setActiveKey(null);
-    setLastResult(result);
-    return result;
+    return apply(effectiveMatches);
   }, [apply, effectiveMatches]);
 
   const isMatch = useCallback(
@@ -285,7 +294,7 @@ export function useFindReplace<T>(params: UseFindReplaceParams<T>): UseFindRepla
     [indexByKey]
   );
 
-  const statusText = lastResult
+  const statusText = replacing ? 'Waiting for validation…' : lastResult
     ? formatReplaceStatus(lastResult)
     : query === '' ? '' : formatFindStatus(activeIndex, effectiveMatches.length);
 

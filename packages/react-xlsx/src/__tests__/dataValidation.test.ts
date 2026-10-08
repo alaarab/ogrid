@@ -6,6 +6,7 @@ import { XlsxWorkbookDocument } from '../xlsxDocument';
 import { readDataValidations, validationSourceResolver } from '../dataValidation';
 import type { IDataValidationRule } from '@alaarab/ogrid-core';
 import { sheetToGridData, workbookFromBlob, type SheetRow } from '../sheetMapper';
+import { diskRoundTrip } from './fixtures/xlsxFile';
 async function reload(wb: ExcelJS.Workbook): Promise<ExcelJS.Workbook> {
   const out = new ExcelJS.Workbook(); await out.xlsx.load(await wb.xlsx.writeBuffer()); return out;
 }
@@ -122,6 +123,32 @@ async function saved(doc: XlsxWorkbookDocument) {
   return { xml, workbook: await workbookFromBlob(blob) };
 }
 describe('validation review regressions', () => {
+  it('round-trips an unrestricted input prompt without a type attribute', async () => {
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Data');
+    ws.addRows([['Value'], [42]]);
+    ws.getCell('A2').dataValidation = { type: 'any', formulae: [], showInputMessage: true, promptTitle: 'Help', prompt: 'Enter any value.' };
+    const doc = new XlsxWorkbookDocument(await workbookFromBlob(await diskRoundTrip(new Blob([await wb.xlsx.writeBuffer()]))));
+    const blob = await diskRoundTrip(await doc.toBlob());
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const xml = await zip.file('xl/worksheets/sheet1.xml')!.async('string');
+    expect(xml.match(/<dataValidation\b[^>]*>/)?.[0]).not.toContain('type=');
+    const again = await workbookFromBlob(blob);
+    expect(again.getWorksheet('Data')!.getCell('A2').dataValidation).toMatchObject({ type: 'any', showInputMessage: true, promptTitle: 'Help', prompt: 'Enter any value.' });
+    expect(again.getWorksheet('Data')!.getCell('A2').value).toBe(42);
+  });
+  it('preserves suppressed list dropdowns when other rule settings are edited', async () => {
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Data');
+    ws.addRows([['Status'], ['Open']]);
+    ws.getCell('A2').dataValidation = { type: 'list', formulae: ['"Open,Closed"'] };
+    const zip = await JSZip.loadAsync(await wb.xlsx.writeBuffer()), part = zip.file('xl/worksheets/sheet1.xml')!;
+    zip.file('xl/worksheets/sheet1.xml', (await part.async('string')).replace('<dataValidation type="list"', '<dataValidation showDropDown="1" type="list"'));
+    const doc = new XlsxWorkbookDocument(await workbookFromBlob(await diskRoundTrip(new Blob([new Uint8Array(await zip.generateAsync({ type: 'uint8array' }))]))));
+    expect(doc.sheet('Data')!.dataValidations[0]).toMatchObject({ inCellDropdown: false });
+    doc.setDataValidations('Data', doc.sheet('Data')!.dataValidations.map(rule => ({ ...rule, allowBlank: true })));
+    const blob = await diskRoundTrip(await doc.toBlob()), out = await workbookFromBlob(blob);
+    expect(new XlsxWorkbookDocument(out).sheet('Data')!.dataValidations[0]).toMatchObject({ inCellDropdown: false, allowBlank: true });
+    expect(await (await JSZip.loadAsync(await blob.arrayBuffer())).file('xl/worksheets/sheet1.xml')!.async('string')).toContain('showDropDown="1"');
+  });
   it('keeps independent relative lists anchored through edits and real XLSX export', async () => {
     const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Data');
     ws.addRows([['Target', 'Source'], ['first', 'first'], ['', 'middle'], ['first', 'last']]);

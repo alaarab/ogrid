@@ -7,6 +7,7 @@ import { compile } from 'sass';
 mock.module('@docusaurus/BrowserOnly', () => ({ default: ({ children }: { children: () => React.ReactNode }) => children() }));
 const { default: XlsxImportDemo } = await import('../components/demos/XlsxImportDemo');
 const { default: DragAndDropDemo } = await import('../components/demos/DragAndDropDemo');
+const { default: DataValidationDemo } = await import('../components/demos/DataValidationDemo');
 const { default: FormulasDemo } = await import('../components/demos/FormulasDemo');
 let stylesheet: HTMLStyleElement;
 beforeAll(() => {
@@ -41,4 +42,13 @@ test('drag instructions inherit the plain controls font and color', async () => 
   const controls = instructions.closest('.live-demo__controls')!;
   expect(getComputedStyle(instructions).fontFamily).toBe(getComputedStyle(controls).fontFamily);
   expect(getComputedStyle(instructions).color).toBe(getComputedStyle(controls).color);
+});
+
+test('validation demo controls use the shared styling and toggle invalid circles', async () => {
+  const { container } = render(<DataValidationDemo />);
+  const checkbox = await screen.findByRole('checkbox', { name: 'Circle invalid data' });
+  expect(!!checkbox.closest('.live-demo__controls')).toBe(true);
+  expect(container.querySelectorAll('[data-validation-invalid]').length).toBeGreaterThan(0);
+  fireEvent.click(checkbox);
+  expect(container.querySelectorAll('[data-validation-invalid]').length).toBe(0);
 });

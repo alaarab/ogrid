@@ -1,5 +1,6 @@
 import type { IDataValidationRule, IListDataValidationRule, IColumnDef } from '../types';
 import { getCellValue } from './cellValue';
+export interface IDataValidationChange { col: number; row: number; value: unknown }
 
 export interface IDataValidationContext<T> {
   items: T[];
@@ -7,9 +8,9 @@ export interface IDataValidationContext<T> {
   namedRanges?: Record<string, string>;
   getValue?: (col: number, row: number, sheet?: string) => unknown;
   /** Injected by the formula feature; the proposed value overrides the target cell for custom formulas. */
-  evaluateFormula?: (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }, proposed?: { value: unknown }) => unknown;
+  evaluateFormula?: (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }, proposed?: { value?: unknown; changes?: readonly IDataValidationChange[] }) => unknown;
   /** Optional source resolver (e.g. XLSX ranges including promoted header cells). */
-  resolveSource?: (source: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown[] | undefined;
+  resolveSource?: (source: string, anchor: { col: number; row: number }, cell: { col: number; row: number }, changes?: readonly IDataValidationChange[]) => unknown[] | undefined;
 }
 
 const DAY = 86400000;
@@ -104,6 +105,7 @@ export function createDataValidator<T>(rules: readonly IDataValidationRule<T>[],
   const validate = (rule: IDataValidationRule<T>, value: unknown, columnId: string, row: number): boolean => {
     if (value === '' || value === null || value === undefined) return rule.allowBlank === true;
     const { anchor, cell } = coords(rule, columnId, row);
+    const proposed = { value };
     // Formula text is checked by its computed result before anything is stored.
     if (typeof value === 'string' && value.startsWith('=') && context.evaluateFormula) {
       const result = context.evaluateFormula(value, cell, cell, { value });
@@ -114,14 +116,14 @@ export function createDataValidator<T>(rules: readonly IDataValidationRule<T>[],
     if (rule.type === 'list') return listValues(rule, columnId, row).some((v) => String(v).toLowerCase() === String(value).toLowerCase());
     if (rule.type === 'custom') {
       if (!context.evaluateFormula) return false;
-      const result = context.evaluateFormula(rule.formula, anchor, cell, { value });
+      const result = context.evaluateFormula(rule.formula, anchor, cell, proposed);
       return !isError(result) && (result === true || (typeof result === 'number' && Number.isFinite(result) && result !== 0));
     }
     const convert = rule.type === 'date' ? validationDateSerial : rule.type === 'time' ? timeSerial : numeric;
     const n = rule.type === 'textLength' ? String(value).length : convert(value);
     if (!Number.isFinite(n) || (rule.type === 'whole' && !Number.isInteger(n))) return false;
     const bound = (v: number | string | undefined): number => {
-      const resolved = typeof v === 'string' && v.startsWith('=') ? context.evaluateFormula?.(v, anchor, cell, { value }) : v;
+      const resolved = typeof v === 'string' && v.startsWith('=') ? context.evaluateFormula?.(v, anchor, cell, proposed) : v;
       return convert(resolved);
     };
     const a = bound(rule.value), b = bound(rule.value2);
