@@ -186,10 +186,13 @@ describe('mount', () => {
 });
 
 describe('XlsxWorkbookGrid sheet tabs keyboard', () => {
-  test('arrow keys move and activate tabs; tabs control the panel', async () => {
+  test.each(['workbook', 'streamed Blob'])('arrow/Home/End keys activate %s tabs and label the panel', async (source) => {
     const changes: string[] = [];
-    render(<XlsxWorkbookGrid workbook={buildWorkbook()} height={400} onSheetChange={(n) => changes.push(n)} />);
-    await waitFor(() => expect(screen.getByText('99')).toBeInTheDocument());
+    const workbook = buildWorkbook();
+    const input = source === 'workbook' ? { workbook } : { blob: new Blob([await workbook.xlsx.writeBuffer()]), streaming: true };
+    render(<XlsxWorkbookGrid {...input} height={400} onSheetChange={(n) => changes.push(n)} />);
+    if (source === 'streamed Blob') await screen.findByText('2 rows loaded');
+    else await screen.findByText('99');
     const orders = screen.getByRole('tab', { name: 'Orders' });
     const summary = screen.getByRole('tab', { name: 'Summary' });
     expect(orders.getAttribute('tabindex')).toBe('0');
@@ -204,5 +207,15 @@ describe('XlsxWorkbookGrid sheet tabs keyboard', () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Summary' })));
     fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowRight' });
     expect(changes).toEqual(['Summary', 'Orders']);
+    fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowLeft' });
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Home' });
+    fireEvent.keyDown(document.activeElement as Element, { key: 'End' });
+    expect(changes).toEqual(['Summary', 'Orders', 'Summary', 'Orders', 'Summary']);
+    if (source === 'workbook') await screen.findByText('orders');
+    expect(document.activeElement).toBe(summary);
+    expect(summary).toHaveAttribute('tabindex', '0');
+    expect(orders).toHaveAttribute('tabindex', '-1');
+    expect(summary).toHaveAttribute('aria-selected', 'true');
+    expect(panel).toHaveAttribute('aria-labelledby', summary.id);
   });
 });

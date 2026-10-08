@@ -304,6 +304,8 @@ export function XlsxGrid({
     onFormulaRecalc,
     editable,
     allowStructureEdits: editable,
+    rangeMove: editable,
+    cellDrop: editable,
     ...(editable ? { onCellValueChanged, onRowsChange, onColumnsChange, createRow } : {}),
     onUndo,
     onRedo,
