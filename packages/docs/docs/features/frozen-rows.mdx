@@ -1,0 +1,48 @@
+---
+sidebar_position: 11.6
+title: Frozen Rows
+description: Keep the first rows visible below the header while the body scrolls, like Excel's Freeze Top Rows
+---
+
+import FrozenRowsDemo from '@site/src/components/demos/FrozenRowsDemo';
+
+# Frozen Rows
+
+Keep the first N displayed rows in place below the header while the rest of the body scrolls vertically, like Excel's **Freeze Panes**. A subtle divider marks the last frozen row.
+
+## Live Demo
+
+<FrozenRowsDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+<OGrid
+  columns={columns}
+  data={rows}
+  getRowId={(r) => r.id}
+  frozenRows={2}
+/>;
+```
+
+The same prop works on `@alaarab/ogrid-react-fluent` and on the bare `DataGridTable`.
+
+## How It Works
+
+- The frozen rows are the first `frozenRows` **displayed** rows: they follow sorting and filtering, and with pagination they are the first rows of the current page.
+- Frozen cells use `position: sticky` below the header. With [column pinning](./column-pinning), cells in the intersection stick on both axes.
+- With [virtual scrolling](./virtual-scrolling), frozen rows are always rendered, however far the body is scrolled.
+- Keyboard navigation scrolls a row out from under the frozen rows when it becomes active.
+- A [merged cell](./merged-cells) never spans across the frozen boundary; it is clipped there.
+
+## Styling
+
+The divider under the last frozen row uses `--ogrid-frozen-divider` (default: `--ogrid-border-strong`). Stacking order uses `--ogrid-z-frozen` (frozen cells, default `7`) and `--ogrid-z-frozen-pinned` (frozen pinned, checkbox and row-number cells, default `9`).
+
+```css
+.my-grid {
+  --ogrid-frozen-divider: #217346;
+}
+```

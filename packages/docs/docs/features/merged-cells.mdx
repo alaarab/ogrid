@@ -1,0 +1,79 @@
+---
+sidebar_position: 11.5
+title: Merged Cells
+description: Merge a block of cells into one, Excel-style, with navigation, selection, copy and editing that treat it as a single cell
+---
+
+import MergedCellsDemo from '@site/src/components/demos/MergedCellsDemo';
+
+# Merged Cells
+
+Merge a rectangular block of cells into one, like Excel's **Merge Cells**. The block's top-left cell (the anchor) is drawn across the whole block; the cells it covers are not rendered.
+
+## Live Demo
+
+<MergedCellsDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { IMergedCell } from '@alaarab/ogrid-react-radix';
+
+const mergedCells: IMergedCell[] = [
+  // "region" of row n1 spans 4 rows
+  { rowId: 'n1', columnId: 'region', rowSpan: 4 },
+  // a 2 x 3 block anchored at row s1, column "quarter"
+  { rowId: 's1', columnId: 'quarter', rowSpan: 2, colSpan: 3 },
+];
+
+<OGrid
+  columns={columns}
+  data={rows}
+  getRowId={(r) => r.id}
+  mergedCells={mergedCells}
+/>;
+```
+
+The same prop works on `@alaarab/ogrid-react-fluent` and on the bare `DataGridTable`.
+
+## The `IMergedCell` contract
+
+```ts
+interface IMergedCell {
+  rowId: RowId;      // the anchor row (getRowId value)
+  columnId: string;  // the anchor column
+  rowSpan?: number;  // default 1
+  colSpan?: number;  // default 1
+}
+```
+
+Spans count **displayed** rows (after sorting, filtering and paging) and **visible** columns, starting at the anchor. Hide a column and a span that crossed it now reaches one column further; sort the grid and the merge follows its anchor row and covers the rows displayed below it.
+
+## Behavior
+
+Merged cells behave like Excel:
+
+| Action | Result |
+|---|---|
+| Click any part of the block | The anchor becomes the active cell |
+| Arrow keys | Move over the block as one cell; entering it lands on the anchor |
+| Tab / Shift+Tab | Covered cells are skipped |
+| Range selection (drag, Shift+click, Shift+arrows) | Grows to include every merge it touches |
+| Copy | The anchor's value is copied once; covered cells copy as empty |
+| Paste | Only the anchor receives a value |
+| Enter / F2 / double-click | Edits the anchor; Enter-commit moves below the block |
+
+## When a merge no longer fits the view
+
+Merges degrade instead of breaking the layout:
+
+- **Anchor not displayed** (filtered out, or on another page): the merge is ignored.
+- **Span past the end of the page or the last column**: clipped to what is displayed.
+- **Pinned columns**: a merge never crosses from pinned to unpinned columns (or between left and right pins); it is clipped at the boundary.
+- **Frozen rows**: a merge never crosses the [frozen-row](./frozen-rows) boundary; it is clipped there.
+- **Overlapping merges**: the first one in the array wins; later overlapping entries are ignored.
+- **Virtual scrolling**: when the block is partly scrolled out of the rendered window, its visible portion is drawn (showing the anchor's content), so nothing misaligns.
+- **Windowed data sources** (`getRowCount` + `getRows`): merges are not applied, because the grid never holds whole spans.
+
+Resolution is available as a pure function for headless use: `resolveMergedCells`, with `expandRangeToMerges` and `isCoveredCell` for selection and clipboard logic.
