@@ -11,7 +11,7 @@
 import ExcelJS from 'exceljs';
 import { UndoRedoStack, triggerBlobDownload, type ICellNote, type IColumnDef, type RowId } from '@alaarab/ogrid-core';
 import { createBuiltInFunctions, tokenize, type IGridDataAccessor, type IRecalcResult } from '@alaarab/ogrid-core/formula';
-import { applyStyleEdit, styleHas, type StyleEdit, type XlsxCellStyle } from './cellStyles';
+import { applyBorderSides, applyStyleEdit, borderSidesForCell, styleHas, type BorderOptions, type StyleEdit, type XlsxCellStyle } from './cellStyles';
 import { XLSX_MIME_TYPE } from './exportToXlsx';
 import { readSheetNotes, writeSheetNotes } from './cellNotes';
 import { rebaseFormulaRows, toFileFormula } from './formulaReferences';
@@ -19,6 +19,7 @@ import type { IMergedCell, XlsxSelection } from './gridAdapter';
 import {
   cellKey,
   headerReferencingFormulas,
+  indexToColumnLetter,
   normalizeCellValue,
   pxToColumnWidth,
   sheetToGridData,
@@ -44,6 +45,8 @@ export interface XlsxSheetState {
   readonly styles: ReadonlyMap<string, XlsxCellStyle>;
   /** Current merged blocks. */
   readonly merges: IMergedCell[];
+  /** Current frozen panes (data rows below the header, leading columns). */
+  readonly frozen: { rows: number; columns: number };
   /** Current cell notes (Excel notes on loaded data cells). */
   readonly notes: ICellNote[];
   /** Current column widths in Excel character units (explicit ones only). */
@@ -65,6 +68,8 @@ interface MutableSheetState {
   styles: Map<string, XlsxCellStyle>;
   initialMerges: IMergedCell[];
   merges: IMergedCell[];
+  initialFrozen: { rows: number; columns: number };
+  frozen: { rows: number; columns: number };
   initialNotes: ICellNote[];
   notes: ICellNote[];
   initialWidths: Record<string, number>;
@@ -199,6 +204,8 @@ export class XlsxWorkbookDocument {
       styles: new Map(source.formatting.styles),
       initialMerges: source.formatting.merges,
       merges: source.formatting.merges,
+      initialFrozen: source.formatting.frozen,
+      frozen: source.formatting.frozen,
       initialNotes: notes,
       notes,
       initialWidths: source.formatting.columnWidths,
@@ -312,6 +319,33 @@ export class XlsxWorkbookDocument {
     this.commit(state, ops);
   }
 
+  /**
+   * Apply a border command to the selection's bounding box. `outside` and
+   * `inside` are resolved per cell from its position in the box. Undoable and
+   * written back to the workbook on export.
+   */
+  applyBorders(sheetName: string, selection: XlsxSelection, opts: BorderOptions): void {
+    const state = this.state(sheetName);
+    const box = state && this.bounds(state, selection);
+    if (!state || !box) return;
+    const ops: Op[] = [];
+    for (let r = box.top; r <= box.bottom; r++) {
+      const row = state.rows[r] as SheetRow | undefined;
+      if (!row) continue;
+      for (let c = box.left; c <= box.right; c++) {
+        const column = state.columns[c] as IColumnDef<SheetRow> | undefined;
+        if (!column) continue;
+        const key = cellKey(row.__rowIdx, column.columnId);
+        const before = state.styles.get(key);
+        const sides = borderSidesForCell(opts, { top: r === box.top, bottom: r === box.bottom, left: c === box.left, right: c === box.right });
+        const after = applyBorderSides(before, sides);
+        if (before === after) continue;
+        ops.push({ t: 'style', key, before, after });
+      }
+    }
+    this.commit(state, ops);
+  }
+
   /** Bounding box of a selection in sheet order (rows by data position, columns by column order). */
   private bounds(state: MutableSheetState, selection: XlsxSelection) {
     const rows = selection.rowIds.map((id) => this.rowIndexOf(state, id)).filter((i) => i >= 0);
@@ -393,6 +427,16 @@ export class XlsxWorkbookDocument {
     const id = Number(rowId);
     if (!state || this.rowIndexOf(state, id) < 0) return;
     state.rowHeights = new Map(state.rowHeights).set(id, Math.round(points * 100) / 100);
+    this.emit();
+  }
+
+  /** Record frozen panes for a sheet (grid counts: data rows below the header, leading columns). Not part of undo history. */
+  setFreeze(sheetName: string, rows: number, columns: number): void {
+    const state = this.state(sheetName);
+    if (!state) return;
+    const next = { rows: Math.max(0, Math.floor(rows)), columns: Math.max(0, Math.floor(columns)) };
+    if (state.frozen.rows === next.rows && state.frozen.columns === next.columns) return;
+    state.frozen = next;
     this.emit();
   }
 
@@ -604,6 +648,23 @@ export class XlsxWorkbookDocument {
       if (state.initialRowHeights.get(rowId) === height) continue;
       const index = this.rowIndexOf(state, rowId);
       if (index >= 0) ws.getRow(sheetRowOf(index)).height = height;
+    }
+
+    // Frozen panes: ySplit counts sheet rows, so the promoted header is one of them.
+    if (state.frozen.rows !== state.initialFrozen.rows || state.frozen.columns !== state.initialFrozen.columns) {
+      const xSplit = state.frozen.columns;
+      const ySplit = state.frozen.rows + offset;
+      if (xSplit > 0 || ySplit > 0) {
+        ws.views = [{
+          state: 'frozen',
+          xSplit,
+          ySplit,
+          topLeftCell: `${indexToColumnLetter(xSplit)}${ySplit + 1}`,
+          activeCell: 'A1',
+        } as ExcelJS.WorksheetViewFrozen];
+      } else {
+        ws.views = [];
+      }
     }
     return valuesChanged;
   }

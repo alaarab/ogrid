@@ -9,6 +9,7 @@ import { useGridCellFocus } from '../hooks/useGridCellFocus';
 import { useFrozenRowOffsets } from '../hooks/useFrozenRowOffsets';
 import { useStructureContextMenu } from '../hooks/useStructureContextMenu';
 import { useHidingContextMenu } from '../hooks/useHidingContextMenu';
+import { useFreezeContextMenu } from '../hooks/useFreezeContextMenu';
 import { useCellNotes } from '../hooks/useCellNotes';
 import { CellNotePopover } from './CellNotePopover';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
@@ -171,6 +172,14 @@ export function BaseDataGridTableInner<T>(
       interaction.setSelectionRange(null);
       interaction.setActiveCell(null);
     },
+  });
+  // Freeze panes (allowFreeze), acting on the active cell or selection.
+  const freezeMenu = useFreezeContextMenu({
+    actions: gridProps.freezeActions,
+    open: menuPosition != null,
+    activeCell: interaction.activeCell,
+    selectionRange,
+    colOffset,
   });
   // Excel-style cell notes: corner marker, hover/focus popover, editor (context menu, Shift+F2).
   // React 17 compatible stable id (no useId).
@@ -394,6 +403,7 @@ export function BaseDataGridTableInner<T>(
               onClose={closeContextMenu}
               structure={structureMenu}
               hiding={hidingMenu}
+              freeze={freezeMenu}
               notes={cellNotes.menu}
             />
             </div>,

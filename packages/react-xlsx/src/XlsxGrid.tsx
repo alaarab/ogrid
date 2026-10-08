@@ -203,6 +203,14 @@ export function XlsxGrid({
   );
   const onUndo = useCallback(() => doc.undo(sheetName), [doc, sheetName]);
   const onRedo = useCallback(() => doc.redo(sheetName), [doc, sheetName]);
+  // Freeze commands record the pane in the document so export writes ws.views.
+  // Read the live state so a command that changes both axes keeps the other.
+  const onFrozenRowsChange = useCallback((rows: number) => {
+    doc.setFreeze(sheetName, rows, doc.sheet(sheetName)?.frozen.columns ?? 0);
+  }, [doc, sheetName]);
+  const onFrozenColumnsChange = useCallback((columns: number) => {
+    doc.setFreeze(sheetName, doc.sheet(sheetName)?.frozen.rows ?? 0, columns);
+  }, [doc, sheetName]);
   const onFormulaRecalc = useCallback((r: IRecalcResult) => doc.recordFormulaResults(sheetName, r), [doc, sheetName]);
   const onCellNotesChange = useCallback((notes: ICellNote[]) => doc.setNotes(sheetName, notes), [doc, sheetName]);
   const onColumnResized = useCallback((columnId: string, width: number) => doc.setColumnWidth(sheetName, columnId, width), [doc, sheetName]);
@@ -266,8 +274,12 @@ export function XlsxGrid({
     rowResize: true,
     rowHeights,
     onRowResized,
-    // Merged cells and frozen rows: passed through for the grid props landing upstream.
-    ...gridLayoutProps({ mergedCells: state.merges, frozenRows: source.formatting.frozen.rows }),
+    // Merged cells and frozen panes: the document's current freeze is shown;
+    // editable grids can change it from the cell context menu (the freeze is
+    // saved on export).
+    ...gridLayoutProps({ mergedCells: state.merges, frozenRows: state.frozen.rows }),
+    frozenColumns: state.frozen.columns,
+    ...(editable ? { allowFreeze: true, onFrozenRowsChange, onFrozenColumnsChange } : {}),
     // Show the sheet in its real row order. OGrid otherwise defaults its
     // sort to the first column; an empty `defaultSortBy` opts out so a
     // spreadsheet preview reads top-to-bottom as authored. Columns stay

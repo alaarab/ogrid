@@ -60,6 +60,7 @@ export type {
   IColumnsChangeEvent,
   IGridStructureActions,
   IGridHidingActions,
+  IGridFreezeActions,
   IGridEditBridge,
   IGridCellNavigator,
 } from './dataGridTypes';
