@@ -19,6 +19,7 @@ import {
   getRows,
   getColumnTexts,
   getCellContent,
+  getDataCellAtIndex,
   getGridRegion,
   sortColumn,
   clickNextPage,
@@ -909,6 +910,41 @@ test.describe('Fill handle', () => {
     const cell = getCellContent(page, 0, 0);
     await cell.click();
     await expect(getFillHandle(page)).toBeVisible();
+  });
+
+  test('active cell clips long text instead of painting over the next column', async ({ page }) => {
+    // A resized column has a fixed width (like a consumer's sized columns), so
+    // long text has to clip inside it instead of widening the column.
+    await page.locator('thead th').filter({ hasText: 'Project Name' }).first().hover();
+    const handleBox = await getResizeHandle(page, 'Project Name').boundingBox();
+    expect(handleBox).not.toBeNull();
+    const hx = (handleBox?.x ?? 0) + (handleBox?.width ?? 0) / 2;
+    const hy = (handleBox?.y ?? 0) + (handleBox?.height ?? 0) / 2;
+    await page.mouse.move(hx, hy);
+    await page.mouse.down();
+    await page.mouse.move(hx - 20, hy, { steps: 5 });
+    await page.mouse.up();
+
+    const input = await enterCellEdit(page, 0, 0);
+    await input.fill('A very long value that is much wider than the name column can show '.repeat(3));
+    await input.press('Enter');
+
+    await getCellContent(page, 0, 0).click();
+    await expect(getFillHandle(page)).toBeVisible();
+
+    // Hit-test the middle of the neighbouring cell: overflowing text from the
+    // active cell must not paint (and take the pointer) there.
+    const nextCell = getDataCellAtIndex(page, 0, 1);
+    await nextCell.scrollIntoViewIfNeeded();
+    const box = await nextCell.boundingBox();
+    expect(box).not.toBeNull();
+    const point = { x: (box?.x ?? 0) + (box?.width ?? 0) / 2, y: (box?.y ?? 0) + (box?.height ?? 0) / 2 };
+    const hitBelongsTo = await getDataCellAtIndex(page, 0, 0).evaluate((activeTd, { x, y }) => {
+      const hit = document.elementFromPoint(x, y);
+      if (!hit) return 'nothing';
+      return activeTd.contains(hit) ? 'active cell' : 'elsewhere';
+    }, point);
+    expect(hitBelongsTo).toBe('elsewhere');
   });
 
   test('dragging fill handle fills value into rows below', async ({ page }) => {
