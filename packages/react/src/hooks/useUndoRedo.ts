@@ -40,11 +40,23 @@ export interface UseUndoRedoResult<T> {
   maxUndoDepth: number;
   /** Set or clear a formula (engine coordinates) as an undoable change. No-op without `formulaCells`. */
   setFormula: (col: number, row: number, formula: string | null) => void;
+  /**
+   * Record a change the caller has already applied (e.g. inserted rows) as an
+   * undo step. Undo calls `undo`, redo calls `redo`. Joins an open batch.
+   */
+  recordAction: (action: UndoableAction) => void;
+}
+
+/** A change recorded with `recordAction`: how to reverse it and how to apply it again. */
+export interface UndoableAction {
+  undo: () => void;
+  redo: () => void;
 }
 
 type UndoEntry<T> =
   | { kind: 'value'; event: ICellValueChangedEvent<T>; cell: { col: number; row: number } | null }
-  | { kind: 'formula'; col: number; row: number; oldFormula: string | null; newFormula: string | null };
+  | { kind: 'formula'; col: number; row: number; oldFormula: string | null; newFormula: string | null }
+  | { kind: 'action'; action: UndoableAction };
 
 /**
  * Wraps onCellValueChanged with an undo/redo history stack.
@@ -120,6 +132,14 @@ export function useUndoRedo<T>(
     [getStack, syncLengths, formulaCellsRef]
   );
 
+  const recordAction = useCallback(
+    (action: UndoableAction) => {
+      getStack().record({ kind: 'action', action });
+      syncLengths();
+    },
+    [getStack, syncLengths]
+  );
+
   const beginBatch = useCallback(() => {
     getStack().beginBatch();
   }, [getStack]);
@@ -134,6 +154,11 @@ export function useUndoRedo<T>(
   /** Re-apply one entry forwards (redo) or backwards (undo), bypassing the history. */
   const apply = useCallback(
     (entry: UndoEntry<T>, backwards: boolean) => {
+      if (entry.kind === 'action') {
+        if (backwards) entry.action.undo();
+        else entry.action.redo();
+        return;
+      }
       const formulaCells = formulaCellsRef.current;
       if (entry.kind === 'formula') {
         formulaCells?.setFormula(entry.col, entry.row, backwards ? entry.oldFormula : entry.newFormula);
@@ -147,7 +172,6 @@ export function useUndoRedo<T>(
   );
 
   const undo = useCallback(() => {
-    if (!onCellValueChangedRef.current && !formulaCellsRef.current) return;
     const stack = getStack();
     const lastBatch = stack.undo();
     if (!lastBatch) return;
@@ -157,17 +181,16 @@ export function useUndoRedo<T>(
       const entry = lastBatch[i];
       if (entry !== undefined) apply(entry, true);
     }
-  }, [getStack, apply, onCellValueChangedRef, formulaCellsRef]);
+  }, [getStack, apply]);
 
   const redo = useCallback(() => {
-    if (!onCellValueChangedRef.current && !formulaCellsRef.current) return;
     const stack = getStack();
     const nextBatch = stack.redo();
     if (!nextBatch) return;
     setHistoryLength(stack.historyLength);
     setRedoLength(stack.redoLength);
     for (const entry of nextBatch) apply(entry, false);
-  }, [getStack, apply, onCellValueChangedRef, formulaCellsRef]);
+  }, [getStack, apply]);
 
   const clear = useCallback(() => {
     const stack = getStack();
@@ -187,5 +210,6 @@ export function useUndoRedo<T>(
     clear,
     maxUndoDepth,
     setFormula,
+    recordAction,
   };
 }

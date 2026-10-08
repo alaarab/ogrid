@@ -1,5 +1,5 @@
 import type { FilterOption } from './columnTypes';
-import type { IDateFilterValue } from './columnTypes';
+import type { IDateFilterValue, IColumnDef } from './columnTypes';
 
 /** Row identifier type  -  grids accept string or number IDs. */
 export type RowId = string | number;
@@ -320,6 +320,24 @@ export interface IColumnReorderConfig {
   enabled?: boolean;
 }
 
+/**
+ * Event payload when rows are inserted or deleted (the `insertRows` /
+ * `deleteRows` API, the row context menu, or undo/redo of either).
+ */
+export interface IRowsChangeEvent<T> {
+  /** Whether rows were inserted into or deleted from the data. */
+  type: 'insert' | 'delete';
+  /** The inserted or deleted rows, in data order. */
+  rows: T[];
+  /**
+   * Index of each row in `rows`: for an insert, its index in `data` (the new
+   * array); for a delete, the index it had in the array before the delete.
+   */
+  indexes: number[];
+  /** The complete data array after the change. Pass it to your state setter. */
+  data: T[];
+}
+
 /** Imperative grid API exposed via ref. */
 export interface IOGridApi<T> {
   /** Set row data (client-side only; no-op when using dataSource). */
@@ -356,4 +374,35 @@ export interface IOGridApi<T> {
   getColumnOrder: () => string[];
   /** Set the column display order. */
   setColumnOrder: (order: string[]) => void;
+  /**
+   * Read a cell. Returns the computed result for a formula cell, otherwise the
+   * value the column reads from the row (`valueGetter` or `row[columnId]`).
+   * `undefined` when the row or column does not exist. Client-side grids find
+   * any row in `data`; server-side grids only the loaded rows.
+   */
+  getCellValue: (rowId: RowId, columnId: string) => unknown;
+  /**
+   * Write a cell as if the user had typed `value` into it: the column's
+   * `valueParser` runs (a rejected value is dropped), `onCellValueChanged`
+   * fires, the change joins the undo history, and with `formulas` on a string
+   * starting with '=' becomes the cell's formula. Ignores `editable` (this is
+   * a programmatic write); needs `onCellValueChanged` to apply a plain value.
+   */
+  setCellValue: (rowId: RowId, columnId: string, value: unknown) => void;
+  /**
+   * Insert rows before `index` in `data` (`data.length` appends). Without
+   * `rows`, one row from the `createRow` prop is inserted. Reports the change
+   * through `onRowsChange`; undoable. Client-side grids only.
+   */
+  insertRows: (index: number, rows?: T[]) => void;
+  /** Delete the rows with these ids. Reports through `onRowsChange`; undoable. Client-side grids only. */
+  deleteRows: (rowIds: RowId[]) => void;
+  /**
+   * Insert a column so it becomes leaf column `index` (an index into the
+   * flattened `columns`). Without `column`, a blank editable column
+   * (`column1`, `column2`, ...) is inserted. Reports through `onColumnsChange`; undoable.
+   */
+  insertColumn: (index: number, column?: IColumnDef<T>) => void;
+  /** Delete a column. Reports through `onColumnsChange`; undoable. The row data keeps the field. */
+  deleteColumn: (columnId: string) => void;
 }

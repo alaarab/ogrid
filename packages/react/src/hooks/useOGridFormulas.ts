@@ -155,5 +155,10 @@ export function useOGridFormulas<T>(
     formulaCellWriterRef: formulas ? formulaCellWriterRef : undefined,
   }), [formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells, formulaBarState.insertReference, formulaRowMap, formulaCellWriterRef]);
 
-  return { dgFormulaProps, formulaBarEl, activeCellRef: activeCell.activeCellRef, onActiveCellChange: activeCell.onActiveCellChange };
+  return {
+    dgFormulaProps, formulaBarEl, activeCellRef: activeCell.activeCellRef, onActiveCellChange: activeCell.onActiveCellChange,
+    formulaEngine,
+    /** True when the engine follows formula text in the data (host-owned undo), so structure edits must not move it. */
+    formulasFollowData: formulasFollowData(props.onUndo != null),
+  };
 }

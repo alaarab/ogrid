@@ -55,6 +55,10 @@ export interface BaseTableBodyProps<T> {
   mergeLayout?: IMergeLayout | null;
   /** First N displayed rows stay visible below the header (always rendered). */
   frozenRows?: number;
+  /** Height override for a row (resized rows); omit for fixed heights. */
+  getRowHeight?: (rowId: string | number) => number | undefined;
+  /** Row-number resize handle pointer-down; omit to hide the handles. */
+  onRowResizeStart?: (e: React.PointerEvent, rowId: string | number) => void;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
 }
@@ -125,7 +129,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumberOf, ariaRowIndexBase,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
     editingCell, tabStopCell, registerTabStop, popoverAnchorEl, pendingEditorValue, formulaVersion,
-    pinnedColumns, rowNumWidth, mergeLayout, styles, primitives,
+    pinnedColumns, rowNumWidth, mergeLayout, getRowHeight, onRowResizeStart, styles, primitives,
   } = props;
   const { Tbody } = primitives;
   const rowCount = windowed ? windowed.rowCount : items.length;
@@ -229,6 +233,8 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         rightSpacerWidth={rightSpacerWidth}
         globalColIndexMap={globalColIndexMap}
         rowNumWidth={rowNumWidth}
+        customRowHeight={getRowHeight?.(rowIdStr)}
+        onRowResizeStart={onRowResizeStart}
         styles={styles}
         primitives={primitives}
       />

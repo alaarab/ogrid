@@ -176,6 +176,10 @@ export function createSnapshot<T>(
  *   before stay hidden until the user re-filters, like edited rows that no
  *   longer match.
  *
+ * With `placeAddedInSourceOrder` (rows inserted through the grid's structure
+ * edits), new rows go right after the row that precedes them in `data`
+ * instead of at the end, so "Insert row above/below" shows the row there.
+ *
  * Returns `null` when the snapshot can't be applied and the caller must run a
  * full re-sort: duplicate ids in `data`, `getRowId` no longer provided, or no
  * id of the previous dataset survives (a different dataset, not an edit).
@@ -185,6 +189,7 @@ export function applySnapshot<T>(
   data: readonly T[],
   getRowId: ((row: T) => unknown) | undefined,
   filterRows: (rows: T[]) => T[],
+  placeAddedInSourceOrder = false,
 ): { rows: T[]; snapshot: RowOrderSnapshot<T> } | null {
   if (snapshot.data === data) return { rows: snapshot.rows, snapshot };
 
@@ -220,6 +225,9 @@ export function applySnapshot<T>(
   // first load), not an edit.
   if (!overlap && byId.size > 0) return null;
 
+  if (added.length > 0 && placeAddedInSourceOrder) {
+    return placeAdded(data, ids, rows, filterRows(added), getRowId, byId);
+  }
   if (added.length > 0) {
     for (const row of filterRows(added)) {
       ids.push(getRowId(row));
@@ -228,6 +236,50 @@ export function applySnapshot<T>(
   }
 
   return { rows, snapshot: { kind: 'ids', data, ids, knownIds: new Set(byId.keys()), rows } };
+}
+
+/**
+ * Merges `added` rows into the kept order: each goes after the nearest row
+ * before it in `data` that is shown (rows with none go first), in data order.
+ */
+function placeAdded<T>(
+  data: readonly T[],
+  ids: unknown[],
+  rows: T[],
+  added: T[],
+  getRowId: (row: T) => unknown,
+  byId: Map<unknown, T>,
+): { rows: T[]; snapshot: RowOrderSnapshot<T> } {
+  const shown = new Set(ids);
+  const addedSet = new Set(added);
+  // Added rows grouped by the shown row they follow (null: before every shown row).
+  const after = new Map<unknown, T[]>();
+  let anchor: unknown = null;
+  for (const row of data) {
+    if (addedSet.has(row)) {
+      const group = after.get(anchor);
+      if (group) group.push(row);
+      else after.set(anchor, [row]);
+    } else {
+      const id = getRowId(row);
+      if (shown.has(id)) anchor = id;
+    }
+  }
+  const outIds: unknown[] = [];
+  const outRows: T[] = [];
+  const emit = (key: unknown) => {
+    for (const row of after.get(key) ?? []) {
+      outIds.push(getRowId(row));
+      outRows.push(row);
+    }
+  };
+  emit(null);
+  ids.forEach((id, i) => {
+    outIds.push(id);
+    outRows.push(rows[i] as T);
+    emit(id);
+  });
+  return { rows: outRows, snapshot: { kind: 'ids', data, ids: outIds, knownIds: new Set(byId.keys()), rows: outRows } };
 }
 
 /**

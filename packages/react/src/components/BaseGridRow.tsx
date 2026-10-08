@@ -72,6 +72,10 @@ export interface BaseGridRowProps extends GridRowProps {
   mergeStateKey?: string;
   /** Frozen top row ('last' for the last one, which draws the divider). */
   frozen?: 'inner' | 'last';
+  /** Row height override in px (a resized row). */
+  customRowHeight?: number;
+  /** Pointer-down for the row-number resize handle (stable identity); omit to hide the handle. */
+  onRowResizeStart?: (e: React.PointerEvent, rowId: string | number) => void;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
 }
@@ -82,7 +86,8 @@ function GridRowInner(props: BaseGridRowProps) {
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumber, ariaRowIndexBase,
     leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
-    selectionRange, activeCell, cutRange, tabStopColumn = -1, registerTabStop, mergePlan, frozen, styles, primitives,
+    selectionRange, activeCell, cutRange, tabStopColumn = -1, registerTabStop, mergePlan, frozen,
+    customRowHeight, onRowResizeStart, styles, primitives,
   } = props;
   const { Tr, Td, renderRowCheckbox } = primitives;
   // Leading columns stay put on horizontal scroll. Radix gets `position: sticky` from CSS;
@@ -107,6 +112,7 @@ function GridRowInner(props: BaseGridRowProps) {
       onClick={handleSingleRowClick}
       aria-selected={isSelected || undefined}
       aria-rowindex={ariaRowIndexBase != null ? ariaRowIndexBase + rowIndex + 1 : undefined}
+      style={customRowHeight != null ? { height: customRowHeight } : undefined}
     >
       {hasCheckboxCol && (
         <Td
@@ -153,6 +159,15 @@ function GridRowInner(props: BaseGridRowProps) {
           <div className={styles.rowNumberCellInner}>
             {rowNumber ?? rowNumberOffset + rowIndex + 1}
           </div>
+          {onRowResizeStart && (
+            // Pointer-only affordance (like Excel's row boundary); rows have no keyboard resize.
+            <div
+              className={styles.rowResizeHandle}
+              data-row-resize-handle=""
+              aria-hidden
+              onPointerDown={(e) => onRowResizeStart(e, rowId)}
+            />
+          )}
         </Td>
       )}
       {leftSpacerWidth != null && leftSpacerWidth > 0 && (

@@ -53,6 +53,12 @@ export interface UseOGridDataFetchingParams<T> {
    * unchanged, it's still treated as an edit and keeps its order.
    */
   editVersionRef?: { readonly current: number };
+  /**
+   * Bumped by structure edits (rows inserted or deleted through the grid).
+   * On the next data change, rows new to the kept order go next to their
+   * neighbor in the data instead of at the end, so inserted rows show in place.
+   */
+  structureVersionRef?: { readonly current: number };
   columns: ICoreColumnDef<T>[];
   stableFilters: IFilters;
   sort: { field: string; direction: 'asc' | 'desc' };
@@ -117,9 +123,11 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const {
     isServerSide, dataSource, dataSourceKey, displayData, getRowId, columns, stableFilters,
     sort, sortVersion, page, pageSize, paginate = true, onError, onFirstDataRendered, workerSort,
-    editVersionRef,
+    editVersionRef, structureVersionRef,
   } = params;
   const editVersion = editVersionRef?.current ?? 0;
+  const structureVersion = structureVersionRef?.current ?? 0;
+  const structureSeenRef = useRef(structureVersion);
 
   const isClientSide = !isServerSide;
   // Held in a ref: callers may pass an inline getRowId, which must not
@@ -144,10 +152,17 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const snapshotRef = useRef<RowOrderSnapshot<T> | null>(null);
   const resortTrackerRef = useRef<ResortTracker<T>>(createResortTracker<T>());
   const resortInputs: ResortInputs = [sortVersion, stableFilters, columns, sort.field, sort.direction];
+  // A structure edit the host has applied (new data since the edit): full re-sort.
+  const structureChanged =
+    structureSeenRef.current !== structureVersion && resortTrackerRef.current.data !== displayData;
+  if (structureChanged) structureSeenRef.current = structureVersion;
   // Full re-sort due (see trackResort): the snapshot is dropped and rebuilt in the memo below.
   if (trackResort(resortTrackerRef.current, resortInputs, displayData, editVersion, snapshotRef.current, getRowIdRef.current)) {
     snapshotRef.current = null;
   }
+  // Read by the memo below, which recomputes on the data change that carries the edit.
+  const placeAddedInSourceOrderRef = useRef(false);
+  placeAddedInSourceOrderRef.current = structureChanged;
 
   // Current filters only (no sort): applied to rows inserted since the snapshot
   // was taken, so a new row that doesn't match stays hidden.
@@ -166,7 +181,9 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     // snapshot was invalidated above or can't be applied (duplicate ids, a
     // replaced dataset) and a full re-sort is due.
     const snapshot = snapshotRef.current;
-    const applied = snapshot ? applySnapshot(snapshot, displayData, getRowIdRef.current, filterRows) : null;
+    const applied = snapshot
+      ? applySnapshot(snapshot, displayData, getRowIdRef.current, filterRows, placeAddedInSourceOrderRef.current)
+      : null;
     let orderedRows: T[];
     if (applied) {
       snapshotRef.current = applied.snapshot;
