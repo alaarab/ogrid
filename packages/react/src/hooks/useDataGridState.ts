@@ -32,6 +32,7 @@ export interface UseDataGridStateParams<T> {
   props: IOGridDataGridProps<T>;
   wrapperRef: RefObject<HTMLDivElement | null>;
   scrollToIndexRef?: RefObject<UseVirtualScrollResult['scrollToIndex'] | null>;
+  onRowReorderKeyDown?: (event: React.KeyboardEvent) => boolean;
 }
 
 // --- Grouped sub-interfaces ---
@@ -143,6 +144,10 @@ export interface DataGridCellInteractionState {
     endCol: number;
   } | null;
   clearClipboardRanges: () => void;
+  /** Move the current selection to a target cell (Ctrl = copy). No-op without a selection. */
+  moveRangeTo: (targetRow: number, targetCol: number, copy: boolean) => void;
+  /** Apply pasted/dropped text at a cell through the normal edit path (valueParser, undo, formulas). */
+  dropTextAt: (rowIndex: number, colIndex: number, text: string) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo?: () => void;
@@ -510,6 +515,7 @@ export function useDataGridState<T>(
     wrapperRef,
     scrollToIndexRef,
     onKeyDown,
+    onRowReorderKeyDown: params.onRowReorderKeyDown,
     onClipboardError,
     formulas: props.formulas,
     flatColumns,

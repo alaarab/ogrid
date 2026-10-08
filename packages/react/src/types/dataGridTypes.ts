@@ -1,7 +1,7 @@
 import type { FilterOption, ICellConditionalFormat, IConditionalFormatRule } from '@alaarab/ogrid-core';
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
-import type { IFormulaFunction, IFormulaLimits, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap, ISheetReferenceRange, IHiddenGaps } from '@alaarab/ogrid-core';
+import type { IFormulaFunction, IFormulaLimits, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap, ISheetReferenceRange, IHiddenGaps, IRowOrderChange } from '@alaarab/ogrid-core';
 
 // Re-export all shared types and functions from core (no React-specific changes)
 export type {
@@ -35,6 +35,7 @@ export type {
   IColumnReorderConfig,
   IOGridApi,
   IRowsChangeEvent,
+  IRowOrderChange,
 } from '@alaarab/ogrid-core';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from '@alaarab/ogrid-core';
@@ -145,6 +146,24 @@ export interface IGridEditBridge<T> {
 }
 
 // --- OGrid / useOGrid ---
+
+/**
+ * The event handed to `onCellDrop`: an HTML5 drop onto a cell. `text` is the
+ * plain-text flavor of the drag, `files` any files it carried, and `event` the
+ * native drop event (read other `dataTransfer` flavors from it).
+ */
+export interface ICellDropEvent<T> {
+  rowId: RowId;
+  columnId: string;
+  dataTransfer: DataTransfer | null;
+  files: File[];
+  text: string;
+  event: DragEvent;
+  /** The row the drop landed on. */
+  item: T;
+  /** Display index the drop landed on. */
+  rowIndex: number;
+}
 
 /** Base props shared by both client-side and server-side OGrid modes. */
 interface IOGridBaseProps<T> {
@@ -307,6 +326,31 @@ interface IOGridBaseProps<T> {
 
   /** Enable column reordering via drag-and-drop on header cells. Default: false. */
   columnReorder?: boolean;
+
+  /**
+   * Drag rows by their row-number handle to reorder them (row numbers are shown
+   * automatically). Disabled while a sort is active. `onRowOrderChange` receives
+   * the new order; without it the grid keeps the reordered display itself
+   * (uncontrolled). Ctrl/Cmd+Shift+Up/Down moves the selected rows from the
+   * keyboard. Default: false.
+   */
+  rowDragging?: boolean;
+  /** Called with the complete new row order after a row drag or keyboard reorder. */
+  onRowOrderChange?: (event: IRowOrderChange<T>) => void;
+  /**
+   * Drag the selection border to move the selected cells (Ctrl/Cmd to copy),
+   * through the same value path as cut/paste: value parsers, formula-reference
+   * shifting and undo all apply. Default: false.
+   */
+  rangeMove?: boolean;
+  /**
+   * Accept HTML5 drops onto cells. With `onCellDrop`, the handler receives the
+   * drop and the grid writes nothing; without it, dropped plain text is written
+   * through the normal edit path. Default: false.
+   */
+  cellDrop?: boolean;
+  /** Called when content is dropped onto a cell (see `cellDrop`). */
+  onCellDrop?: (event: ICellDropEvent<T>) => void;
 
   /**
    * Enable responsive column hiding. Columns with `responsivePriority` are
@@ -502,6 +546,8 @@ export interface IOGridDataGridProps<T> {
   /** @internal Connects the table's scroll implementation to the grid API. */
   scrollToRowRef?: React.RefObject<((index: number, options?: { align?: 'start' | 'center' | 'end' }) => void) | null>;
   items: T[];
+  /** @internal Full client dataset for managed row reorder callbacks across pages/filters. */
+  rowOrderRows?: T[];
   /**
    * Windowed (lazy) row access. Set when the data source streams rows on
    * demand instead of holding them all in `items`. When present the grid
@@ -625,6 +671,16 @@ export interface IOGridDataGridProps<T> {
   };
   /** Enable column reordering via drag-and-drop on header cells. Default: false. */
   columnReorder?: boolean;
+  /** Drag rows by their row-number handle to reorder them (disabled while sorted). */
+  rowDragging?: boolean;
+  /** Called with the complete new row order after a row drag or keyboard reorder. */
+  onRowOrderChange?: (event: IRowOrderChange<T>) => void;
+  /** Drag the selection border to move the selected cells (Ctrl/Cmd to copy). */
+  rangeMove?: boolean;
+  /** Accept HTML5 drops onto cells; plain text is written to the cell when there is no `onCellDrop`. */
+  cellDrop?: boolean;
+  /** Called when content is dropped onto a cell. */
+  onCellDrop?: (event: ICellDropEvent<T>) => void;
   /** Responsive column hiding config (passed from IOGridBaseProps). */
   responsiveColumns?: boolean | IResponsiveColumnsConfig;
   /** Virtual scrolling configuration. When provided, only visible rows are rendered for large datasets. */

@@ -103,12 +103,13 @@ export function resolveSpreadsheetChrome(flags: {
   showRowNumbers?: boolean;
   cellReferences?: boolean;
   formulas?: boolean;
+  rowDragging?: boolean;
 }) {
-  const { showRowNumbers, cellReferences, formulas } = flags;
+  const { showRowNumbers, cellReferences, formulas, rowDragging } = flags;
   const spreadsheetMode = !!(cellReferences || formulas);
   return {
     spreadsheetMode,
-    showRowNumbers: showRowNumbers || cellReferences || formulas,
+    showRowNumbers: showRowNumbers || cellReferences || formulas || rowDragging,
     showColumnLetters: spreadsheetMode,
     // The formula bar has its own name box.
     showNameBox: !!cellReferences && !formulas,

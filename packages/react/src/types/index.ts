@@ -63,6 +63,8 @@ export type {
   IGridFreezeActions,
   IGridEditBridge,
   IGridCellNavigator,
+  ICellDropEvent,
+  IRowOrderChange,
 } from './dataGridTypes';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './dataGridTypes';

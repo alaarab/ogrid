@@ -78,6 +78,7 @@ export interface UseKeyboardNavigationParams<T> {
     /** Virtual grids: scrolls a row into view by index (rows off screen aren't rendered). */
     scrollToIndexRef?: React.RefObject<ScrollToRowIndex | null>;
     onKeyDown?: (event: React.KeyboardEvent) => void;
+    onRowReorderKeyDown?: (event: React.KeyboardEvent) => boolean;
     fillDown?: () => void;
     /** Ctrl+R: fill the selection right from its left column. */
     fillRight?: () => void;
@@ -198,6 +199,7 @@ export function useKeyboardNavigation<T>(
 
       const targetKind = getKeyTargetKind(e);
       if (targetKind === 'outside') return;
+      if (targetKind === 'grid' && !editingCell && features.onRowReorderKeyDown?.(e)) return;
       // Space/Enter activate the focused in-cell control (row or boolean checkbox).
       if (targetKind === 'control' && (e.key === ' ' || e.key === 'Enter')) return;
 

@@ -1,0 +1,140 @@
+---
+sidebar_position: 5.6
+title: Drag and Drop
+description: Reorder rows, move cell ranges, accept external drops, and make custom cell content draggable
+---
+
+import DragAndDropDemo from '@site/src/components/demos/DragAndDropDemo';
+
+# Drag and Drop
+
+Opt-in drag-and-drop for the grid: reorder rows, move a selected cell range
+(Excel-style, with Ctrl/Cmd to copy), accept content dropped onto a cell, and
+make custom `renderCell` content a native HTML5 drag source. Each feature is a
+separate flag, so nothing changes until you turn it on.
+
+## Live Demo
+
+<DragAndDropDemo />
+
+## Row reordering
+
+`rowDragging` puts a drag handle on the row-number gutter (row numbers are shown
+automatically). Drag the handle — or any row in the current row selection — to
+reorder. A drop-indicator line shows where the rows will land.
+
+```tsx
+<OGrid
+  {...props}
+  rowDragging
+  defaultSortBy=""                       // OGrid sorts by its first column by default
+  onRowOrderChange={(e) => setData(e.data)}
+/>
+```
+
+`onRowOrderChange` receives the complete new order:
+
+```ts
+{
+  rowIds: RowId[];   // every displayed row id, in the new order
+  fromIndex: number; // display index the block moved from
+  toIndex: number;   // display index the block moved to
+  data: T[];         // the full reordered array
+}
+```
+
+Apply `event.data` to your data to make the reorder **controlled**
+(`setData(e.data)`). Without `onRowOrderChange` the grid keeps the reordered
+display itself (**uncontrolled**), so the feature works with no host state.
+
+Row dragging is **disabled while a sort is active** (like AG Grid's managed row
+dragging), because a sort defines the order. OGrid sorts by its first column by
+default, so pass `defaultSortBy=""` (or mark columns `sortable: false`) to start
+unsorted. Reordering is also unavailable with a windowed (lazy) data source.
+
+### Keyboard
+
+`Ctrl/Cmd+Shift+ArrowUp` and `Ctrl/Cmd+Shift+ArrowDown` move the selected rows
+(or the active row when nothing is selected) one position. This is the
+accessible alternative to dragging and records the same `onRowOrderChange`.
+
+## Moving a cell range
+
+`rangeMove` shows a small handle at the top-left of the current cell selection.
+Drag it onto another cell to move the selected cells there; hold Ctrl/Cmd to
+copy instead of move.
+
+The move routes through the same value path as cut and paste: each column's
+`valueParser` runs on the way in, formula references shift relative to the new
+position, and the whole move is a single undo step (Ctrl+Z / Ctrl+Y). Merged
+cells and frozen rows are respected.
+
+```tsx
+<OGrid {...props} editable cellSelection rangeMove />
+```
+
+## Dropping content onto a cell
+
+`cellDrop` accepts HTML5 drops on cells and highlights the target while a drag
+hovers it.
+
+- With `onCellDrop`, your handler receives the drop and the grid writes nothing.
+- Without a handler, dropped plain text is written to the cell through the normal
+  edit path (value parser, `onCellValueChanged`, undo).
+
+```tsx
+<OGrid
+  {...props}
+  cellDrop
+  onCellDrop={(e) => {
+    // e: { rowId, columnId, dataTransfer, files, text, event, item, rowIndex }
+    if (e.files.length) upload(e.files[0], e.rowId, e.columnId);
+    else setValue(e.rowId, e.columnId, e.text);
+  }}
+/>
+```
+
+Read any other `dataTransfer` flavor from `e.event.dataTransfer`.
+
+## Draggable custom cell content
+
+Content inside a cell can use native HTML5 drag without fighting the grid's
+range selection. Mark the draggable element with `data-ogrid-allow-drag`; the
+grid then ignores pointer presses on it (so range selection and the fill handle
+never start), and the browser's drag takes over.
+
+```tsx
+renderCell: (item) => (
+  <span draggable data-ogrid-allow-drag="" style={{ cursor: 'grab' }}>
+    {item.name}
+  </span>
+)
+```
+
+For headless consumers and for packaging a payload, the `useCellDragSource`
+hook returns the props to spread onto the element:
+
+```tsx
+import { useCellDragSource } from '@alaarab/ogrid-react-radix';
+
+function Chip({ row }: { row: Row }) {
+  const drag = useCellDragSource({
+    rowId: row.id,
+    columnId: 'name',
+    payload: { label: row.name },      // serialised with the drag
+  });
+  return <span {...drag}>{row.name}</span>;
+}
+```
+
+The payload is written as JSON under `application/json` (and tagged with the
+`application/x-ogrid-cell` MIME type). Pass `handleSelector` to require the drag
+to start from a specific child (e.g. `handleSelector="[data-grip]"`).
+
+## Interaction with selection
+
+Row dragging and external drops use HTML5 drag events; range selection and the
+fill handle keep using pointer events, so they do not conflict. During a row
+drag or a range move the grid sets `data-ogrid-dragging-row` on the wrapper, and
+while an external drag hovers a cell it sets `data-ogrid-drop-target` on that
+cell for styling.

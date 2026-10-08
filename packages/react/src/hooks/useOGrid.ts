@@ -73,10 +73,13 @@ export function useOGrid<T>(
     stickyHeader, columnReorder, responsiveColumns, virtualScroll, rowHeight, density = 'normal',
     mergedCells, frozenRows, findReplace,
     defaultFrozenRows, onFrozenRowsChange, frozenColumns, defaultFrozenColumns, onFrozenColumnsChange, allowFreeze,
+    rowDragging, rangeMove, cellDrop,
     'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     rowResize, rowHeights,
   } = props;
   const onRowResized = useStableOptionalCallback(props.onRowResized);
+  const onRowOrderChange = useStableOptionalCallback(props.onRowOrderChange);
+  const onCellDrop = useStableOptionalCallback(props.onCellDrop);
 
   // Inline consumer callbacks are stabilized so they don't cause cascading re-renders.
   const { getRowId, editVersionRef, onColumnOrderChange, onCellValueChanged, onUndo, onRedo, onClipboardError } =
@@ -307,13 +310,15 @@ export function useOGrid<T>(
     mergedCells, frozenRows: freeze.frozenRows, frozenColumns: freeze.frozenColumns, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef, hidingActions,
     freezeActions: freeze.freezeActions,
+    rowDragging, onRowOrderChange, rangeMove, cellDrop, onCellDrop,
+    rowOrderRows: rowDragging && !isServerSide ? displayData : undefined,
     findReplace, findRows, onFindPageChange: findRows ? setPage : undefined,
     cellNavigatorRef: nameBox.cellNavigatorRef,
     ...dgNoteProps,
     emptyState: dgEmptyState,
     ...dgFormulaProps,
   }), [
-    displayItems, windowed, columnsProp, getRowId,
+    displayItems, windowed, columnsProp, getRowId, displayData, isServerSide,
     sortingState.sort.field, sortingState.sort.direction, sortingState.sortModel, sortingState.handleSort,
     visibleColumns, effectiveColumnOrder, handleColumnOrderChange, handleColumnResized,
     handleColumnPinned, columnWidthOverrides,
@@ -326,6 +331,7 @@ export function useOGrid<T>(
     rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, hidingActions, dgNoteProps,
     freeze.frozenRows, freeze.frozenColumns, freeze.freezeActions, pinnedOverrides,
+    rowDragging, onRowOrderChange, rangeMove, cellDrop, onCellDrop,
     findReplace, findRows, setPage,
     nameBox.cellNavigatorRef, dgEmptyState, dgFormulaProps,
   ]);

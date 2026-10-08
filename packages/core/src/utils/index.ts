@@ -73,6 +73,16 @@ export {
 } from './columnReorder';
 export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams } from './columnReorder';
 export {
+  moveRows,
+  applyRowOrder,
+  computeRowOrderChange,
+  rowIndexById,
+  isRowMoveNoop,
+} from './rowReorder';
+export type { IRowOrderChange } from './rowReorder';
+export { moveCellRange } from './rangeMove';
+export type { MoveCellRangeParams, RangeMoveFormulaOptions } from './rangeMove';
+export {
   computeVisibleRange,
   computeTotalHeight,
   getScrollTopForRow,

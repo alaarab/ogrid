@@ -23,6 +23,7 @@ import type { IStatusBarProps, RowId, HeaderRow } from '../types';
 /** Parameters for the orchestration hook. */
 export interface UseDataGridTableOrchestrationParams<T> {
   props: IOGridDataGridProps<T>;
+  onRowReorderKeyDown?: (event: React.KeyboardEvent) => boolean;
 }
 
 /** Everything the framework-specific view layer needs to render. */
