@@ -4,10 +4,10 @@
 // styles, merges, undo) lives in an XlsxWorkbookDocument so it survives
 // sheet switches and can be exported.
 
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type ExcelJS from 'exceljs';
 import { OGrid, type IOGridProps, type ICellValueChangedEvent, type IColumnsChangeEvent } from '@alaarab/ogrid-react-radix';
-import type { ICellNote, IColumnDef, IRowsChangeEvent } from '@alaarab/ogrid-core';
+import type { ICellNote, IColumnDef, IOGridApi, IRowsChangeEvent } from '@alaarab/ogrid-core';
 import type { IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { styleToCss, themePaletteOf, type CssStyle, type ThemePalette, type XlsxCellStyle } from './cellStyles';
 import { conditionalFormatsOf } from './conditionalFormats';
@@ -16,6 +16,9 @@ import { gridLayoutProps, readSelection } from './gridAdapter';
 import { formatWithNumFmt } from './numFmt';
 import { cellKey, type SheetRow, type SheetToGridDataOptions, type WorkbookLoadOptions } from './sheetMapper';
 import { XlsxWorkbookDocument, type XlsxSheetState } from './xlsxDocument';
+import { sourceArchiveOf } from './sourceArchive';
+
+const MediaLayer = lazy(() => import('./XlsxMediaLayer').then((m) => ({ default: m.XlsxMediaLayer })));
 
 export interface XlsxGridProps {
   workbook: ExcelJS.Workbook;
@@ -207,6 +210,13 @@ export function XlsxGrid({
   );
   const sheets = useMemo(() => doc.sheetAccessors(), [doc]);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const apiRef = useRef<IOGridApi<SheetRow>>(null);
+  const worksheet = workbook.getWorksheet(sheetName);
+  const hasMedia = !!worksheet?.getImages().length || !!sourceArchiveOf(workbook)?.charts.get(sheetName)?.length;
+  const hiddenRows = useMemo(() => {
+    const offset = sheetSource?.formatting.headerPromoted ? 1 : 0;
+    return state?.rows.filter((row) => worksheet?.findRow(row.__rowIdx + 1 + offset)?.hidden).map((row) => row.__rowIdx) ?? [];
+  }, [state, worksheet, sheetSource]);
   const rowHeight = ROW_HEIGHT_BY_DENSITY[density];
   const { rowHeights, pxToPoints } = useSheetRowHeights(state, rowHeight);
 
@@ -286,6 +296,7 @@ export function XlsxGrid({
     columns,
     data: rows,
     getRowId: (row: SheetRow) => row.__rowIdx,
+    defaultHiddenRowIds: hiddenRows,
     cellReferences: true,
     formulas: true,
     sheets,
@@ -327,7 +338,7 @@ export function XlsxGrid({
   } as unknown as IOGridProps<unknown>;
 
   return (
-    <div ref={wrapperRef} style={{ width: '100%', height, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <div ref={wrapperRef} style={{ position: 'relative', width: '100%', height, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <style>{FILL_OVERLAY_CSS}</style>
       {showToolbar && (
         <FormatToolbar
@@ -349,7 +360,8 @@ export function XlsxGrid({
         </div>
       )}
       {/* One grid per sheet state: the formula engine loads a sheet's formulas once per OGrid instance. */}
-      <OGrid key={gridKeyFor(state)} {...gridProps} />
+      <OGrid key={gridKeyFor(state)} {...gridProps} ref={apiRef as React.Ref<IOGridApi<unknown>>} />
+      {hasMedia && <Suspense fallback={null}><MediaLayer workbook={workbook} sheetName={sheetName} rootRef={wrapperRef} apiRef={apiRef} headerPromoted={source.formatting.headerPromoted} rowHeight={rowHeight} rowHeights={rowHeights} /></Suspense>}
     </div>
   );
 }
