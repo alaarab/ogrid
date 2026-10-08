@@ -52,6 +52,8 @@ describe('XlsxWorkbookGrid formatting', () => {
     let doc: XlsxWorkbookDocument | undefined;
     render(<XlsxWorkbookGrid workbook={await styledWorkbook()} height={400} editable onDocument={(d) => { doc = d; }} />);
     await waitFor(() => expect(screen.getByText('Pears')).toBeInTheDocument());
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    await waitFor(() => expect(screen.getByText('Pears').closest('[inert]')).toBeNull());
 
     fireEvent.pointerDown(cellOf('Pears'));
     await waitFor(() => expect(cellOf('Pears')).toHaveAttribute('data-active-cell', 'true'));

@@ -30,6 +30,7 @@ try {
     const api = await import('/ogrid-xlsx.js');
     const workbook = api.workbookFromGridData([{ a: 7, b: 14 }], [{ columnId: 'a', name: 'Input' }, { columnId: 'b', name: 'Result' }], (row, column) => row[column], { formulas: [{ row: 0, col: 1, formula: '=A1*2' }] });
     const sheet = workbook.worksheets[0];
+    for (let i = 5; i <= 300; i++) sheet.getCell(`A${i}`).value = i;
     sheet.getCell('A2').font = { bold: true, color: { argb: 'FF217346' } };
     sheet.getCell('A2').note = 'Keep this note';
     sheet.getCell('A2').dataValidation = { type: 'whole', operator: 'between', formulae: [0, 100] };
@@ -40,7 +41,16 @@ try {
     const image = workbook.addImage({ base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2OZAAAAAASUVORK5CYII=', extension: 'png' });
     untouched.addImage(image, 'B2:C3');
     window.original = await api.xlsxBlobFromWorkbook(workbook);
-    window.unmountGrid = api.mount(document.getElementById('grid'), { blob: window.original, streaming: true, editable: true, onStreamedWorkbook: value => { window.streamed = value; }, onDocument: value => { window.doc = value; } });
+    window.hydration = [];
+    const workerFactory = () => {
+      const worker = new Worker('/xlsxWorker.js', { type: 'module' });
+      worker.addEventListener('message', ({ data }) => {
+        if (data.kind === 'model') window.hydration.push({ kind: data.kind, sheets: data.model.sheets, rows: data.model.worksheets.map(sheet => sheet.rows.length) });
+        if (data.kind === 'documentRows' || data.kind === 'preparedRows') window.hydration.push({ kind: data.kind, sheetId: data.sheetId, sheetName: data.sheetName, count: data.rows.length });
+      });
+      return worker;
+    };
+    window.unmountGrid = api.mount(document.getElementById('grid'), { blob: window.original, streaming: true, editable: true, streamOptions: { workerFactory }, onStreamedWorkbook: value => { window.streamed = value; }, onDocument: value => { window.doc = value; } });
   });
   await page.locator('td[data-column-id="B"]').filter({ hasText: '14' }).waitFor({ timeout: 20_000 });
   assert.ok(await page.evaluate(() => [...document.styleSheets].some(sheet => sheet.href?.endsWith('/ogrid-xlsx.css') && sheet.cssRules.length > 0)), 'shipped stylesheet must load');
@@ -52,6 +62,13 @@ try {
   }), true, 'unedited streamed export must preserve original ZIP bytes');
   await page.getByRole('button', { name: 'Enable editing' }).click();
   await page.waitForFunction(() => !!window.doc);
+  const hydration = await page.evaluate(() => window.hydration);
+  const model = hydration.find(message => message.kind === 'model');
+  assert.ok(model.rows.every(count => count === 0), 'initial worksheet models must contain no cell rows');
+  assert.ok(model.sheets.every(sheet => Object.keys(sheet).length === 1 && 'id' in sheet), 'sheets must carry ordering metadata only');
+  const rows = hydration.filter(message => message.kind === 'documentRows' && message.sheetId === 1);
+  assert.ok(rows.length > 1 && rows.every(message => message.count <= 128), 'document transport must cross the hydration boundary with bounded batches');
+  assert.equal(rows.reduce((total, message) => total + message.count, 0), 299, 'all populated worksheet rows must arrive');
   assert.ok(workers >= 2, 'preview and lazy document load must each use a real worker');
   const bytes = await page.evaluate(async () => {
     const name = window.doc.sheetNames[0];
@@ -85,7 +102,7 @@ try {
       return false;
     } catch (error) { return error.name === 'AbortError' && chunks === 1; }
   }), true, 'cancel must terminate a real streaming worker after its first chunk');
-  console.log('Browser bundle passed: real-worker preview/cancel, original bytes, lazy edit/export with styles/merges/validation/CF/notes/media, structural cache invalidation, mount/unmount (17 assertions).');
+  console.log('Browser bundle passed: real-worker preview/cancel, original bytes, lazy edit/export with styles/merges/validation/CF/notes/media, structural cache invalidation, bounded hydration, mount/unmount (21 assertions).');
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));

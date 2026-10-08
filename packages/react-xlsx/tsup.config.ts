@@ -7,7 +7,7 @@ import { defineConfig } from 'tsup';
 // route or component that uses this package (React.lazy / dynamic import).
 // @alaarab/ogrid-react-xlsx-browser is the self-contained bundle.
 export default defineConfig([{
-  entry: ['src/index.ts', 'src/xlsxWorkerFactory.ts'],
+  entry: ['src/index.ts', 'src/xlsxWorkerFactory.ts', 'src/streamingReader.ts'],
   format: ['esm'],
   outDir: 'dist/esm',
   // XLSX media display and OOXML passthrough load on demand.

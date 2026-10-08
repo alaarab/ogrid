@@ -29,7 +29,7 @@ Copy **all `.js` files and the CSS in `dist/`**, including `xlsxWorker.js`, into
 
 The complete module graph measures about 615 kB with gzip, or 486.30 kB after minification and Brotli compression (the size gate), within its 505.8 kB budget. These totals include deferred chunks; the initial entry does not load optional UI or media. If you have a bundler, use `@alaarab/ogrid-react-xlsx` instead so React and ExcelJS aren't duplicated. See its README for the API and the load limits for untrusted files.
 
-Blobs of at least 1 MiB use a progressive worker preview automatically. Set
+Blobs of at least 1 MiB without `onDocument` use a progressive worker preview automatically. Set
 `streaming: true` to stream smaller files too. With `editable: true`, choose
 **Enable editing** after loading to prepare the full document. Until then,
 Export returns the original file byte-for-byte. Use `streaming: false` for
