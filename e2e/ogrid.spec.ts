@@ -368,6 +368,28 @@ test.describe('Cell editing', () => {
     await expect.poll(async () => (await getCellContent(page, 0, 0).textContent()) ?? '').toContain('!E2E Edited');
   });
 
+  // Regression: a state update from a native 'input' listener (formula assist)
+  // re-rendered the controlled editor with its old value before React's
+  // onChange ran, so typed text was reverted. happy-dom unit tests miss it.
+  test('typed characters stay in the editor and Enter commits them', async ({ page }) => {
+    const input = await enterCellEdit(page, 0, 0);
+    const original = await input.inputValue();
+
+    await input.press('End');
+    await page.keyboard.type(' Typed');
+    await expect(input).toHaveValue(`${original} Typed`);
+    await input.press('Enter');
+    await expect.poll(async () => ((await getCellContent(page, 0, 0).textContent()) ?? '').trim()).toBe(`${original} Typed`);
+  });
+
+  test('fast type-to-replace keeps every keystroke', async ({ page }) => {
+    await getCellContent(page, 0, 0).click();
+
+    await page.keyboard.type('Zed Fast');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => ((await getCellContent(page, 0, 0).textContent()) ?? '').trim()).toBe('Zed Fast');
+  });
+
   test('Escape discards the edit', async ({ page }) => {
     const cellContent = getCellContent(page, 0, 0);
     const originalText = (await cellContent.textContent()) ?? '';
