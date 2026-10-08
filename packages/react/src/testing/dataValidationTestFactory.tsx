@@ -19,11 +19,11 @@ function cut(target: HTMLElement): string {
   return clipboard['text/plain'] ?? '';
 }
 export function createDataValidationTests(OGrid: React.ComponentType<IOGridProps<Row> & { ref?: React.Ref<IOGridApi<Row>> }>) {
-  function setup(overrides: Partial<IOGridProps<Row>> = {}) {
+  function setup(overrides: Partial<IOGridProps<Row>> = {}, initial = rows) {
     const changes = jest.fn();
     const ref = React.createRef<IOGridApi<Row>>();
     function Host() {
-      const [data, setData] = React.useState(rows);
+      const [data, setData] = React.useState(initial);
       return <OGrid ref={ref} {...({ columns, data, getRowId: (r: Row) => r.id, editable: true, defaultSortBy: '', cellReferences: true, dataValidations: [whole], onCellValueChanged: (e: ICellValueChangedEvent<Row>) => { changes(e); setData((old) => old.map((r) => r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r)); }, ...overrides } as IOGridProps<Row>)} />;
     }
     const view = render(<Host />);
@@ -41,7 +41,7 @@ export function createDataValidationTests(OGrid: React.ComponentType<IOGridProps
     it('stop rejects an edit before an event or undo entry is recorded', async () => {
       const g = setup(); await g.edit('r0', '11');
       expect(g.changes).not.toHaveBeenCalled(); expect(g.api().getCellValue('r0', 'qty')).toBe(2);
-      expect(await screen.findByRole('dialog')).toHaveTextContent('Choose 1 to 10.');
+      await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent('Choose 1 to 10.'));
       fireEvent.click(screen.getByRole('button', { name: 'OK' }));
       await g.edit('r0', '5'); expect(g.changes).toHaveBeenCalledTimes(1);
       fireEvent.keyDown(g.grid, { key: 'z', ctrlKey: true });
@@ -52,6 +52,50 @@ export function createDataValidationTests(OGrid: React.ComponentType<IOGridProps
       expect(g.changes).toHaveBeenCalledTimes(1);
       expect(g.changes.mock.calls[0]?.[0]).toMatchObject({ columnId: 'qty', rowIndex: 1, newValue: 7 });
       expect(g.api().getCellValue('r0', 'qty')).toBe(2);
+    });
+    it.each([[2, 5, false], [20, 15, true]] as const)('paste checks dependent rules against the final batch (%s, %s)', (a, b, valid) => {
+      const fail = jest.fn();
+      const g = setup({ formulas: true, onValidationFail: fail, dataValidations: [{ type: 'decimal', columnIds: ['status'], operator: 'lessThanOrEqual', value: '=A1' }] }, [{ id: 'r0', qty: 10, status: '8' }]);
+      g.select('r0'); paste(g.grid, `${a}\t${b}`);
+      expect(g.api().getCellValue('r0', 'qty')).toBe(a);
+      expect(g.api().getCellValue('r0', 'status')).toBe(valid ? String(b) : '8');
+      expect(fail).toHaveBeenCalledTimes(valid ? 0 : 1);
+    });
+    it.each(['2', '=2'])('range-backed lists read a pasted source candidate %s', source => {
+      const g = setup({ formulas: true, dataValidations: [{ type: 'list', columnIds: ['status'], source: '=$A$1' }] }, [{ id: 'r0', qty: 10, status: '8' }]);
+      g.select('r0'); paste(g.grid, `${source}\t2`);
+      expect(g.api().getCellValue('r0', 'status')).toBe('2');
+    });
+    it('pasted formulas see every candidate formula in the batch', () => {
+      const fail = jest.fn();
+      const g = setup({ formulas: true, onValidationFail: fail, dataValidations: [{ type: 'custom', columnIds: ['status'], formula: '=B1<=A1' }] }, [{ id: 'r0', qty: 10, status: '8' }]);
+      g.select('r0'); paste(g.grid, '=1+1\t=5');
+      expect(g.api().getCellValue('r0', 'qty')).toBe(2);
+      expect(g.api().getCellValue('r0', 'status')).toBe('8');
+      expect(fail).toHaveBeenCalledTimes(1);
+    });
+    it.each([[2, 5, false], [20, 15, true]] as const)('fill checks dependent destination values (%s, %s)', (a, b, valid) => {
+      const fail = jest.fn();
+      const g = setup({ formulas: true, onValidationFail: fail, dataValidations: [{ type: 'decimal', columnIds: ['status'], rows: { start: 1, end: 1 }, operator: 'lessThanOrEqual', value: '=A2' }] }, [{ id: 'r0', qty: a, status: String(b) }, { id: 'r1', qty: 10, status: '8' }]);
+      g.select('r0'); fireEvent.keyDown(g.grid, { key: 'ArrowRight', shiftKey: true }); fireEvent.keyDown(g.grid, { key: 'ArrowDown', shiftKey: true });
+      fireEvent.keyDown(g.grid, { key: 'd', ctrlKey: true });
+      expect(g.api().getCellValue('r1', 'qty')).toBe(a);
+      expect(g.api().getCellValue('r1', 'status')).toBe(valid ? String(b) : '8');
+      expect(fail).toHaveBeenCalledTimes(valid ? 0 : 1);
+    });
+    it.each([['drag', false], ['drag', true], ['cut', false], ['cut', true]] as const)('%s moves include destination candidates and cleared sources (accepted: %s)', async (kind, valid) => {
+      const g = setup({ formulas: true, rangeMove: true, dataValidations: [{ type: 'custom', columnIds: ['status'], rows: { start: 1, end: 1 }, formula: `=AND(B2*1<=A2,${valid ? 'LEN($A$1)=0' : '$A$1>0'})` }] }, [{ id: 'r0', qty: 2, status: '1' }, { id: 'r1', qty: 10, status: '8' }]);
+      await waitFor(() => expect(!!g.container.querySelector('[aria-busy="true"]')).toBe(false));
+      g.select('r0'); fireEvent.keyDown(g.grid, { key: 'ArrowRight', shiftKey: true });
+      if (kind === 'cut') { const text = cut(g.grid); g.select('r1'); paste(g.grid, text); } else {
+      const handle = await waitFor(() => { const el = g.container.querySelector('[data-ogrid-range-move-handle]'); expect(el).toBeInTheDocument(); return el!; });
+      const dt = new DataTransfer();
+      fireEvent.dragStart(handle, { dataTransfer: dt });
+      fireEvent.drop(g.cell('r1').querySelector('[data-row-index]')!, { dataTransfer: dt });
+      }
+      expect(g.api().getCellValue('r0', 'qty')).toBe(valid || kind === 'cut' ? null : 2);
+      expect(g.api().getCellValue('r1', 'qty')).toBe(valid || kind === 'cut' ? 2 : 10);
+      expect(g.api().getCellValue('r1', 'status')).toBe(valid ? '1' : '8');
     });
     it('warning cancellation rejects and confirmation commits exactly once', async () => {
       const g = setup({ dataValidations: [{ ...whole, errorAlert: { style: 'warning', message: 'Keep this quantity?' } }] });
@@ -149,14 +193,14 @@ export function createDataValidationTests(OGrid: React.ComponentType<IOGridProps
         fireEvent.dragStart(handle, { dataTransfer: dt });
       }
       fireEvent.drop(g.cell('r1').querySelector('[data-row-index]')!, { dataTransfer: dt });
-      expect(await screen.findByRole('dialog')).toHaveTextContent('Choose 1 to 10.');
+      await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent('Choose 1 to 10.'));
       expect(g.api().getCellValue('r0', 'qty')).toBe(2); expect(g.api().getCellValue('r1', 'qty')).toBe(3);
       expect(g.changes).not.toHaveBeenCalled();
     });
     it('information accepts with a notice', async () => {
       const g = setup({ dataValidations: [{ ...whole, errorAlert: { style: 'information', message: 'Outside our suggested range.' } }] });
       await g.edit('r0', '11'); expect(g.api().getCellValue('r0', 'qty')).toBe(11);
-      expect(await screen.findByRole('dialog')).toHaveTextContent('Outside our suggested range.');
+      await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent('Outside our suggested range.'));
     });
     it('API stop rejects and API warning uses onValidationFail without opening a dialog', () => {
       const fail = jest.fn((_failure: IDataValidationFailure<Row>) => false);
@@ -178,6 +222,15 @@ export function createDataValidationTests(OGrid: React.ComponentType<IOGridProps
       g.select('r0', 'status'); fireEvent.click(screen.getByRole('button', { name: 'Show validation list' }));
       const option = await screen.findByRole('option', { name: 'Closed' }); fireEvent.click(option);
       expect(g.api().getCellValue('r0', 'status')).toBe('Closed');
+    });
+    it('range-backed dropdowns show and accept computed spill children', async () => {
+      const g = setup({ formulas: true, initialFormulas: [{ col: 0, row: 0, formula: '=SEQUENCE(3)' }], dataValidations: [{ type: 'list', columnIds: ['status'], source: '=$A$1:$A$3' }] }, rows.map(r => ({ ...r, qty: '' })) as unknown as Row[]);
+      g.select('r0', 'status'); fireEvent.click(screen.getByRole('button', { name: 'Show validation list' }));
+      expect(await screen.findByRole('option', { name: '2' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('option', { name: '3' }));
+      expect(g.api().getCellValue('r0', 'status')).toBe('3');
+      act(() => g.api().setCellValue('r1', 'status', 2));
+      expect(g.api().getCellValue('r1', 'status')).toBe(2);
     });
     it('input message follows the active cell and is absent outside its range', () => {
       const g = setup({ dataValidations: [{ ...whole, rows: { start: 0, end: 0 }, inputMessage: { title: 'Order quantity', text: 'Enter a whole number from 1 to 10.' } }] });
@@ -208,6 +261,18 @@ export function createDataValidationTests(OGrid: React.ComponentType<IOGridProps
       fireEvent.change(screen.getByRole('textbox', { name: 'Replace with' }), { target: { value: '20' } });
       fireEvent.click(screen.getByRole('button', { name: 'Replace all' }));
       expect(g.api().getCellValue('r0', 'qty')).toBe(2); expect(g.changes).not.toHaveBeenCalled();
+      expect(await screen.findByText('Replaced 0 cells, 1 skipped')).toBeInTheDocument();
+    });
+    it.each([false, true])('Find & Replace reports a warning decision after it finishes (accepted: %s)', async accept => {
+      const g = setup({ findReplace: true, dataValidations: [{ ...whole, errorAlert: { style: 'warning' } }] });
+      g.select('r0'); fireEvent.keyDown(g.grid, { key: 'h', ctrlKey: true });
+      fireEvent.change(await screen.findByRole('textbox', { name: 'Find' }), { target: { value: '2' } });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Replace with' }), { target: { value: '20' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Replace all' }));
+      expect(!!screen.queryByText('Replaced 1 cell')).toBe(false);
+      fireEvent.click(await screen.findByRole('button', { name: accept ? 'Accept value' : 'Cancel' }));
+      expect(await screen.findByText(accept ? 'Replaced 1 cell' : 'Replaced 0 cells, 1 skipped')).toBeInTheDocument();
+      expect(g.api().getCellValue('r0', 'qty')).toBe(accept ? 20 : 2);
     });
     it('editing an existing custom rule preserves its relative meaning on a different selected row', async () => {
       const changed = jest.fn();

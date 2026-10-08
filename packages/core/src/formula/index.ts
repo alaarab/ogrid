@@ -24,6 +24,7 @@ export type {
   ErrorNode,
   NameNode,
   IFormulaContext,
+  IDetachedEvaluationOptions,
   IFormulaFunction,
   IEvaluator,
   IRecalcResult,

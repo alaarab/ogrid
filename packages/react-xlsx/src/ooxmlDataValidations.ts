@@ -38,8 +38,8 @@ export async function readValidationXml(workbook: ExcelJS.Workbook, bytes: Array
       });
       const first = sqref?.split(/\s+/)[0] ?? '';
       const origin = parseRange(`${first.split(':')[0]}:${first.split(':')[0]}`)?.start;
-      const rule = { ...attrs, formulae, _ogridOrigin: origin ? { col: origin.col, row: origin.row } : undefined } as unknown as AnchoredValidation;
-      for (const key of ['allowBlank', 'showInputMessage', 'showErrorMessage'] as const) {
+      const rule = { ...attrs, type: attrs.type || 'any', formulae, _ogridOrigin: origin ? { col: origin.col, row: origin.row } : undefined } as unknown as AnchoredValidation;
+      for (const key of ['allowBlank', 'showInputMessage', 'showErrorMessage', 'showDropDown'] as const) {
         rule[key] = attrs[key] === '1' || attrs[key] === 'true';
       }
       for (const ref of sqref?.split(/\s+/) ?? []) {
@@ -62,7 +62,8 @@ export async function writeValidationXml(workbook: ExcelJS.Workbook, bytes: Uint
     const path = parts.get(sheet.name), file = path ? zip.file(path) : null;
     if (!path || !file) continue;
     const rules = validationRanges(model).map(([sqref, rule]) => {
-      const attrs: Record<string, string> = { type: rule.type, sqref };
+      const attrs: Record<string, string> = { sqref };
+      if (rule.type && String(rule.type) !== 'any') attrs.type = rule.type;
       for (const [key, value] of Object.entries(rule)) {
         if (key === 'formulae' || key === 'type' || key === '_ogridOrigin' || value === undefined) continue;
         attrs[key] = typeof value === 'boolean' ? (value ? '1' : '0') : String(value);

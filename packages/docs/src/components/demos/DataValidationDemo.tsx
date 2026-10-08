@@ -14,7 +14,7 @@ function ValidationGrid() {
   const [rules, setRules] = useState(initialRules);
   const [circle, setCircle] = useState(true);
   return <>
-    <label style={{ display: 'block', marginBottom: 8 }}><input type="checkbox" checked={circle} onChange={(e) => setCircle(e.target.checked)} /> Circle invalid data</label>
+    <div className="live-demo__controls"><label><input type="checkbox" checked={circle} onChange={(e) => setCircle(e.target.checked)} /> Circle invalid data</label></div>
     <OGrid columns={columns} data={data} getRowId={(r: Row) => r.id} editable defaultSortBy="" dataValidations={rules} onDataValidationsChange={(next: IDataValidationRule<Row>[]) => setRules(next)} allowValidationEditing circleInvalidData={circle}
       onCellValueChanged={(e: ICellValueChangedEvent<Row>) => setData((prev) => prev.map((r) => r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r))} />
   </>;

@@ -39,15 +39,20 @@ test('a streamed file switches to the editable model only after Enable editing',
 test.each(['worker', 'fallback'] as const)('Enable editing preserves validation enforcement and formula-bound exports through the %s handover', async (transport) => {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Values');
-  ws.addRows([['Count', 'Status', 'Limit', 'Date'], [2, 'Open', 10, new Date('2026-01-01T00:00:00Z')]]);
+  ws.addRows([['Count', 'Status', 'Limit', 'Date', 'Prompt'], [2, 'Open', 10, new Date('2026-01-01T00:00:00Z'), 'anything']]);
   ws.getCell('A2').dataValidation = {
     type: 'whole', operator: 'between', formulae: [1, '$C$2'],
     showErrorMessage: true, errorStyle: 'stop', error: 'Choose a count within the limit.',
   };
   ws.getCell('B2').dataValidation = { type: 'list', formulae: ['"Open,Closed"'] };
   ws.getCell('D2').dataValidation = { type: 'date', operator: 'greaterThanOrEqual', formulae: ['DATE(2026,1,1)'] };
+  ws.getCell('E2').dataValidation = { type: 'any', formulae: [], showInputMessage: true, promptTitle: 'Help', prompt: 'Enter any value.' } as unknown as ExcelJS.DataValidation;
   preserveDataValidationSerialization(wb);
-  const blob = await diskRoundTrip(await xlsxBlobFromWorkbook(wb));
+  const archive = await JSZip.loadAsync(await (await xlsxBlobFromWorkbook(wb)).arrayBuffer());
+  const part = archive.file('xl/worksheets/sheet1.xml')!;
+  // ExcelJS's unrestricted prompt has no type attribute in a real file.
+  archive.file('xl/worksheets/sheet1.xml', (await part.async('string')).replace(/type="any"/g, ''));
+  const blob = await diskRoundTrip(new Blob([new Uint8Array(await archive.generateAsync({ type: 'uint8array' }))]));
   let doc: XlsxWorkbookDocument | undefined;
   const workerFactory = transport === 'worker' ? await xlsxWorkerFactory() : null;
   const { container } = render(<XlsxWorkbookGrid blob={blob} streaming editable toolbar={false} height={400}
@@ -69,7 +74,7 @@ test.each(['worker', 'fallback'] as const)('Enable editing preserves validation 
     fireEvent.keyDown(input, { key: 'Enter' });
   };
   await edit('11');
-  expect(await screen.findByRole('dialog')).toHaveTextContent('Choose a count within the limit.');
+  await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent('Choose a count within the limit.'));
   expect(doc!.sheet('Values')!.rows[0]!.A).toBe(2);
   fireEvent.click(screen.getByRole('button', { name: 'OK' }));
   await edit('5');
@@ -83,6 +88,7 @@ test.each(['worker', 'fallback'] as const)('Enable editing preserves validation 
     expect(reread.getWorksheet('Values')!.getCell('A2').value).toBe(count);
     expect(reread.getWorksheet('Values')!.getCell('A2').dataValidation).toMatchObject({ type: 'whole', formulae: [1, '$C$2'], error: 'Choose a count within the limit.' });
     expect(reread.getWorksheet('Values')!.getCell('B2').dataValidation).toMatchObject({ type: 'list', formulae: ['"Open,Closed"'] });
+    expect(reread.getWorksheet('Values')!.getCell('E2').dataValidation).toMatchObject({ type: 'any', showInputMessage: true, promptTitle: 'Help', prompt: 'Enter any value.' });
     expect(reread.getWorksheet('Values')!.getCell('D2').dataValidation).toMatchObject({ type: 'date', formulae: ['DATE(2026,1,1)'] });
   }
 }, 20000);

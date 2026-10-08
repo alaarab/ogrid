@@ -185,6 +185,7 @@ export function BaseDataGridTableContent<T>(
     const formulaOffset = { col: o.layout.flatColumns.findIndex((c) => c.columnId === columnIds[0]) - Math.max(0, o.layout.flatColumns.findIndex((c) => c.columnId === originCol)), row: rows.reduce((min, row) => Math.min(min, row), Infinity) - (rule?.anchor?.row ?? rule?.rows?.start ?? 0) };
     setValidationEditor({ columnIds, rows, formulaOffset, rule: rule as import('@alaarab/ogrid-core').IDataValidationRule | undefined });
   };
+  const closeValidation = () => validationEditor ? setValidationEditor(null) : o.validation.respond(false);
   const applyValidation = (rule: import('@alaarab/ogrid-core').IDataValidationRule | undefined) => {
     if (!validationEditor) return;
     let rules = o.validation.rules;
@@ -326,7 +327,7 @@ export function BaseDataGridTableContent<T>(
     recordAction: o.recordAction,
   });
   // Theme tokens for the portaled context menu (it renders outside the grid).
-  const contextMenuTheme = usePortalTheme(wrapperRef, menuPosition != null);
+  const contextMenuTheme = usePortalTheme(wrapperRef, menuPosition != null || validationEditor != null || o.validation.alert != null);
   // Roving tabindex: one body cell is the tab stop and holds DOM focus; the
   // wrapper is the fallback stop while that cell isn't rendered. Without cell
   // selection there is no cell navigation, so the wrapper stays the stop.
@@ -596,13 +597,19 @@ export function BaseDataGridTableContent<T>(
         </div>
       )}
       {ValidationDialog && (validationEditor || o.validation.alert) && (
-        <React.Suspense fallback={null}>
+        <React.Suspense fallback={createPortal(
+          <dialog aria-label="Data validation" aria-busy ref={el => { if (el && !el.open) el.showModal(); }} onCancel={e => { e.preventDefault(); closeValidation(); }}
+            style={{ background: 'var(--ogrid-bg)', color: 'var(--ogrid-fg)', ...contextMenuTheme }}>
+            Loading…{' '}
+            <button type="button" onClick={closeValidation}>Cancel</button>
+          </dialog>, document.body,
+        )}>
           <ValidationDialog
             rule={validationEditor?.rule}
             formulaOffset={validationEditor?.formulaOffset}
             alert={o.validation.alert as import('@alaarab/ogrid-core').IDataValidationFailure | null}
             onApply={applyValidation}
-            onClose={() => validationEditor ? setValidationEditor(null) : o.validation.respond(false)}
+            onClose={closeValidation}
             onRespond={o.validation.respond}
           />
         </React.Suspense>

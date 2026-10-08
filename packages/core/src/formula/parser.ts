@@ -19,7 +19,8 @@
 import type { Token, ASTNode, BinaryOp, FormulaErrorType } from './types';
 import { FormulaError } from './types';
 import { MAX_FORMULA_DEPTH } from './limits';
-import { parseCellRef, parseRange } from './cellAddressUtils';
+import { parseCellRef } from './cellAddressUtils';
+import { tokenize } from './tokenizer';
 
 /**
  * Parse an array of tokens into an AST.
@@ -359,17 +360,11 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
 
     if (ref.length > 32767) return { kind: 'error', error: new FormulaError('#VALUE!', 'Named range reference too long') };
 
-    // Try to parse as range (A1:B10) first, then as single cell ref
-    if (ref.includes(':')) {
-      const rangeRef = parseRange(ref);
-      if (rangeRef) {
-        return { kind: 'range', start: rangeRef.start, end: rangeRef.end, raw: ref };
-      }
-    }
-    const cellRef = parseCellRef(ref);
-    if (cellRef) {
-      return { kind: 'cellRef', address: cellRef, raw: ref };
-    }
+    // Use the ordinary reference parser so workbook names retain sheet qualifiers.
+    try {
+      const node = parse(tokenize(ref));
+      if (node.kind === 'range' || node.kind === 'cellRef') return node;
+    } catch { /* Invalid workbook references become #REF!, as below. */ }
 
     return { kind: 'error', error: new FormulaError('#REF!', `Invalid named range reference: ${ref}`) };
   }

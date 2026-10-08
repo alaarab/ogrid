@@ -21,6 +21,8 @@ export interface UseClipboardParams<T> {
   afterBatch?: (action: () => void) => void;
   /** Internal source erasure is part of the move, not new user input. */
   onCutClear?: (event: ICellValueChangedEvent<T>) => void;
+  /** Prospective source erasure for validation; actual clearing follows accepted writes. */
+  previewCutClears?: (read: (accepted: (row: number, columnId: string) => boolean) => ICellValueChangedEvent<T>[]) => void;
   endBatch?: () => void;
   /** When true, enables formula-aware copy/paste. */
   formulas?: boolean;
@@ -161,7 +163,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const {
     colOffset,
     beginBatch,
-    endBatch, afterBatch, onCutClear,
+    endBatch, afterBatch, onCutClear, previewCutClears,
   } = params;
 
   // Volatile values accessed via refs  -  keeps callbacks stable
@@ -312,6 +314,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const parsedRows = norm && !cut ? tilePastedRows(block, norm) : block;
     // Cells that received a pasted formula (they produce no value event).
     const pastedFormulaKeys: string[] = [];
+    const plannedFormulaKeys: { row: number; columnId: string }[] = [];
     const flatColumns = flatColumnsRef.current;
     const setFormula = setFormulaRef.current;
     const formulaOptions = formulasRef.current && flatColumns && !valuesOnly
@@ -319,6 +322,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
           colOffset,
           flatColumns,
           setFormula: setFormula && ((col: number, row: number, formula: string | null) => {
+            if (formula) plannedFormulaKeys.push({ row, columnId: flatColumns[col]?.columnId ?? '' });
             const accepted = () => { pastedFormulaKeys.push(`${row}|${flatColumns[col]?.columnId}`); };
             if (afterBatch) setFormula(col, row, formula, accepted);
             else if (setFormula(col, row, formula) !== false) accepted();
@@ -336,6 +340,11 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
         if (afterBatch) onCellValueChanged(evt, () => { acceptedPasteEvents.push(evt); });
         else if (onCellValueChanged(evt) !== false) acceptedPasteEvents.push(evt);
       }
+      if (cut) previewCutClears?.(accepted => resolveCutClear({ cut, text,
+        pasteEvents: pasteEvents.filter(event => accepted(event.rowIndex, event.columnId)),
+        pastedFormulaCells: plannedFormulaKeys.filter(cell => accepted(cell.row, cell.columnId)).map(cell => `${cell.row}|${cell.columnId}`),
+        anchorRow, anchorCol, items, visibleCols, rowKeyOf,
+      }));
       const clearSource = () => { if (cut) {
         const cutEvents = resolveCutClear({ cut, text, pasteEvents: acceptedPasteEvents, pastedFormulaCells: pastedFormulaKeys, anchorRow, anchorCol, items, visibleCols, rowKeyOf });
         for (const evt of cutEvents) (onCutClear ?? onCellValueChanged)(evt);
@@ -345,7 +354,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     } finally {
       endBatch?.();
     }
-  }, [getEffectiveRange, activeCellRef, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, formulaRowRef, colOffset, rowKeyOf, takePendingCut, isCoveredCellRef, afterBatch, onCutClear]);
+  }, [getEffectiveRange, activeCellRef, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, formulaRowRef, colOffset, rowKeyOf, takePendingCut, isCoveredCellRef, afterBatch, onCutClear, previewCutClears]);
 
   /** Read the clipboard for a programmatic paste (context menu), or null when the read failed. */
   const readClipboardText = useCallback(async (): Promise<string | null> => {

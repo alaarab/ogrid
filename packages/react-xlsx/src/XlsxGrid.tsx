@@ -213,16 +213,17 @@ export function XlsxGrid({
     }, palette),
     [doc, sheetName, sheetSource, palette],
   );
+  const worksheet = doc.worksheet(sheetName);
+  const currentWorkbook = worksheet?.workbook;
   const sheets = useMemo(() => doc.sheetAccessors(), [doc]);
   const validationResolver = useMemo(() => {
-    const sheet = workbook.getWorksheet(sheetName);
+    const sheet = worksheet;
     return sheet ? validationSourceResolver(sheet, sheets, sheetSource?.formatting.headerPromoted ? 1 : 0) : undefined;
-  }, [workbook, sheetName, sheets, sheetSource]);
+  }, [worksheet, sheets, sheetSource]);
   const onDataValidationsChange = useCallback((rules: IDataValidationRule<SheetRow>[]) => doc.setDataValidations(sheetName, rules), [doc, sheetName]);
-  const namedRanges = useMemo(() => Object.fromEntries(workbook.definedNames.model.map((n) => [n.name, n.ranges[0] ?? ''])), [workbook]);
+  const namedRanges = useMemo(() => Object.fromEntries(currentWorkbook?.definedNames.model.map((n) => [n.name, n.ranges[0] ?? '']) ?? []), [currentWorkbook]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<IOGridApi<SheetRow>>(null);
-  const worksheet = doc.worksheet(sheetName);
   const hasMedia = !!worksheet?.getImages().length || !!sourceArchiveOf(workbook)?.charts.get(sheetName)?.length;
   const hiddenRows = useMemo(() => {
     const offset = sheetSource?.formatting.headerPromoted ? 1 : 0;

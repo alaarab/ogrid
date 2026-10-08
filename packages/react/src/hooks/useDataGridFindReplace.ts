@@ -33,12 +33,15 @@ export interface UseDataGridFindReplaceParams<T> {
   /** Grid-level `editable`; false makes the panel find-only. */
   editable: boolean | undefined;
   /** The undo-wrapped value change handler (undefined when the grid has none). */
-  onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
+  // biome-ignore lint/suspicious/noConfusingVoidType: legacy void handlers remain compatible
+  onCellValueChanged: ((event: ICellValueChangedEvent<T>, onAccepted?: () => void) => boolean | void) | undefined;
   beginBatch: () => void;
   endBatch: () => void;
+  afterBatch: (action: () => void) => void;
   /** Formula accessors in (flat column, displayed row) coordinates. */
   getFormula?: (col: number, row: number) => string | undefined;
-  setFormula?: (col: number, row: number, formula: string | null) => void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: legacy void handlers remain compatible
+  setFormula?: (col: number, row: number, formula: string | null, onAccepted?: () => void) => boolean | void;
   /** Computed formula value in sheet coordinates. */
   getFormulaValue?: (col: number, row: number) => unknown;
   formulaCol: (columnId: string) => number;
@@ -74,7 +77,7 @@ export function useDataGridFindReplace<T>(params: UseDataGridFindReplaceParams<T
   const {
     enabled, items, findRows, onFindPageChange, currentPage, pageSize, visibleCols, colOffset, getRowId,
     activeCell, setActiveCell, selectionRange, setSelectionRange, editingCell, editable,
-    onCellValueChanged, beginBatch, endBatch, getFormula, setFormula, getFormulaValue,
+    onCellValueChanged, beginBatch, endBatch, afterBatch, getFormula, setFormula, getFormulaValue,
     formulaCol, formulaRow, mergeLayout, wrapperRef,
   } = params;
   const [scopeId] = useState(() => `f${++scopeCounter}`);
@@ -116,21 +119,27 @@ export function useDataGridFindReplace<T>(params: UseDataGridFindReplaceParams<T
   }, [getFormula, getFormulaValue, formulaCol, formulaRow, pageOffset]);
 
   const canEdit = editable !== false && onCellValueChanged != null;
-  const editRef = useLatestRef({ onCellValueChanged, setFormula, beginBatch, endBatch, formulaCol, pageOffset });
+  const editRef = useLatestRef({ onCellValueChanged, setFormula, beginBatch, endBatch, afterBatch, formulaCol, pageOffset });
   const onCellEdit = useCallback((events: ICellValueChangedEvent<T>[], formulaEdits: IFindFormulaEdit<T>[]) => {
     const st = editRef.current;
+    let committed = 0;
+    const accepted = () => { committed++; };
+    let settled: number | undefined;
+    let complete: ((count: number) => void) | undefined;
     st.beginBatch();
     try {
       // Events carry displayed-row indexes, like every other grid edit; rows on
       // other pages get indexes outside the displayed range.
-      for (const e of events) st.onCellValueChanged?.({ ...e, rowIndex: e.rowIndex - st.pageOffset });
+      for (const e of events) st.onCellValueChanged?.({ ...e, rowIndex: e.rowIndex - st.pageOffset }, accepted);
       for (const f of formulaEdits) {
         const col = st.formulaCol(f.columnId);
-        if (col >= 0) st.setFormula?.(col, f.rowIndex - st.pageOffset, f.newFormula);
+        if (col >= 0) st.setFormula?.(col, f.rowIndex - st.pageOffset, f.newFormula, accepted);
       }
+      st.afterBatch(() => { settled = committed; complete?.(committed); });
     } finally {
       st.endBatch();
     }
+    return settled ?? new Promise<number>(resolve => { complete = resolve; });
   }, [editRef]);
 
   // --- Navigation: make the match the active cell, changing page first if needed ---

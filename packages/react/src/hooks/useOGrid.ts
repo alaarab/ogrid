@@ -258,11 +258,11 @@ export function useOGrid<T>(
     getValue: (col: number, row: number, sheet?: string): unknown => {
       if (sheet) return props.sheets?.[sheet]?.getCellValue(col, row);
       const item = sheetItems[row], column = columns[col];
-      if (formulaEngine.enabled && formulaEngine.hasFormula(col, row)) return formulaEngine.getFormulaValue(col, row);
+      if (formulaEngine.enabled && (formulaEngine.hasFormula(col, row) || formulaEngine.getSpillRange(col, row))) return formulaEngine.getFormulaValue(col, row);
       return item !== undefined && column ? (column.valueGetter ? column.valueGetter(item) : (item as Record<string, unknown>)[column.columnId]) : undefined;
     },
-    evaluateFormula: formulaEngine.enabled ? (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }, proposed?: { value: unknown }) =>
-      formulaEngine.createDetachedEvaluator({ preserveArrays: true, proposed: proposed ? { ...cell, value: proposed.value, alias: props.validationSheet ? { sheet: props.validationSheet.name, col: cell.col, row: cell.row + props.validationSheet.rowOffset } : undefined } : undefined })?.(formula, anchor, cell) : undefined,
+    evaluateFormula: formulaEngine.enabled ? (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }, proposed?: { value?: unknown; changes?: readonly { col: number; row: number; value: unknown }[] }) =>
+      formulaEngine.createDetachedEvaluator({ preserveArrays: true, sheet: props.validationSheet, changes: proposed?.changes, proposed: proposed && 'value' in proposed ? { ...cell, value: proposed.value } : undefined })?.(formula, anchor, cell) : undefined,
   }), [sheetItems, columns, props.namedRanges, props.sheets, props.validationSourceResolver, props.validationSheet, formulaEngine, dgFormulaProps.formulaVersion]);
 
   // --- Cell API and structure edits (through the table's edit path and undo history) ---
