@@ -1,9 +1,10 @@
+import { sourceArchiveOf, dynamicCellsOf } from './sourceArchive';
 import { readXlsxStream } from './streamingReader';
 import type { XlsxStreamOptions } from './streamingTypes';
 
 const scope = globalThis as unknown as {
   onmessage: ((event: MessageEvent) => void) | null;
-  postMessage: (value: unknown) => void;
+  postMessage: (value: unknown, transfer?: Transferable[]) => void;
 };
 let acknowledge: (() => void) | undefined;
 scope.onmessage = (event: MessageEvent<{ kind: string; blob: Blob; options: XlsxStreamOptions }>) => {
@@ -18,11 +19,19 @@ scope.onmessage = (event: MessageEvent<{ kind: string; blob: Blob; options: Xlsx
         const workbook = await workbookFromBlob(blob, options);
         const model = workbook.model;
         const worksheets = model.worksheets as unknown as Array<import('exceljs').WorksheetModel & { rows: import('exceljs').RowModel[]; merges: string[] }>;
-        scope.postMessage({ kind: 'model', model: { ...model, worksheets: worksheets.map((sheet) => ({ ...sheet, rows: [], merges: [], mergeCells: [] })) } });
+        const sourceArchive = sourceArchiveOf(workbook);
+        scope.postMessage({ kind: 'model', sourceArchive, model: {
+          ...model,
+          // ExcelJS duplicates its worksheets in sheets; only ordering is needed.
+          sheets: worksheets.map(({ id }) => ({ id })),
+          worksheets: worksheets.map((sheet) => ({ ...sheet, rows: [], merges: [], mergeCells: [] })),
+        } }, sourceArchive ? [sourceArchive.bytes] : []);
         const send = (value: unknown) => new Promise<void>((resolve) => { acknowledge = resolve; scope.postMessage(value); });
         for (const sheet of worksheets) {
           for (let i = 0; i < sheet.rows.length; i += 128) await send({ kind: 'documentRows', sheetId: sheet.id, rows: sheet.rows.slice(i, i + 128) });
           for (let i = 0; i < sheet.merges.length; i += 128) await send({ kind: 'documentMerges', sheetId: sheet.id, merges: sheet.merges.slice(i, i + 128) });
+          const arrays = [...dynamicCellsOf(workbook)?.get(sheet.name) ?? []];
+          for (let i = 0; i < arrays.length; i += 128) await send({ kind: 'documentArrays', sheetId: sheet.id, arrays: arrays.slice(i, i + 128) });
           const worksheet = workbook.getWorksheet(sheet.id);
           if (!worksheet) continue;
           const source = sheetToGridData(worksheet, options);

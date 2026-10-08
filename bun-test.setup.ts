@@ -6,6 +6,8 @@
  * cleanup for React Testing Library, and suppresses known test-noise console
  * output so failure diagnostics stay readable.
  */
+// Capture Bun's native worker before happy-dom replaces browser globals.
+import 'node:worker_threads';
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { afterEach, expect, jest, mock, spyOn } from 'bun:test';
 

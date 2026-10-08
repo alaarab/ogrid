@@ -68,7 +68,7 @@ function SingleSheet({ file }: { file: Blob }) {
 |---|---|---|---|
 | `blob` | `Blob` | — | The raw `.xlsx`/CSV/TSV file. Parsed inside the component. Use this OR `workbook`. |
 | `workbook` | `ExcelJS.Workbook` | — | A pre-parsed workbook. Use this OR `blob`. |
-| `streaming` | `boolean` | `true` for Blobs ≥ 1 MiB | Progressive value preview, progress and cancellation; `false` uses the eager formatted view. CSV/TSV use the existing loader. |
+| `streaming` | `boolean` | `true` for Blobs ≥ 1 MiB without `onDocument` | Progressive value preview, progress and cancellation; `false` uses the eager formatted view. CSV/TSV use the existing loader. |
 | `streamOptions` | `{ workerFactory?, chunkSize?, maxSharedStringsBytes? }` | 256 rows / 32 MiB shared strings | Override worker hosting or the streaming budgets. `workerFactory: null` uses the fallback. |
 | `onLoadProgress` | `(percent: number) => void` | — | Worksheet compressed bytes consumed, from 0 to 100. Metadata and shared-string parsing precede worksheet progress. |
 | `onStreamedWorkbook` | `(workbook: StreamedXlsxWorkbook) => void` | — | Completed preview, with `toBlob()` and `loadDocument()` for lazy editing. |
@@ -82,7 +82,7 @@ function SingleSheet({ file }: { file: Blob }) {
 | `editable` | `boolean` | `false` | Allow editing values, formulas, rows and columns through the grid menus. Off, the grid is a read-only preview. |
 | `toolbar` | `boolean` | `editable` | Show the formatting toolbar above the grid. |
 | `exportFileName` | `string` | — | Adds an **Export .xlsx** button to the toolbar that downloads the edited workbook under this name. |
-| `onDocument` | `(doc: XlsxWorkbookDocument) => void` | — | Receives the editable document after eager loading or **Enable editing**. Keep it to export from your own UI. |
+| `onDocument` | `(doc: XlsxWorkbookDocument) => void` | — | Receives the document after loading. Supplying it disables automatic streaming to preserve host-managed export; explicit `streaming={true}` defers delivery until **Enable editing**. |
 
 `XlsxGrid` takes the same `editable`, `toolbar` and `exportFileName` props, plus an optional `document` to share one `XlsxWorkbookDocument` between grids.
 
@@ -190,13 +190,13 @@ Only populated cells are read, and each sheet is capped by `limits`. `sheetToGri
 
 ### Large files
 
-Blobs of at least 1 MiB open as a progressive value preview by default. Use `streaming` to opt smaller files in. Rows become visible as chunks arrive, with **Loading… 42%** and **Cancel**. Changing the Blob or unmounting terminates the worker. Without Workers, or if construction is blocked by CSP, the same SAX reader runs in small tasks on the main thread. SSR renders the loading state; parsing begins on the client.
+Blobs of at least 1 MiB without `onDocument` open as a progressive value preview by default. Use `streaming` to opt smaller files in. Rows become visible as chunks arrive, with **Loading… 42%** and **Cancel**. Changing the Blob or unmounting terminates the worker. Without Workers, or if construction is blocked by CSP, the same SAX reader runs in small tasks on the main thread. SSR renders the loading state; parsing begins on the client.
 
 <XlsxStreamingDemo />
 
-Preview shows text, numbers, dates, booleans and cached formula results. Formatting, merges, validations, notes, live recalculation and sorting become available after **Enable editing** when `editable` is set. This prepares the full ExcelJS document in the worker and transfers rows and pre-mapped data back in batches. `onDocument` then receives that document. Set `streaming={false}` when you need the complete formatted view immediately. Pre-parsed `workbook` and `XlsxGrid` retain their existing behavior.
+Preview shows text, numbers, dates, booleans and cached formula results. Formatting, merges, validations, notes, live recalculation and sorting become available after **Enable editing** when `editable` is set. This prepares the full ExcelJS document in the worker and transfers rows and pre-mapped data back in batches. `onDocument` then receives that document. Supplying this callback disables automatic streaming, so existing read-only consumers still receive a full document. Explicit `streaming={true}` opts into deferred delivery. Set `streaming={false}` when you need the complete formatted view immediately. Pre-parsed `workbook` and `XlsxGrid` retain their existing behavior.
 
-An unedited streamed export returns the original Blob byte-for-byte, preserving every ZIP part, including media and features ExcelJS cannot interpret. After editing, export uses the existing document path, preserving styles, merges, validations, conditional formatting, notes and ExcelJS-supported media. Loading and editing a full document still require memory proportional to that workbook; edited serialization and structural operations retain ExcelJS's existing costs. Streaming preview does not promise constant memory for retained grid values.
+An unedited streamed export returns the original Blob byte-for-byte, preserving every ZIP part, including media and features ExcelJS cannot interpret. After editing, export uses the existing document path, preserving styles, merges, validations, conditional formatting, notes, images, charts, pivots and dynamic-array metadata. Loading and editing a full document still require memory proportional to that workbook; edited serialization and structural operations retain ExcelJS's existing costs. Streaming preview does not promise constant memory for retained grid values.
 
 The parser reads the ZIP directory and 8 KiB compressed slices, without retaining an inflated worksheet string or creating ExcelJS cells. The main thread acknowledges each chunk before delivery continues and supplies only the viewport to OGrid. Shared strings are retained for lookup, capped at 32 MiB of decoded UTF-16 text plus entry pointers by default; an oversized table is rejected. ZIP checks enforce both declared sizes and actual inflated bytes.
 

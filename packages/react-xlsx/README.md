@@ -18,7 +18,7 @@ import { XlsxWorkbookGrid } from '@alaarab/ogrid-react-xlsx';
 <XlsxWorkbookGrid blob={file} height={600} />
 ```
 
-Blobs of at least 1 MiB open in a progressive worker preview, with loading
+Blobs of at least 1 MiB without `onDocument` open in a progressive worker preview, with loading
 percentage and Cancel. Set `streaming` to stream smaller files too, or
 `streaming={false}` for the eager formatted view. CSV/TSV keep the existing
 loader. To edit and save:
@@ -30,7 +30,7 @@ loader. To edit and save:
 
 In streaming mode, **Enable editing** prepares the full ExcelJS document in a
 worker. It then shows workbook formatting and enables value/formula editing,
-the formatting toolbar and undo. `onDocument` fires after that preparation.
+the formatting toolbar and undo. `onDocument` fires after that preparation. Supplying `onDocument` keeps the eager loader by default; use explicit `streaming={true}` to defer the callback until editing is enabled.
 Before editing, export returns the original Blob byte-for-byte; afterward it
 keeps every sheet and writes back only changes with the existing round-trip
 fidelity. Without Workers, preview parsing yields between small slices;

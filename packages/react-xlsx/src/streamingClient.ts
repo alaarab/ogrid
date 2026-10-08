@@ -1,3 +1,4 @@
+import { attachSourceArchive, markDynamicArray } from './sourceArchive';
 import type ExcelJS from 'exceljs';
 import type { XlsxWorkbookDocument, PreparedXlsxSheet } from './xlsxDocument';
 import { checkAbort, streamLimit, type XlsxStreamChunk, type XlsxStreamOptions, type XlsxStreamSheet } from './streamingTypes';
@@ -56,12 +57,17 @@ async function workerRequest(
       if (data.kind === 'error') finish(new Error(data.message));
       else if (data.kind === 'model') {
         model = data.model;
-        try { if (workbook && model) workbook.model = model; } catch (error) { finish(error); }
+        try {
+          if (workbook && model) {
+            workbook.model = model;
+            if (data.sourceArchive) attachSourceArchive(workbook, data.sourceArchive);
+          }
+        } catch (error) { finish(error); }
       }
       else if (data.kind === 'done') finish();
       else if (data.kind === 'progress') {
         try { options.onProgress?.(data.percent); } catch (error) { finish(error); }
-      } else if (data.kind === 'chunk' || data.kind === 'documentRows' || data.kind === 'documentMerges' || data.kind.startsWith('prepared')) {
+      } else if (data.kind === 'chunk' || data.kind === 'documentRows' || data.kind === 'documentMerges' || data.kind === 'documentArrays' || data.kind.startsWith('prepared')) {
         Promise.resolve().then(async () => {
           if (data.kind === 'chunk') await options.onChunk?.(data.chunk);
           else if (data.kind.startsWith('prepared')) {
@@ -80,6 +86,7 @@ async function workerRequest(
             await new Promise<void>((done) => setTimeout(done, 0));
           } else {
             const target = workbook?.getWorksheet(data.sheetId);
+            if (data.kind === 'documentArrays' && target) for (const [address, cell] of data.arrays as Array<[string, { cm?: string }]>) markDynamicArray(target, address, cell.cm);
             if (data.kind === 'documentRows' && target) for (const row of data.rows as ExcelJS.RowModel[]) target.getRow(row.number).model = row;
             if (data.kind === 'documentMerges' && target) for (const merge of data.merges as string[]) target.mergeCellsWithoutStyle(merge);
             await new Promise<void>((done) => setTimeout(done, 0));

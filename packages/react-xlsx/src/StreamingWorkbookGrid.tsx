@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import ExcelJS from 'exceljs';
 import { OGrid } from '@alaarab/ogrid-react-radix';
 import type { IOGridProps } from '@alaarab/ogrid-react-radix';
 import { triggerBlobDownload } from '@alaarab/ogrid-core';
 import type { IDataSource } from '@alaarab/ogrid-core';
+import { WorkbookSheetTabs } from './WorkbookSheetTabs';
 import { XlsxWorkbookGrid, type XlsxWorkbookGridProps } from './XlsxWorkbookGrid';
 import { sheetToGridData, type SheetRow } from './sheetMapper';
 import { materializeStreamRows, streamWorkbook, type StreamedXlsxWorkbook, type XlsxStreamSheet } from './streamingClient';
@@ -16,6 +17,7 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
   const { workerFactory, chunkSize, maxSharedStringsBytes } = streamOptions ?? {};
   const [sheets, setSheets] = useState(new Map<string, XlsxStreamSheet>());
   const [active, setActive] = useState(initialSheet ?? '');
+  const idBase = useId();
   const [percent, setPercent] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,6 +25,9 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
   const [csv, setCsv] = useState(false);
   const [result, setResult] = useState<StreamedXlsxWorkbook>();
   const [document, setDocument] = useState<XlsxWorkbookDocument>();
+  const sheetNames = document?.sheetNames ?? [...sheets.keys()];
+  const sheetNamesRef = useRef(sheetNames);
+  sheetNamesRef.current = sheetNames;
   const [preparing, setPreparing] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const sampleVersions = useRef(new Map<string, number>());
@@ -35,11 +40,11 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
     sampleVersions.current.clear();
     setSheets(views); setResult(undefined); setDocument(undefined); setPercent(0);
     setLoading(true); setCancelled(false); setCsv(false); setError(''); setPreparing(false);
-    setActive(initialSheet ?? '');
+    setActive(callbacks.current.initialSheet ?? '');
     const options = { maxRows, maxCols, maxCells, maxFileBytes, maxUncompressedBytes, workerFactory, chunkSize, maxSharedStringsBytes, headerRow, signal: controller.signal };
     void (async () => {
       const magic = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
-      if (magic[0] !== 80 || magic[1] !== 75) { if (!controller.signal.aborted) setCsv(true); return; }
+      if (magic[0] !== 0x50 || magic[1] !== 0x4b || magic[2] !== 0x03 || magic[3] !== 0x04) { if (!controller.signal.aborted) setCsv(true); return; }
       const loaded = await streamWorkbook(blob, {
         ...options,
         onProgress: (value) => {
@@ -72,7 +77,13 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
       setError(reason instanceof Error ? reason.message : String(reason)); setLoading(false);
     });
     return () => controller.abort();
-  }, [blob, headerRow, initialSheet, maxRows, maxCols, maxCells, maxFileBytes, maxUncompressedBytes, workerFactory, chunkSize, maxSharedStringsBytes]);
+  }, [blob, headerRow, maxRows, maxCols, maxCells, maxFileBytes, maxUncompressedBytes, workerFactory, chunkSize, maxSharedStringsBytes]);
+
+  // Navigation must not reload the source or discard its editable document.
+  useEffect(() => {
+    const names = sheetNamesRef.current;
+    setActive(initialSheet && names.includes(initialSheet) ? initialSheet : names[0] ?? initialSheet ?? '');
+  }, [initialSheet]);
 
   const selected = sheets.get(active);
   const columnCount = selected?.columnCount ?? 0;
@@ -108,7 +119,7 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
   if (csv) return <XlsxWorkbookGrid {...props} streaming={false} />;
   if (error) return <div role="alert">Could not parse workbook: {error}</div>;
   if (cancelled) return <div role="status">Workbook loading cancelled.</div>;
-  if (document) return <XlsxWorkbookGrid {...props} blob={undefined as never} workbook={document.workbook} document={document} initialSheet={active} streaming={false} onDocument={callbacks.current.onDocument} />;
+  if (document) return <XlsxWorkbookGrid {...props} blob={undefined as never} workbook={document.workbook} document={document} initialSheet={active} streaming={false} onSheetChange={(name) => { setActive(name); callbacks.current.onSheetChange?.(name); }} onDocument={callbacks.current.onDocument} />;
   const rowHeight = density === 'compact' ? 28 : density === 'comfortable' ? 44 : 36;
   const gridProps = {
     dataSource, columns: mapped?.columns ?? [], getRowId: (row: SheetRow) => row.__rowIdx,
@@ -125,8 +136,10 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
         {exportFileName && <button type="button" disabled={loading || !result || preparing} onClick={() => { if (result) void result.toBlob().then((saved) => triggerBlobDownload(saved, exportFileName)).catch((reason) => setError(String(reason))); }}>Export</button>}
         {!loading && !preparing && <span>{rowCount.toLocaleString()} rows loaded{selected?.truncated ? ' (load limit reached)' : ''}</span>}
       </div>
-      {sheets.size > 1 && <nav style={{ display: 'flex', gap: 4, padding: 8 }} aria-label="Workbook sheets">{[...sheets.keys()].map((name) => <button type="button" key={name} aria-pressed={active === name} onClick={() => { setActive(name); callbacks.current.onSheetChange?.(name); }}>{name}</button>)}</nav>}
-      {mapped && <OGrid key={active} {...gridProps} />}
+      <WorkbookSheetTabs sheetNames={sheetNames} active={active} idBase={idBase} onSelect={(name) => { setActive(name); callbacks.current.onSheetChange?.(name); }} />
+      <div id={`${idBase}-panel`} style={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}
+        {...(sheetNames.length > 1 ? { role: 'tabpanel', 'aria-labelledby': `${idBase}-tab-${sheetNames.indexOf(active)}` } : {})}
+      >{mapped && <OGrid key={active} {...gridProps} />}</div>
       {!loading && !sheets.size && <div>Workbook has no sheets.</div>}
     </div>
   );

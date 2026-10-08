@@ -38,8 +38,14 @@
     "path": "packages/react-xlsx/dist/esm/index.js",
     "limit": "509.7 kB",
     "ignore": [
-      "@alaarab/ogrid-core/formula/assist"
+      "@alaarab/ogrid-core/formula/assist",
+      "./streamingReader.js"
     ]
+  },
+  {
+    "name": "react-xlsx streaming reader (lazy)",
+    "path": "packages/react-xlsx/dist/esm/streamingReader.js",
+    "limit": "14 kB"
   },
   {
     "name": "react-xlsx-browser",
