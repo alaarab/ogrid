@@ -49,6 +49,7 @@ export type {
   IRowsChangeEvent,
   IColumnsChangeEvent,
   IGridHidingActions,
+  IGridFreezeActions,
   IOGridDataGridProps,
   RowSelectionMode,
   RowId,

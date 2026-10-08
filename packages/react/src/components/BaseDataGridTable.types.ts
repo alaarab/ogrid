@@ -160,6 +160,7 @@ export interface DataGridPrimitives {
     onSelectAll: () => void; onClose: () => void;
     structure?: import('./GridContextMenu').GridContextMenuStructure;
     hiding?: import('./GridContextMenu').GridContextMenuHiding;
+    freeze?: import('./GridContextMenu').GridContextMenuFreeze;
     notes?: import('./GridContextMenu').GridContextMenuNotes;
   }>;
   /** Empty-state component. */

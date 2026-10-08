@@ -23,6 +23,7 @@ import { useOGridStructureEdits } from './useOGridStructureEdits';
 import { useOGridCellApi } from './useOGridCellApi';
 import { useOGridNameBox } from './useOGridNameBox';
 import { useOGridHiddenRows } from './useOGridHiddenRows';
+import { useOGridFreeze } from './useOGridFreeze';
 import { useLatestRef } from './useLatestRef';
 import { useOGridCellNotes } from './useOGridCellNotes';
 import { useSortFilterColumns } from './useSortFilterColumns';
@@ -71,6 +72,7 @@ export function useOGrid<T>(
     editable, cellSelection, canUndo, canRedo, rowSelection = 'none', statusBar, pageSizeOptions,
     stickyHeader, columnReorder, responsiveColumns, virtualScroll, rowHeight, density = 'normal',
     mergedCells, frozenRows, findReplace,
+    defaultFrozenRows, onFrozenRowsChange, frozenColumns, defaultFrozenColumns, onFrozenColumnsChange, allowFreeze,
     'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     rowResize, rowHeights,
   } = props;
@@ -149,13 +151,21 @@ export function useOGrid<T>(
     handleColumnOrderChange, handleColumnResized, handleColumnPinned,
   } = columnLayout;
 
+  // --- Frozen panes (allowFreeze) ---
+  // Counts are sheet-scoped here; the shared table layout resolves column pins.
+  const freeze = useOGridFreeze({
+    allowFreeze, frozenRows, defaultFrozenRows, onFrozenRowsChange,
+    frozenColumns, defaultFrozenColumns, onFrozenColumnsChange,
+  });
+
   // --- Per-sheet UI state (captured on leave, restored on return) ---
   useOGridSheetState(props, {
     visibleColumns, sort: sortingState.sort, sortModel: sortingState.sortModel, filters: filtersState.filters, page,
     selectedRows: effectiveSelectedRows, columnOrder: effectiveColumnOrder,
     columnWidths: columnWidthOverrides, pinned: pinnedOverrides, hiddenRowIds: hiddenRows.hiddenRowIds,
+    frozenRows: freeze.frozenRows, frozenColumns: freeze.frozenColumns,
   }, defaultSortField, defaultSortDirection, {
-    visibility, sorting: sortingState, filters: filtersState, pagination: paginationState, selection, columnLayout, hiddenRows,
+    visibility, sorting: sortingState, filters: filtersState, pagination: paginationState, selection, columnLayout, hiddenRows, freeze,
   });
 
   // --- Hide/unhide from the menus and gap markers (allowHiding) ---
@@ -294,8 +304,9 @@ export function useOGrid<T>(
     ...dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader: stickyHeader ?? true, columnReorder, responsiveColumns,
     virtualScroll, rowHeight, density, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
-    mergedCells, frozenRows, conditionalFormat,
+    mergedCells, frozenRows: freeze.frozenRows, frozenColumns: freeze.frozenColumns, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef, hidingActions,
+    freezeActions: freeze.freezeActions,
     findReplace, findRows, onFindPageChange: findRows ? setPage : undefined,
     cellNavigatorRef: nameBox.cellNavigatorRef,
     ...dgNoteProps,
@@ -305,15 +316,16 @@ export function useOGrid<T>(
     displayItems, windowed, columnsProp, getRowId,
     sortingState.sort.field, sortingState.sort.direction, sortingState.sortModel, sortingState.handleSort,
     visibleColumns, effectiveColumnOrder, handleColumnOrderChange, handleColumnResized,
-    handleColumnPinned, pinnedOverrides, columnWidthOverrides,
+    handleColumnPinned, columnWidthOverrides,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo, onClipboardError,
     rowSelection, effectiveSelectedRows, handleSelectionChange,
     showRowNumbersResolved, showColumnLettersResolved, showNameBox, showActiveCellChange, onActiveCellChange,
     isWindowed, page, pageSize, displayTotalCount, statusBarConfig,
     isLoadingResolved, dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
-    rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows, conditionalFormat,
+    rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, hidingActions, dgNoteProps,
+    freeze.frozenRows, freeze.frozenColumns, freeze.freezeActions, pinnedOverrides,
     findReplace, findRows, setPage,
     nameBox.cellNavigatorRef, dgEmptyState, dgFormulaProps,
   ]);

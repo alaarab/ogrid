@@ -37,12 +37,12 @@ export {
   MAX_PAGE_BUTTONS,
 } from './paginationHelpers';
 export type { PaginationViewModel, PageSize } from './paginationHelpers';
-export { GRID_CONTEXT_MENU_ITEMS, COLUMN_HEADER_MENU_ITEMS, getContextMenuHandlers, getColumnHeaderMenuItems, getStructureMenuItems, getHidingMenuItems, formatShortcut } from './gridContextMenuHelpers';
+export { GRID_CONTEXT_MENU_ITEMS, COLUMN_HEADER_MENU_ITEMS, getContextMenuHandlers, getColumnHeaderMenuItems, getStructureMenuItems, getHidingMenuItems, getFreezeMenuItems, formatShortcut } from './gridContextMenuHelpers';
 export { computeHiddenGaps, hiddenKeysInSpan, hiddenKeysAround } from './hiddenGaps';
 export type { IHiddenGaps } from './hiddenGaps';
 export type { CsvColumn, CsvEscapeOptions, FormulaExportOptions } from './exportToCsv';
 export type { StatusBarPart, StatusBarPartsInput } from './statusBarHelpers';
-export type { GridContextMenuItem, IColumnHeaderMenuItem, GridContextMenuHandlerProps, ColumnHeaderMenuInput, ColumnHeaderMenuHandlers, StructureMenuInput, HidingMenuInput } from './gridContextMenuHelpers';
+export type { GridContextMenuItem, IColumnHeaderMenuItem, GridContextMenuHandlerProps, ColumnHeaderMenuInput, ColumnHeaderMenuHandlers, StructureMenuInput, HidingMenuInput, FreezeMenuInput } from './gridContextMenuHelpers';
 export {
   parseValue,
   numberParser,

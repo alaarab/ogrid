@@ -95,6 +95,34 @@ export function getHidingMenuItems(input: HidingMenuInput): GridContextMenuItem[
   return items;
 }
 
+/** Input for the freeze-panes section of the grid context menu (`allowFreeze`). */
+export interface FreezeMenuInput {
+  /** Data rows above the active cell (0 when the active cell is in the first row). */
+  rowsAbove: number;
+  /** Data columns left of the active cell (0 when the active cell is in the first column). */
+  columnsLeft: number;
+  /** Whether any panes are currently frozen (shows "Unfreeze panes"). */
+  hasFrozenPanes: boolean;
+}
+
+/**
+ * Context menu items for freezing panes (opt-in via `allowFreeze`), like
+ * Excel's View → Freeze Panes: freeze the rows above and columns left of the
+ * active cell, just the top row, just the first column, or unfreeze.
+ * Ids: `freezePanes`, `freezeTopRow`, `freezeFirstColumn`, `unfreezePanes`.
+ */
+export function getFreezeMenuItems(input: FreezeMenuInput): GridContextMenuItem[] {
+  const { rowsAbove, columnsLeft, hasFrozenPanes } = input;
+  const items: GridContextMenuItem[] = [];
+  if (rowsAbove > 0 || columnsLeft > 0) {
+    items.push({ id: 'freezePanes', label: 'Freeze panes', dividerBefore: true });
+  }
+  items.push({ id: 'freezeTopRow', label: 'Freeze top row', ...(items.length === 0 ? { dividerBefore: true } : {}) });
+  items.push({ id: 'freezeFirstColumn', label: 'Freeze first column' });
+  if (hasFrozenPanes) items.push({ id: 'unfreezePanes', label: 'Unfreeze panes' });
+  return items;
+}
+
 /** Returns the shortcut string with Ctrl swapped to ⌘ on Mac. */
 export function formatShortcut(shortcut: string): string {
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);

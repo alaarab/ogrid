@@ -123,6 +123,7 @@ export {
   getColumnHeaderMenuItems,
   getStructureMenuItems,
   getHidingMenuItems,
+  getFreezeMenuItems,
   formatShortcut,
   computeHiddenGaps,
   hiddenKeysInSpan,
@@ -136,6 +137,7 @@ export type {
   ColumnHeaderMenuHandlers,
   StructureMenuInput,
   HidingMenuInput,
+  FreezeMenuInput,
   IHiddenGaps,
 } from './utils';
 

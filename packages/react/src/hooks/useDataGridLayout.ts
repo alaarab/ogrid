@@ -22,6 +22,7 @@ export interface UseDataGridLayoutParams<T> {
   onColumnResized?: (columnId: string, width: number) => void;
   onAutosizeColumn?: (columnId: string, width: number) => void;
   pinnedColumns?: Record<string, 'left' | 'right'>;
+  frozenColumns?: number;
   onColumnPinned?: (columnId: string, side: 'left' | 'right' | null) => void;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
@@ -92,6 +93,7 @@ export function useDataGridLayout<T>(
     onColumnResized,
     onAutosizeColumn,
     pinnedColumns,
+    frozenColumns,
     onColumnPinned,
     sortBy,
     sortDirection,
@@ -104,17 +106,24 @@ export function useDataGridLayout<T>(
   // Cast is safe: input columns are React.IColumnDef instances; flattenColumns only extracts leaves.
   const flatColumnsRaw = useMemo(() => flattenColumns(columns as (IColumnDef<T>)[]) as IColumnDef<T>[], [columns]);
 
+  const frozenColumnIds = useMemo(() => {
+    if (!frozenColumns || !Number.isFinite(frozenColumns) || frozenColumns <= 0) return undefined;
+    const visible = visibleColumns ? flatColumnsRaw.filter((col) => visibleColumns.has(col.columnId)) : flatColumnsRaw;
+    return orderColumns(visible, columnOrder).slice(0, Math.floor(frozenColumns)).map((col) => col.columnId);
+  }, [flatColumnsRaw, visibleColumns, columnOrder, frozenColumns]);
+  const pinningResult = useColumnPinning({ columns: flatColumnsRaw, pinnedColumns, onColumnPinned, frozenColumnIds });
+  const effectivePins = pinningResult.pinnedColumns;
+
   // Apply runtime pin overrides (from applyColumnState or programmatic changes)
   const flatColumns = useMemo(() => {
-    if (!pinnedColumns || Object.keys(pinnedColumns).length === 0) return flatColumnsRaw;
     return flatColumnsRaw.map((col) => {
-      const override = pinnedColumns[col.columnId];
-      if (override && col.pinned !== override) {
+      const override = effectivePins[col.columnId];
+      if (col.pinned !== override) {
         return { ...col, pinned: override };
       }
       return col;
     });
-  }, [flatColumnsRaw, pinnedColumns]);
+  }, [flatColumnsRaw, effectivePins]);
 
   const responsiveConfig = useMemo(
     () => resolveResponsiveConfig(responsiveColumns),
@@ -189,12 +198,6 @@ export function useDataGridLayout<T>(
   const specialColsCount = (hasCheckboxCol ? 1 : 0) + (hasRowNumbersCol ? 1 : 0);
   const totalColCount = visibleColumnCount + specialColsCount;
   const colOffset = specialColsCount;
-
-  const pinningResult = useColumnPinning({
-    columns: flatColumns,
-    pinnedColumns,
-    onColumnPinned,
-  });
 
   // Measure actual column widths from the DOM for accurate pinning offsets.
   // Use a serialized key of overrides to prevent re-running on every object reference change

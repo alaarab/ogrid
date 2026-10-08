@@ -63,12 +63,18 @@ export {
   styleToCss,
   colorToCss,
   applyStyleEdit,
+  applyBorderSides,
+  borderSidesForCell,
   themePaletteOf,
   NUMBER_FORMAT_PRESETS,
+  COMMON_FONTS,
   DEFAULT_THEME_PALETTE,
   type XlsxCellStyle,
   type StyleEdit,
   type ThemePalette,
+  type BorderOptions,
+  type BorderScope,
+  type BorderLineStyle,
 } from './cellStyles';
 export { readSelection, type IMergedCell, type XlsxSelection } from './gridAdapter';
 

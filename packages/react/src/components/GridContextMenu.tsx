@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, getStructureMenuItems, getHidingMenuItems, getCellNoteMenuItems, formatShortcut } from '../utils';
+import { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, getStructureMenuItems, getHidingMenuItems, getCellNoteMenuItems, getFreezeMenuItems, formatShortcut } from '../utils';
 import type { GridContextMenuHandlerProps } from '../utils';
 import { useMenuKeyboardNav } from '../hooks/useMenuKeyboardNav';
 
@@ -43,6 +43,20 @@ export interface GridContextMenuHiding {
   onAction: (id: string) => void;
 }
 
+/** Freeze-panes section of the context menu (`allowFreeze`). */
+export interface GridContextMenuFreeze {
+  /** Currently frozen displayed rows. */
+  frozenRows: number;
+  /** Currently frozen leading visible columns. */
+  frozenColumns: number;
+  /** Data rows above the active cell (what "Freeze panes" would freeze). */
+  rowsAbove: number;
+  /** Data columns left of the active cell. */
+  columnsLeft: number;
+  /** Runs a freeze item: freezePanes, freezeTopRow, freezeFirstColumn, unfreezePanes. */
+  onAction: (id: string) => void;
+}
+
 export interface GridContextMenuProps extends GridContextMenuHandlerProps {
   x: number;
   y: number;
@@ -53,13 +67,15 @@ export interface GridContextMenuProps extends GridContextMenuHandlerProps {
   structure?: GridContextMenuStructure;
   /** Hide/unhide row and column items. Omit to hide them. */
   hiding?: GridContextMenuHiding;
+  /** Freeze/unfreeze items. Omit to hide them. */
+  freeze?: GridContextMenuFreeze;
   /** New/Edit/Delete note items for the active cell. Omit to hide them. */
   notes?: GridContextMenuNotes;
   classNames?: GridContextMenuClassNames;
 }
 
 export function GridContextMenu(props: GridContextMenuProps): React.ReactElement {
-  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, structure, hiding, notes, classNames } = props;
+  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, structure, hiding, freeze, notes, classNames } = props;
   const ref = React.useRef<HTMLDivElement>(null);
   const handlers = React.useMemo(
     () => getContextMenuHandlers({ onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, onClose }),
@@ -102,6 +118,17 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
   );
   const noteItems = React.useMemo(() => (notes ? getCellNoteMenuItems(notes.hasNote) : []), [notes]);
 
+  const freezeItems = React.useMemo(
+    () => (freeze
+      ? getFreezeMenuItems({
+        rowsAbove: freeze.rowsAbove,
+        columnsLeft: freeze.columnsLeft,
+        hasFrozenPanes: freeze.frozenRows > 0 || freeze.frozenColumns > 0,
+      })
+      : []),
+    [freeze]
+  );
+
   const { onKeyDown } = useMenuKeyboardNav(ref, { active: true, onClose });
 
   React.useEffect(() => {
@@ -123,13 +150,13 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
   // Compute viewport-aware menu position to prevent overflow on small screens
   const menuStyle = React.useMemo((): React.CSSProperties => {
     const menuWidth = 200;
-    const menuHeight = (GRID_CONTEXT_MENU_ITEMS.length + structureItems.length + hidingItems.length + noteItems.length) * 44 + 16; // approx
+    const menuHeight = (GRID_CONTEXT_MENU_ITEMS.length + structureItems.length + hidingItems.length + noteItems.length + freezeItems.length) * 44 + 16; // approx
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const left = x + menuWidth > vw ? Math.max(0, vw - menuWidth - 8) : x;
     const top = y + menuHeight > vh ? Math.max(0, vh - menuHeight - 8) : y;
     return { left, top };
-  }, [x, y, structureItems.length, hidingItems.length, noteItems.length]);
+  }, [x, y, structureItems.length, hidingItems.length, noteItems.length, freezeItems.length]);
 
   return (
     <div
@@ -187,6 +214,23 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
             className={classNames?.contextMenuItem}
             onClick={() => {
               hiding?.onAction(item.id);
+              onClose();
+            }}
+          >
+            <span className={classNames?.contextMenuItemLabel}>{item.label}</span>
+          </button>
+        </React.Fragment>
+      ))}
+      {freezeItems.map((item) => (
+        <React.Fragment key={item.id}>
+          {item.dividerBefore && <div className={classNames?.contextMenuDivider} />}
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className={classNames?.contextMenuItem}
+            onClick={() => {
+              freeze?.onAction(item.id);
               onClose();
             }}
           >

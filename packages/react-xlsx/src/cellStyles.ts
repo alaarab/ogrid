@@ -177,10 +177,82 @@ export type StyleEdit =
   | { kind: 'bold' | 'italic' | 'underline' | 'strike'; value: boolean }
   | { kind: 'fill'; argb: string | null }
   | { kind: 'fontColor'; argb: string | null }
+  | { kind: 'fontFamily'; value: string | null }
+  | { kind: 'fontSize'; value: number | null }
   | { kind: 'horizontal'; value: 'left' | 'center' | 'right' | null }
   | { kind: 'vertical'; value: 'top' | 'middle' | 'bottom' | null }
   | { kind: 'wrapText'; value: boolean }
   | { kind: 'numFmt'; value: string | null };
+
+/** Borders offered by the toolbar, by Excel's line-style names. */
+export type BorderLineStyle = 'thin' | 'medium' | 'thick' | 'dashed' | 'dotted' | 'double';
+
+/** Which edges of a selection a border command draws. */
+export type BorderScope = 'all' | 'outside' | 'inside' | 'top' | 'bottom' | 'left' | 'right' | 'none';
+
+/** A border command: scope, line style and color (`null` for automatic). */
+export interface BorderOptions {
+  scope: BorderScope;
+  lineStyle: BorderLineStyle;
+  argb: string | null;
+}
+
+/** Common fonts offered in the font-family menu, Excel/Word's everyday list. */
+export const COMMON_FONTS = ['Calibri', 'Aptos', 'Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana'] as const;
+
+/**
+ * The border sides a cell at the given position within the selection gets.
+ * `outside` draws only the selection's edges; `inside` draws the shared
+ * bottom/right lines between cells; `all` draws every side on every cell.
+ */
+export function borderSidesForCell(
+  opts: BorderOptions,
+  edge: { top: boolean; bottom: boolean; left: boolean; right: boolean },
+): Partial<ExcelJS.Borders> {
+  if (opts.scope === 'none') return { top: undefined, right: undefined, bottom: undefined, left: undefined };
+  const side: ExcelJS.Border = (opts.argb ? { style: opts.lineStyle, color: { argb: opts.argb } } : { style: opts.lineStyle }) as ExcelJS.Border;
+  const sides: Partial<ExcelJS.Borders> = {};
+  const set = (key: 'top' | 'right' | 'bottom' | 'left') => { sides[key] = side; };
+  switch (opts.scope) {
+    case 'all':
+      set('top'); set('right'); set('bottom'); set('left');
+      break;
+    case 'outside':
+      if (edge.top) set('top');
+      if (edge.right) set('right');
+      if (edge.bottom) set('bottom');
+      if (edge.left) set('left');
+      break;
+    case 'inside':
+      // Interior lines are each cell's bottom/right (except the last row/column).
+      if (!edge.bottom) set('bottom');
+      if (!edge.right) set('right');
+      break;
+    case 'top':
+      set('top');
+      break;
+    case 'bottom':
+      set('bottom');
+      break;
+    case 'left':
+      set('left');
+      break;
+    case 'right':
+      set('right');
+      break;
+  }
+  return sides;
+}
+
+/** Merge border sides into a style (undefined clears a side). Returns a new style. */
+export function applyBorderSides(style: XlsxCellStyle | undefined, sides: Partial<ExcelJS.Borders>): XlsxCellStyle | undefined {
+  const next = { ...style } as Record<string, unknown>;
+  const border: Record<string, unknown> = { ...(next.border as object | undefined) };
+  for (const [key, value] of Object.entries(sides)) border[key] = value;
+  next.border = border;
+  return pruneStyle(next);
+}
+
 
 /** Number formats offered by the toolbar. `null` is General. */
 export const NUMBER_FORMAT_PRESETS: Array<{ id: string; label: string; numFmt: string | null }> = [
@@ -211,6 +283,13 @@ export function applyStyleEdit(style: XlsxCellStyle | undefined, edit: StyleEdit
       break;
     case 'fontColor':
       sub('font', 'color', edit.argb ? { argb: edit.argb } : undefined);
+      break;
+    case 'fontFamily':
+      sub('font', 'name', edit.value ?? undefined);
+      if (edit.value) sub('font', 'scheme', undefined);
+      break;
+    case 'fontSize':
+      sub('font', 'size', typeof edit.value === 'number' ? edit.value : undefined);
       break;
     case 'fill':
       next.fill = edit.argb ? { type: 'pattern', pattern: 'solid', fgColor: { argb: edit.argb } } : undefined;

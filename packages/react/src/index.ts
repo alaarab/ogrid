@@ -68,6 +68,7 @@ export type {
   IGridStructureActions,
   IGridCellNavigator,
   IGridHidingActions,
+  IGridFreezeActions,
 } from './types';
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './types';
 
@@ -265,7 +266,7 @@ export {
 } from './components/BaseInlineCellEditor';
 export type { BaseInlineCellEditorProps } from './components/BaseInlineCellEditor';
 export { GridContextMenu } from './components/GridContextMenu';
-export type { GridContextMenuProps, GridContextMenuClassNames, GridContextMenuStructure, GridContextMenuHiding } from './components/GridContextMenu';
+export type { GridContextMenuProps, GridContextMenuClassNames, GridContextMenuStructure, GridContextMenuHiding, GridContextMenuFreeze } from './components/GridContextMenu';
 export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export type { MarchingAntsOverlayProps } from './components/MarchingAntsOverlay';
 export { FormulaBar } from './components/FormulaBar';

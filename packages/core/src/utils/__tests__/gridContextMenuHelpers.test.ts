@@ -1,4 +1,4 @@
-import { GRID_CONTEXT_MENU_ITEMS, formatShortcut, getContextMenuHandlers } from '../gridContextMenuHelpers';
+import { GRID_CONTEXT_MENU_ITEMS, formatShortcut, getContextMenuHandlers, getFreezeMenuItems } from '../gridContextMenuHelpers';
 import type { GridContextMenuHandlerProps } from '../gridContextMenuHelpers';
 
 describe('gridContextMenuHelpers', () => {
@@ -313,6 +313,25 @@ describe('gridContextMenuHelpers', () => {
       handlers.undo();
       handlers.redo();
       expect(onClose).toHaveBeenCalledTimes(6);
+    });
+  });
+
+  describe('getFreezeMenuItems', () => {
+    it('offers the three freeze commands without unfreeze when nothing is frozen', () => {
+      const items = getFreezeMenuItems({ rowsAbove: 0, columnsLeft: 0, hasFrozenPanes: false });
+      expect(items.map((i) => i.id)).toEqual(['freezeTopRow', 'freezeFirstColumn']);
+      expect(items[0]?.dividerBefore).toBe(true);
+    });
+
+    it('adds Freeze panes when the active cell leaves rows above or columns left', () => {
+      const items = getFreezeMenuItems({ rowsAbove: 2, columnsLeft: 1, hasFrozenPanes: false });
+      expect(items.map((i) => i.id)).toEqual(['freezePanes', 'freezeTopRow', 'freezeFirstColumn']);
+      expect(items[0]?.dividerBefore).toBe(true);
+    });
+
+    it('adds Unfreeze panes when panes are frozen', () => {
+      const items = getFreezeMenuItems({ rowsAbove: 1, columnsLeft: 0, hasFrozenPanes: true });
+      expect(items.map((i) => i.id)).toEqual(['freezePanes', 'freezeTopRow', 'freezeFirstColumn', 'unfreezePanes']);
     });
   });
 });

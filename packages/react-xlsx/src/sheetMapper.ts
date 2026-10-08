@@ -457,7 +457,6 @@ export function sheetToGridData(
       sortable: true,
       defaultWidth: Math.max(width, 24),
       minWidth: 24,
-      ...(c < formatting.frozen.columns ? { pinned: 'left' as const } : {}),
       ...(hidden ? { defaultVisible: false } : {}),
       ...(listValues ? { cellEditor: 'select', cellEditorParams: { values: listValues } } : {}),
       // valueGetter omitted — ogrid reads row[columnId] by default.
@@ -742,7 +741,9 @@ function readFormatting(sheet: ExcelJS.Worksheet, promoted: boolean, dataRows: n
   if (view) {
     formatting.frozen = {
       rows: Math.max(0, Math.min((view.ySplit ?? 0) - headerOffset, dataRows)),
-      columns: Math.max(0, Math.min(view.xSplit ?? 0, colCount)),
+      // Excel counts physical columns; the grid freezes visible columns only.
+      columns: Array.from({ length: Math.max(0, Math.min(view.xSplit ?? 0, colCount)) }, (_, c) => c)
+        .filter((c) => sheet.columns?.[c]?.hidden !== true).length,
     };
   }
 
