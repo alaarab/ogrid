@@ -46,7 +46,7 @@ test.describe('Formula mode parity', () => {
 
     await activateCell(page, 0, DEMO_COLUMN_INDEX.budget);
 
-    await expect(page.getByLabel(/active cell reference/i).first()).toHaveText(/[A-Z]+\d+/);
+    await expect(page.getByLabel(/active cell reference/i).first()).toHaveValue(/[A-Z]+\d+/);
     await expect(page.getByRole('textbox', { name: /formula input/i }).first()).toHaveValue('=20+20');
   });
 

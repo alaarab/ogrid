@@ -79,7 +79,7 @@ function formatNumberPattern(value: number): string {
 
 function getTextEditorSelector(): string {
   return [
-    'input[type="text"]:not([readonly]):not([aria-label="Formula input"]):not([aria-label^="Filter "]):not([aria-label="Rows per page"]):not([placeholder="Search..."])',
+    'input[type="text"]:not([readonly]):not([aria-label="Formula input"]):not([aria-label^="Filter "]):not([aria-label="Rows per page"]):not([placeholder="Search..."]):not([aria-label="Active cell reference"])',
     'textarea:not([readonly]):not([aria-label="Formula input"]):not([aria-label^="Filter "])',
   ].join(', ');
 }
