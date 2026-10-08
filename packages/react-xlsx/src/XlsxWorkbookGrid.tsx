@@ -5,7 +5,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type ExcelJS from 'exceljs';
 import { XlsxGrid, type XlsxGridProps } from './XlsxGrid';
-import { workbookFromBlob, type SheetToGridDataOptions } from './sheetMapper';
+import { tabColorOf, workbookFromBlob, type SheetToGridDataOptions } from './sheetMapper';
+import { XlsxWorkbookDocument } from './xlsxDocument';
 
 type Source = { blob: Blob } | { workbook: ExcelJS.Workbook };
 
@@ -21,12 +22,23 @@ export type XlsxWorkbookGridProps = Source & {
   headerRow?: SheetToGridDataOptions['headerRow'];
   /** Per-sheet load limits; see {@link XlsxGridProps.limits}. */
   limits?: XlsxGridProps['limits'];
+  /** Allow cell editing. Defaults to false (read-only preview). */
+  editable?: boolean;
+  /** Show the formatting toolbar. Defaults to `editable`. */
+  toolbar?: boolean;
+  /** When set, the toolbar shows an Export button that downloads the workbook under this name. */
+  exportFileName?: string;
+  /**
+   * Called with the editable document once the workbook is loaded (and again
+   * when it is replaced). Keep it to export: `await doc.toBlob()`.
+   */
+  onDocument?: (document: XlsxWorkbookDocument) => void;
 };
 
 let workbookGridInstanceCounter = 0;
 
 export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
-  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits } = props;
+  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits, editable, toolbar, exportFileName, onDocument } = props;
   const sourceBlob = 'blob' in props ? props.blob : null;
   const sourceWorkbook = 'workbook' in props ? props.workbook : null;
   const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(sourceWorkbook);
@@ -57,6 +69,20 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
 
   const sheetNames = useMemo(
     () => workbook?.worksheets.map((w) => w.name) ?? [],
+    [workbook],
+  );
+  // One document per loaded workbook and mapping options: edits survive sheet switches.
+  const doc = useMemo(
+    () => (workbook ? new XlsxWorkbookDocument(workbook, { headerRow, maxRows, maxCols, maxCells }) : null),
+    [workbook, headerRow, maxRows, maxCols, maxCells],
+  );
+  const onDocumentRef = useRef(onDocument);
+  onDocumentRef.current = onDocument;
+  useEffect(() => {
+    if (doc) onDocumentRef.current?.(doc);
+  }, [doc]);
+  const tabColors = useMemo(
+    () => new Map(workbook?.worksheets.map((w) => [w.name, tabColorOf(w)]) ?? []),
     [workbook],
   );
   const [active, setActive] = useState<string | null>(null);
@@ -97,7 +123,7 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
   if (workbook && sheetNames.length === 0) {
     return <div style={loadingStyle}>Workbook has no sheets.</div>;
   }
-  if (!workbook || !active) {
+  if (!workbook || !active || !doc) {
     return <div style={loadingStyle}>Loading workbook…</div>;
   }
 
@@ -119,7 +145,10 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => selectSheet(name)}
                 onKeyDown={(e) => onTabKeyDown(e, index)}
-                style={isActive ? tabActiveStyle : tabStyle}
+                style={{
+                  ...(isActive ? tabActiveStyle : tabStyle),
+                  ...(tabColors.get(name) ? { boxShadow: `inset 0 -3px 0 ${tabColors.get(name)}` } : {}),
+                }}
               >
                 {name}
               </button>
@@ -134,7 +163,18 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
           ? { role: 'tabpanel', 'aria-labelledby': `${idBase}-tab-${sheetNames.indexOf(active)}` }
           : {})}
       >
-        <XlsxGrid key={active} workbook={workbook} sheetName={active} density={density} headerRow={headerRow} limits={limits} />
+        <XlsxGrid
+          key={active}
+          workbook={workbook}
+          document={doc}
+          sheetName={active}
+          density={density}
+          headerRow={headerRow}
+          limits={limits}
+          editable={editable}
+          toolbar={toolbar}
+          exportFileName={exportFileName}
+        />
       </div>
     </div>
   );
@@ -163,8 +203,9 @@ const tabsStyle: React.CSSProperties = {
 };
 
 const tabBase: React.CSSProperties = {
-  border: '1px solid var(--border, #1f2a3a)',
-  borderBottom: 'none',
+  borderWidth: '1px 1px 0',
+  borderStyle: 'solid',
+  borderColor: 'var(--border, #1f2a3a)',
   borderRadius: '4px 4px 0 0',
   padding: '4px 12px',
   fontSize: 12,
@@ -181,8 +222,7 @@ const tabActiveStyle: React.CSSProperties = {
   ...tabBase,
   background: 'var(--bg, #0b1014)',
   color: 'var(--accent, #3cb87a)',
-  border: '1px solid var(--accent, #3cb87a)',
-  borderBottom: 'none',
+  borderColor: 'var(--accent, #3cb87a)',
 };
 const gridWrapStyle: React.CSSProperties = {
   flex: '1 1 auto',

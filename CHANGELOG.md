@@ -36,6 +36,29 @@ All notable changes to OGrid will be documented in this file.
   formulas page lists the details.
 - The formula AST has a new `NameNode` (`kind: 'name'`) for `LET` names.
   Exhaustive `switch` statements over `ASTNode` need a case for it.
+- `@alaarab/ogrid-react-xlsx`: import → edit → export keeps the workbook's
+  formatting. Cells render the file's fonts, fills, borders, alignment, wrap
+  and number formats (currency, percent, dates, thousands separators,
+  decimals, `[Red]` sections), resolving theme colors against the workbook
+  theme. Column widths come from the sheet, frozen columns are pinned, hidden
+  columns stay hidden, and a list validation covering a whole column becomes a
+  dropdown editor.
+- `XlsxWorkbookGrid` / `XlsxGrid` take `editable`, `toolbar` and
+  `exportFileName`. The formatting toolbar applies bold, italic, underline,
+  fill and font color, alignment, a number format and merge/unmerge to the
+  selected range; edits and formatting share an undoable per-sheet history
+  that survives sheet switches.
+- `XlsxWorkbookDocument` (also passed to `onDocument`) holds the edited
+  workbook and exports it with `toWorkbook()`, `toBlob()` or `download()`.
+  Export keeps every sheet with its name, order and tab color, writes back
+  only what changed (values, formulas with their latest result, styles merged
+  into the original style, merges, column widths), and leaves everything else
+  as read: validations, frozen panes, row heights, rich text, hyperlinks,
+  comments, defined names, cross-sheet formulas. New formulas get Excel's
+  `_xlfn.` prefix where needed.
+- Exports: `formatWithNumFmt`, `styleToCss`, `applyStyleEdit`,
+  `themePaletteOf`, `FormatToolbar`, and `sheetToGridData(...).formatting`
+  (styles, widths, row heights, merges, frozen panes, list validations).
 
 ### Fixed
 
@@ -43,6 +66,17 @@ All notable changes to OGrid will be documented in this file.
   paints the text over the neighbouring cells. The active cell clips its
   content like Excel does. The fill handle now renders next to the cell
   content inside the `<td>`, so clipping no longer hides it.
+
+### Changed
+
+- `@alaarab/ogrid-react-xlsx`: columns use the sheet's widths (Excel's
+  default 64px when unset) instead of a fixed 120px, and numbers show in
+  Excel's General format when a cell has no number format (`0.3`, not
+  `0.30000000000000004`).
+- Cells merged away in the source file read as empty instead of repeating the
+  merged block's value.
+- Merged cells and frozen rows are passed to OGrid as `mergedCells` and
+  `frozenRows`; they display once the grid supports those props.
 
 ## [2.18.0] - 2026-10-06
 

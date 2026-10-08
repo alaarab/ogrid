@@ -18,6 +18,15 @@ import { XlsxWorkbookGrid } from '@alaarab/ogrid-react-xlsx';
 <XlsxWorkbookGrid blob={file} height={600} />
 ```
 
+Cells show the workbook's styles and number formats, and column widths come from the sheet. To edit and save:
+
+```tsx
+<XlsxWorkbookGrid blob={file} editable exportFileName="book.xlsx" onDocument={(doc) => (docRef.current = doc)} />
+// later: const blob = await docRef.current.toBlob();
+```
+
+`editable` turns on value/formula editing and a formatting toolbar (bold, italic, underline, colors, alignment, number format, merge/unmerge) with undo. Export keeps every sheet and writes back only what changed, so styles, validations, frozen panes, merges, hyperlinks and the rest of the file survive. The docs page lists exactly what round-trips.
+
 Other entry points:
 
 - `XlsxGrid` renders one sheet of an already-parsed ExcelJS workbook.
