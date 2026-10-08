@@ -5,16 +5,17 @@ import type { FilterOption } from '../types/columnTypes';
  * Framework packages re-export these and may add thin framework-specific wrappers.
  */
 
-import type { ColumnFilterType, IDateFilterValue, ICellEditorProps } from '../types/columnTypes';
+import type { ColumnFilterType, ConditionFilterKind, IConditionFilterValue, IDateFilterValue, ICellEditorProps } from '../types/columnTypes';
 import type { IColumnDef } from '../types/columnTypes';
 import { formatCellValue } from './cellFormatting';
-import type { RowId, UserLike, IFilters, FilterValue } from '../types/dataGridTypes';
+import type { RowId, UserLike, IFilters, FilterValue, ISortModelItem } from '../types/dataGridTypes';
 import { getCellValue, isColumnEditable } from './cellValue';
 import { isInSelectionRange } from '../types/dataGridTypes';
 import { isFilterConfig } from './ogridHelpers';
 import { isSingleMergeRange } from './mergedCells';
 import type { IMergeLayout } from './mergedCells';
 import type { ISelectionRange } from '../types/dataGridTypes';
+import { normalizeConditionFilter, resolveConditionFilterKind } from './conditionFilter';
 import { FormulaError } from '../formula/types';
 
 // ---------------------------------------------------------------------------
@@ -31,7 +32,12 @@ const EMPTY_SELECTED_VALUES: string[] = [];
 export interface HeaderFilterConfigInput {
   sortBy?: string;
   sortDirection: 'asc' | 'desc';
-  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
+  /**
+   * Every sort level, primary first. When it has more than one level, headers
+   * show each sorted column's direction and priority. Defaults to `sortBy`/`sortDirection`.
+   */
+  sortModel?: readonly ISortModelItem[];
+  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null, options?: { additive?: boolean }) => void;
   filters: IFilters;
   onFilterChange: (key: string, value: FilterValue | undefined) => void;
   filterOptions: Record<string, FilterOption[]>;
@@ -46,7 +52,10 @@ export interface HeaderFilterConfig {
   filterType: ColumnFilterType;
   isSorted?: boolean;
   isSortedDescending?: boolean;
-  onSort?: () => void;
+  /** 1-based sort priority, set only when the grid sorts by more than one column. */
+  sortIndex?: number;
+  /** Toggle this column's sort. `additive` (Shift+click) adds or cycles a sort level instead of replacing the sort. */
+  onSort?: (options?: { additive?: boolean }) => void;
   selectedValues?: string[];
   onFilterChange?: (values: string[]) => void;
   options?: FilterOption[];
@@ -58,6 +67,10 @@ export interface HeaderFilterConfig {
   peopleSearch?: (query: string) => Promise<UserLike[]>;
   dateValue?: IDateFilterValue;
   onDateChange?: (value: IDateFilterValue | undefined) => void;
+  /** Operator set for `number` / `condition` filters. */
+  conditionKind?: ConditionFilterKind;
+  conditionValue?: IConditionFilterValue;
+  onConditionChange?: (value: IConditionFilterValue | undefined) => void;
 }
 
 /**
@@ -73,13 +86,22 @@ export function getHeaderFilterConfig<T>(
   const sortable = col.sortable !== false;
   const filterValue = input.filters[filterField];
 
-  const base = {
+  // Multi-level: each sorted column shows its own direction and priority.
+  const model = input.sortModel;
+  const levelIndex = model && model.length > 1 ? model.findIndex((level) => level.field === col.columnId) : -1;
+  const level = levelIndex >= 0 ? model?.[levelIndex] : undefined;
+  const isSorted = level ? true : input.sortBy === col.columnId;
+  const base: HeaderFilterConfig = {
     columnKey: col.columnId,
     columnName: col.name,
     filterType,
-    isSorted: input.sortBy === col.columnId,
-    isSortedDescending: input.sortBy === col.columnId && input.sortDirection === 'desc',
-    onSort: sortable ? () => input.onColumnSort(col.columnId) : undefined,
+    isSorted,
+    isSortedDescending: level ? level.direction === 'desc' : isSorted && input.sortDirection === 'desc',
+    ...(level ? { sortIndex: levelIndex + 1 } : {}),
+    onSort: sortable
+      ? (options?: { additive?: boolean }) =>
+          options?.additive ? input.onColumnSort(col.columnId, undefined, { additive: true }) : input.onColumnSort(col.columnId)
+      : undefined,
   };
 
   if (filterType === 'text') {
@@ -115,6 +137,17 @@ export function getHeaderFilterConfig<T>(
       dateValue: filterValue?.type === 'date' ? filterValue.value : undefined,
       onDateChange: (v: IDateFilterValue | undefined) =>
         input.onFilterChange(filterField, v ? { type: 'date', value: v } : undefined),
+    };
+  }
+  if (filterType === 'number' || filterType === 'condition') {
+    return {
+      ...base,
+      conditionKind: resolveConditionFilterKind(col) ?? 'number',
+      conditionValue: filterValue?.type === 'condition' ? filterValue.value : undefined,
+      onConditionChange: (v: IConditionFilterValue | undefined) => {
+        const normalized = normalizeConditionFilter(v);
+        input.onFilterChange(filterField, normalized ? { type: 'condition', value: normalized } : undefined);
+      },
     };
   }
   return base;

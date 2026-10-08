@@ -94,4 +94,50 @@ describe('useOGridSorting', () => {
     rerender({ columns: [{ columnId: 'a1' }] });
     expect(seen[seen.length - 1]).toBe(first);
   });
+
+  describe('multi-level', () => {
+    const cols = [{ columnId: 'a' }, { columnId: 'b' }, { columnId: 'c' }];
+
+    it('additive requests add levels; sort stays the primary level; plain requests reset', () => {
+      const onSortChange = jest.fn();
+      const onSortModelChange = jest.fn();
+      const setPage = jest.fn();
+      const { result } = renderHook(() =>
+        useOGridSorting({ columns: cols, defaultSortField: 'a', defaultSortDirection: 'asc', onSortChange, onSortModelChange, setPage }),
+      );
+      expect(result.current.sortModel).toEqual([{ field: 'a', direction: 'asc' }]);
+      act(() => result.current.handleSort('b', undefined, { additive: true }));
+      expect(result.current.sortModel).toEqual([{ field: 'a', direction: 'asc' }, { field: 'b', direction: 'asc' }]);
+      expect(result.current.sort).toEqual({ field: 'a', direction: 'asc' });
+      expect(onSortChange).toHaveBeenLastCalledWith({ field: 'a', direction: 'asc' });
+      expect(setPage).toHaveBeenLastCalledWith(1);
+      act(() => result.current.handleSort('a', null));
+      expect(result.current.sortModel).toEqual([{ field: 'b', direction: 'asc' }]);
+      act(() => result.current.handleSort('c'));
+      expect(onSortModelChange).toHaveBeenLastCalledWith([{ field: 'c', direction: 'asc' }]);
+      act(() => result.current.handleSort('c', null));
+      expect(result.current.sort).toEqual({ field: '', direction: 'asc' });
+      expect(onSortChange).toHaveBeenLastCalledWith({ field: '', direction: 'asc' });
+      expect(result.current.sortVersion).toBe(4);
+    });
+
+    it('controlled sortModel wins over sort, keeps identity for equal content, and resetSort restores defaultSortModel', () => {
+      const onSortModelChange = jest.fn();
+      const defaultSortModel = [{ field: 'c', direction: 'desc' as const }];
+      const { result, rerender } = renderHook(
+        ({ model }: { model: { field: string; direction: 'asc' | 'desc' }[] }) =>
+          useOGridSorting({
+            columns: cols, defaultSortField: 'a', defaultSortDirection: 'asc', defaultSortModel,
+            controlledSort: { field: 'a', direction: 'asc' }, controlledSortModel: model, onSortModelChange, setPage: noop,
+          }),
+        { initialProps: { model: [{ field: 'b', direction: 'desc' as const }, { field: 'a', direction: 'asc' as const }] } },
+      );
+      expect(result.current.sort).toEqual({ field: 'b', direction: 'desc' });
+      const first = result.current.sortModel;
+      rerender({ model: [{ field: 'b', direction: 'desc' }, { field: 'a', direction: 'asc' }] });
+      expect(result.current.sortModel).toBe(first);
+      act(() => result.current.resetSort());
+      expect(onSortModelChange).toHaveBeenLastCalledWith(defaultSortModel);
+    });
+  });
 });

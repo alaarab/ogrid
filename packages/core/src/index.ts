@@ -2,6 +2,10 @@
 export type {
   ColumnFilterType,
   IDateFilterValue,
+  ConditionFilterKind,
+  ConditionOperator,
+  IFilterCondition,
+  IConditionFilterValue,
   IColumnFilterDef,
   IFilterOption,
   FilterOption,
@@ -25,6 +29,8 @@ export type {
   UserLikeInput,
   FilterValue,
   IFilters,
+  ISortModelItem,
+  SortModel,
   IFetchParams,
   IPageResult,
   IRowWindowParams,
@@ -151,6 +157,17 @@ export type { AggregationResult } from './utils';
 // Utils  -  clientSideData
 export { processClientSideData } from './utils';
 
+// Utils  -  conditionFilter
+export {
+  CONDITION_OPERATORS,
+  getConditionOperatorLabel,
+  getConditionOperatorArity,
+  resolveConditionFilterKind,
+  isConditionComplete,
+  normalizeConditionFilter,
+  createConditionPredicate,
+} from './utils';
+
 // Utils  -  gridRowComparator
 export { areGridRowPropsEqual, isRowInRange } from './utils';
 export type { GridRowComparatorProps } from './utils';
@@ -225,8 +242,8 @@ export { measureRange, buildCellIndex, cellIndexKey, CELL_INDEX_STRIDE, injectGl
 export type { OverlayRect } from './utils';
 
 // Utils  -  sortHelpers
-export { computeNextSortState } from './utils';
-export type { ISortState } from './utils';
+export { computeNextSortState, computeNextSortModel, normalizeSortModel, sortModelKey } from './utils';
+export type { ISortState, ComputeNextSortModelOptions } from './utils';
 
 // Utils  -  columnAutosize
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './utils';

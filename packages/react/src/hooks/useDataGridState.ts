@@ -196,6 +196,7 @@ export interface DataGridPinningState {
     handleSortAsc: () => void;
     handleSortDesc: () => void;
     handleClearSort: () => void;
+    handleAddToSort: () => void;
     handleAutosizeThis: () => void;
     handleAutosizeAll: () => void;
     handleInsertColumnLeft: () => void;
@@ -212,6 +213,7 @@ export interface DataGridPinningState {
     currentSort: 'asc' | 'desc' | null;
     isSortable: boolean;
     isResizable: boolean;
+    canAddToSort: boolean;
   };
 }
 
@@ -338,6 +340,7 @@ export function useDataGridState<T>(
     onColumnPinned,
     sortBy: props.sortBy,
     sortDirection: props.sortDirection,
+    sortModel: props.sortModel,
     onColumnSort: props.onColumnSort,
     responsiveColumns,
     wrapperRef,
@@ -675,6 +678,7 @@ export function useDataGridState<T>(
   const {
     sortBy,
     sortDirection,
+    sortModel,
     filters,
     onFilterChange,
     filterOptions,
@@ -699,6 +703,7 @@ export function useDataGridState<T>(
     () => ({
       sortBy,
       sortDirection,
+      sortModel,
       onColumnSort: layoutResult.stableOnColumnSort,
       filters,
       onFilterChange: stableOnFilterChange,
@@ -709,6 +714,7 @@ export function useDataGridState<T>(
     [
       sortBy,
       sortDirection,
+      sortModel,
       layoutResult.stableOnColumnSort,
       filters,
       stableOnFilterChange,

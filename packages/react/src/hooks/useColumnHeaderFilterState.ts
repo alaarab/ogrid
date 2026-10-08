@@ -24,12 +24,18 @@ import { useTextFilterState } from './useTextFilterState';
 import { useMultiSelectFilterState } from './useMultiSelectFilterState';
 import { usePeopleFilterState } from './usePeopleFilterState';
 import { useDateFilterState } from './useDateFilterState';
+import { useConditionFilterState } from './useConditionFilterState';
+import type { ConditionDraft } from './useConditionFilterState';
+import type { ConditionFilterKind, IConditionFilterValue } from '@alaarab/ogrid-core';
+
+/** Pointer travel (px) between press and click above which a header click is a drag, not a sort. */
+const SORT_CLICK_SLOP = 5;
 
 const EMPTY_OPTIONS: string[] = [];
 
 export interface UseColumnHeaderFilterStateParams {
   filterType: ColumnFilterType;
-  onSort?: () => void;
+  onSort?: (options?: { additive?: boolean }) => void;
   selectedValues?: string[];
   onFilterChange?: (values: string[]) => void;
   options?: FilterOption[];
@@ -41,6 +47,9 @@ export interface UseColumnHeaderFilterStateParams {
   peopleSearch?: (query: string) => Promise<UserLike[]>;
   dateValue?: IDateFilterValue;
   onDateChange?: (value: IDateFilterValue | undefined) => void;
+  conditionKind?: ConditionFilterKind;
+  conditionValue?: IConditionFilterValue;
+  onConditionChange?: (value: IConditionFilterValue | undefined) => void;
 }
 
 export interface UseColumnHeaderFilterStateResult {
@@ -65,6 +74,11 @@ export interface UseColumnHeaderFilterStateResult {
   setTempDateFrom: (v: string) => void;
   tempDateTo: string;
   setTempDateTo: (v: string) => void;
+  conditionKind: ConditionFilterKind;
+  conditionDrafts: [ConditionDraft, ConditionDraft];
+  setConditionDraft: (index: 0 | 1, patch: Partial<ConditionDraft>) => void;
+  conditionJoin: 'and' | 'or';
+  setConditionJoin: (join: 'and' | 'or') => void;
   hasActiveFilter: boolean;
   popoverPosition: { top: number; left: number } | null;
   handlers: {
@@ -85,6 +99,12 @@ export interface UseColumnHeaderFilterStateResult {
     handleDateApply: () => void;
     handleDateClear: () => void;
     handleSortClick: (e: React.MouseEvent) => void;
+    handleConditionApply: () => void;
+    handleConditionClear: () => void;
+    /** Header label press: remembers where it started (a drag isn't a click) and blocks Shift text selection. */
+    handleLabelPointerDown: (e: React.PointerEvent) => void;
+    /** Header label click: sorts; Shift+click adds or cycles a sort level. */
+    handleLabelClick: (e: React.MouseEvent) => void;
   };
 }
 
@@ -104,6 +124,9 @@ export function useColumnHeaderFilterState(
     peopleSearch,
     dateValue,
     onDateChange,
+    conditionKind,
+    conditionValue,
+    onConditionChange,
   } = params;
 
   const safeSelectedValues = selectedValues ?? EMPTY_OPTIONS;
@@ -139,6 +162,13 @@ export function useColumnHeaderFilterState(
   const dateFilterState = useDateFilterState({
     dateValue,
     onDateChange,
+    isFilterOpen,
+  });
+
+  const conditionFilterState = useConditionFilterState({
+    conditionKind,
+    conditionValue,
+    onConditionChange,
     isFilterOpen,
   });
 
@@ -225,6 +255,24 @@ export function useColumnHeaderFilterState(
     [onSort]
   );
 
+  const labelPressRef = useRef<{ x: number; y: number } | null>(null);
+  const handleLabelPointerDown = useCallback((e: React.PointerEvent) => {
+    labelPressRef.current = { x: e.clientX, y: e.clientY };
+    if (e.shiftKey) e.preventDefault();
+  }, []);
+  const handleLabelClick = useCallback(
+    (e: React.MouseEvent) => {
+      const press = labelPressRef.current;
+      labelPressRef.current = null;
+      if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) >= SORT_CLICK_SLOP) return;
+      if (!onSort) return;
+      e.stopPropagation();
+      if (e.shiftKey) onSort({ additive: true });
+      else onSort();
+    },
+    [onSort]
+  );
+
   // Destructure stable callbacks from sub-hooks before using as deps
   const { handleApplyMultiSelect: _applyMultiSelect } = multiSelectFilterState;
   const { handleTextApply: _textApply, handleTextClear: _textClear } = textFilterState;
@@ -267,6 +315,16 @@ export function useColumnHeaderFilterState(
     setFilterOpen(false);
   }, [_dateApply]);
 
+  const { handleConditionApply: _conditionApply, handleConditionClear: _conditionClear } = conditionFilterState;
+  const handleConditionApply = useCallback(() => {
+    _conditionApply();
+    setFilterOpen(false);
+  }, [_conditionApply]);
+  const handleConditionClear = useCallback(() => {
+    _conditionClear();
+    setFilterOpen(false);
+  }, [_conditionClear]);
+
   // Event propagation stoppers
   const handlePopoverClick = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
   const handleInputFocus = useCallback((e: React.FocusEvent) => e.stopPropagation(), []);
@@ -282,8 +340,9 @@ export function useColumnHeaderFilterState(
     if (filterType === 'text') return !!textValue.trim();
     if (filterType === 'people') return !!selectedUser;
     if (filterType === 'date') return !!(dateValue?.from || dateValue?.to);
+    if (filterType === 'number' || filterType === 'condition') return (conditionValue?.conditions.length ?? 0) > 0;
     return false;
-  }, [filterType, safeSelectedValues, textValue, selectedUser, dateValue]);
+  }, [filterType, safeSelectedValues, textValue, selectedUser, dateValue, conditionValue]);
 
   return {
     headerRef,
@@ -307,6 +366,11 @@ export function useColumnHeaderFilterState(
     setTempDateFrom: dateFilterState.setTempDateFrom,
     tempDateTo: dateFilterState.tempDateTo,
     setTempDateTo: dateFilterState.setTempDateTo,
+    conditionKind: conditionFilterState.conditionKind,
+    conditionDrafts: conditionFilterState.conditionDrafts,
+    setConditionDraft: conditionFilterState.setConditionDraft,
+    conditionJoin: conditionFilterState.conditionJoin,
+    setConditionJoin: conditionFilterState.setConditionJoin,
     hasActiveFilter,
     popoverPosition,
     handlers: {
@@ -327,6 +391,10 @@ export function useColumnHeaderFilterState(
       handleInputClick,
       handleInputKeyDown,
       handleSortClick,
+      handleConditionApply,
+      handleConditionClear,
+      handleLabelPointerDown,
+      handleLabelClick,
     },
   };
 }

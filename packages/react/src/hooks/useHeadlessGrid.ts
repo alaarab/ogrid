@@ -46,7 +46,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCellValue as coreGetCellValue } from '@alaarab/ogrid-core';
-import type { IFilters, FilterValue, PageSize } from '@alaarab/ogrid-core';
+import type { IFilters, FilterValue, ISortModelItem, PageSize } from '@alaarab/ogrid-core';
 import type { IColumnDef, IDataSource } from '../types';
 
 import { useOGridSorting, type SortState } from './useOGridSorting';
@@ -75,6 +75,11 @@ export interface UseHeadlessGridParams<T> {
   /** Optional controlled sort. */
   sort?: SortState;
   onSortChange?: (sort: SortState) => void;
+  /** Initial multi-level sort (primary first). Takes precedence over `initialSort`. */
+  initialSortModel?: ISortModelItem[];
+  /** Optional controlled multi-level sort. Takes precedence over `sort`. */
+  sortModel?: ISortModelItem[];
+  onSortModelChange?: (sortModel: ISortModelItem[]) => void;
 
   /** Optional controlled filters. */
   filters?: IFilters;
@@ -128,13 +133,21 @@ export interface UseHeadlessGridResult<T> {
    */
   allFilteredRows: T[];
 
-  /** Current sort state. */
+  /** Current (primary) sort state. */
   sort: SortState;
   setSort: (sort: SortState) => void;
-  /** Toggle a column's sort between ascending and descending (a new column starts ascending). Use `setSort` to clear. */
-  toggleSort: (columnId: string) => void;
-  /** "▲" / "▼" / "" — convenient indicator for header rendering. */
+  /** Every sort level, primary first. */
+  sortModel: ISortModelItem[];
+  setSortModel: (sortModel: ISortModelItem[]) => void;
+  /**
+   * Toggle a column's sort between ascending and descending (a new column starts ascending). Use `setSort` to clear.
+   * With `{ additive: true }` (e.g. Shift+click) the column is added as the next level, or its level cycles asc -> desc -> removed.
+   */
+  toggleSort: (columnId: string, options?: { additive?: boolean }) => void;
+  /** "▲" / "▼" / "" — convenient indicator for header rendering (any sort level). */
   sortIndicator: (columnId: string) => '▲' | '▼' | '';
+  /** 1-based sort priority of a column when sorting by more than one level, else undefined. */
+  sortPriority: (columnId: string) => number | undefined;
 
   /** Current filter state. */
   filters: IFilters;
@@ -185,6 +198,9 @@ export function useHeadlessGrid<T>(
     initialPageSize = DEFAULT_PAGE_SIZE,
     sort: controlledSort,
     onSortChange,
+    initialSortModel,
+    sortModel: controlledSortModel,
+    onSortModelChange,
     filters: controlledFilters,
     onFiltersChange,
     page: controlledPage,
@@ -214,10 +230,13 @@ export function useHeadlessGrid<T>(
 
   const sorting = useOGridSorting({
     controlledSort,
+    controlledSortModel,
     defaultSortField: initialSort?.field ?? '',
     defaultSortDirection: initialSort?.direction ?? 'asc',
+    defaultSortModel: initialSortModel,
     columns,
     onSortChange,
+    onSortModelChange,
     setPage: pagination.setPage,
   });
 
@@ -243,6 +262,7 @@ export function useHeadlessGrid<T>(
     columns,
     stableFilters: filtersHook.stableFilters,
     sort: sorting.sort,
+    sortModel: sorting.sortModel,
     sortVersion: sorting.sortVersion,
     page: pagination.page,
     pageSize: pagination.pageSize,
@@ -292,16 +312,27 @@ export function useHeadlessGrid<T>(
   // ── Sort helpers ───────────────────────────────────────────────────────
   const { handleSort } = sorting;
   const toggleSort = useCallback(
-    (columnId: string) => handleSort(columnId),
+    (columnId: string, options?: { additive?: boolean }) =>
+      options?.additive ? handleSort(columnId, undefined, { additive: true }) : handleSort(columnId),
     [handleSort],
   );
 
+  const { sortModel } = sorting;
   const sortIndicator = useCallback(
     (columnId: string): '▲' | '▼' | '' => {
-      if (sorting.sort.field !== columnId) return '';
-      return sorting.sort.direction === 'asc' ? '▲' : '▼';
+      const level = sortModel.find((l) => l.field === columnId);
+      if (!level) return '';
+      return level.direction === 'asc' ? '▲' : '▼';
     },
-    [sorting.sort.field, sorting.sort.direction],
+    [sortModel],
+  );
+  const sortPriority = useCallback(
+    (columnId: string): number | undefined => {
+      if (sortModel.length < 2) return undefined;
+      const index = sortModel.findIndex((l) => l.field === columnId);
+      return index >= 0 ? index + 1 : undefined;
+    },
+    [sortModel],
   );
 
   // ── Filter helpers ─────────────────────────────────────────────────────
@@ -357,8 +388,11 @@ export function useHeadlessGrid<T>(
 
     sort: sorting.sort,
     setSort: sorting.setSort,
+    sortModel: sorting.sortModel,
+    setSortModel: sorting.setSortModel,
     toggleSort,
     sortIndicator,
+    sortPriority,
 
     filters: filtersHook.filters,
     setFilters: filtersHook.setFilters,

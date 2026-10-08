@@ -96,3 +96,44 @@ describe('applySheetState', () => {
     expect(set.setColumnOrder).toHaveBeenCalledWith(undefined);
   });
 });
+
+describe('applySheetState sort model', () => {
+  const base = {
+    visibleColumns: undefined,
+    sort: { field: 'a', direction: 'asc' as const },
+    filters: {},
+    page: 1,
+    selectedRows: new Set<string>(),
+    columnOrder: undefined,
+    columnWidths: {},
+    pinned: undefined,
+    hiddenRowIds: [2],
+  };
+  const model = [{ field: 'a', direction: 'asc' as const }, { field: 'b', direction: 'desc' as const }];
+
+  it('restores a captured multi-level sort next to hidden rows', () => {
+    const { set, slices } = setters();
+    const setModel = mock(() => {});
+    const setHidden = mock(() => {});
+    applySheetState({ ...base, sortModel: model }, uncontrolled, {
+      ...slices,
+      sorting: { setInternalSort: set.setSort, setInternalSortModel: setModel },
+      hiddenRows: { setInternalHiddenRowIds: setHidden },
+    });
+    expect(setModel).toHaveBeenCalledWith(model);
+    expect(set.setSort).not.toHaveBeenCalled();
+    expect(setHidden).toHaveBeenCalledWith([2]);
+  });
+
+  it('leaves a controlled sortModel to the host, and defaults use defaultSortModel', () => {
+    const { set, slices } = setters();
+    const setModel = mock(() => {});
+    applySheetState({ ...base, sortModel: model }, { sortModel: model }, {
+      ...slices,
+      sorting: { setInternalSort: set.setSort, setInternalSortModel: setModel },
+    });
+    expect(setModel).not.toHaveBeenCalled();
+    expect(set.setSort).not.toHaveBeenCalled();
+    expect(sheetStateDefaults({ field: 'a', direction: 'asc' }, model).sortModel).toEqual(model);
+  });
+});

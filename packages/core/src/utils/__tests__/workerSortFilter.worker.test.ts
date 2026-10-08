@@ -7,7 +7,7 @@
 import { processClientSideDataAsync, terminateSortFilterWorker } from '../workerSortFilter';
 import { processClientSideData } from '../clientSideData';
 import type { SortFilterRequest } from '../../workers/sortFilterWorker';
-import type { IColumnDef, IFilters } from '../../types';
+import type { IColumnDef, IFilters, ISortModelItem } from '../../types';
 
 type Row = { id: number; name: string; when: Date | string | null; score: number };
 
@@ -69,7 +69,7 @@ afterEach(() => {
   URL.revokeObjectURL = originalRevoke;
 });
 
-async function expectParity(filters: IFilters, sortBy?: string, dir?: 'asc' | 'desc') {
+async function expectParity(filters: IFilters, sortBy?: string | ISortModelItem[], dir?: 'asc' | 'desc') {
   const expected = processClientSideData(rows, columns, filters, sortBy, dir).map((r) => r.id);
   const actual = (await processClientSideDataAsync(rows, columns, filters, sortBy, dir)).map((r) => r.id);
   expect(actual).toEqual(expected);
@@ -105,5 +105,30 @@ describe('processClientSideDataAsync (worker path)', () => {
     const result = await processClientSideDataAsync(rows, columns, { name: { type: 'text', value: '  ' } });
     expect(posted).toHaveLength(0);
     expect(result.map((r) => r.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('sorts by several levels in the worker, matching the sync path', async () => {
+    const tied: Row[] = [
+      { id: 1, name: 'b', when: null, score: 2 },
+      { id: 2, name: 'a', when: '2024-01-02', score: 1 },
+      { id: 3, name: 'b', when: '2024-01-01', score: 1 },
+      { id: 4, name: 'a', when: '2024-01-01', score: 2 },
+      { id: 5, name: 'b', when: '2024-01-01', score: 2 },
+    ];
+    const model: ISortModelItem[] = [{ field: 'score', direction: 'desc' }, { field: 'name', direction: 'asc' }, { field: 'when', direction: 'desc' }];
+    const actual = (await processClientSideDataAsync(tied, columns, {}, model)).map((r) => r.id);
+    expect((posted[0] as SortFilterRequest).sorts).toHaveLength(3);
+    expect(actual).toEqual([4, 5, 1, 2, 3]);
+    expect(actual).toEqual(processClientSideData(tied, columns, {}, model).map((r) => r.id));
+  });
+
+  it('runs condition filters in the worker with the same results as the sync path', async () => {
+    await expectParity({ score: { type: 'condition', value: { kind: 'number', conditions: [{ operator: 'greaterThan', value: 1 }] } } }, 'score', 'asc');
+    await expectParity({ score: { type: 'condition', value: { kind: 'number', conditions: [{ operator: 'top', value: 2 }] } } });
+    await expectParity({ score: { type: 'condition', value: { kind: 'number', conditions: [{ operator: 'belowAverage' }] } } });
+    await expectParity({ name: { type: 'condition', value: { kind: 'text', conditions: [{ operator: 'beginsWith', value: 'B' }, { operator: 'equals', value: 'd' }], join: 'or' } } });
+    await expectParity({ when: { type: 'condition', value: { kind: 'date', conditions: [{ operator: 'greaterThanOrEqual', value: '2024-01-15' }] } } }, 'when', 'asc');
+    await expectParity({ when: { type: 'condition', value: { kind: 'date', conditions: [{ operator: 'blank' }] } } });
+    expect(posted.length).toBeGreaterThanOrEqual(6);
   });
 });

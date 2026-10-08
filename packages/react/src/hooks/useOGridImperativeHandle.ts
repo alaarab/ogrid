@@ -75,6 +75,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
 
   const visibleColumnsRef = useLatestRef(visibleColumns);
   const sortRef = useLatestRef(sortingState.sort);
+  const sortModelRef = useLatestRef(sortingState.sortModel);
   const columnOrderRef = useLatestRef(effectiveColumnOrder);
   const columnWidthOverridesRef = useLatestRef(columnWidthOverrides);
   const pinnedOverridesRef = useLatestRef(pinnedOverrides);
@@ -89,7 +90,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
   const getRowIdRef = useLatestRef(getRowId);
   const columnsRef = useLatestRef(columns);
   // Depend on the member functions, not the state objects (new literals every render).
-  const { setSort, defaultSortField, defaultSortDirection } = sortingState;
+  const { setSort, setSortModel, resetSort } = sortingState;
   const { setFilters } = filtersState;
   const { refreshData } = dataFetchingState;
 
@@ -103,6 +104,8 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       getColumnState: () => ({
         visibleColumns: Array.from(visibleColumnsRef.current),
         sort: sortRef.current,
+        // Only multi-level sorts add `sortModel`; `sort` alone describes a single level.
+        ...(sortModelRef.current.length > 1 ? { sortModel: sortModelRef.current } : {}),
         columnOrder: columnOrderRef.current ?? undefined,
         columnWidths: Object.keys(columnWidthOverridesRef.current).length > 0 ? columnWidthOverridesRef.current : undefined,
         filters: Object.keys(filtersRef.current).length > 0 ? filtersRef.current : undefined,
@@ -110,7 +113,8 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       }),
       applyColumnState: (state: Partial<import('../types').IGridColumnState>) => {
         if (state.visibleColumns) setVisibleColumns(new Set(state.visibleColumns));
-        if (state.sort) setSort(state.sort);
+        if (state.sortModel) setSortModel(state.sortModel);
+        else if (state.sort) setSort(state.sort);
         if (state.columnOrder) {
           if (columnOrder === undefined) setInternalColumnOrder(state.columnOrder);
           onColumnOrderChange?.(state.columnOrder);
@@ -129,10 +133,10 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       },
       deselectAll: () => commitSelection([]),
       clearFilters: () => setFilters({}),
-      clearSort: () => setSort({ field: defaultSortField, direction: defaultSortDirection }),
+      clearSort: resetSort,
       resetGridState: (options?: { keepSelection?: boolean }) => {
         setFilters({});
-        setSort({ field: defaultSortField, direction: defaultSortDirection });
+        resetSort();
         if (!options?.keepSelection) commitSelection([]);
       },
       getDisplayedRows: () => displayItemsRef.current,
@@ -153,11 +157,11 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       deleteColumn,
     }),
     [
-      isServerSide, setVisibleColumns, setSort, defaultSortField, defaultSortDirection, setFilters,
+      isServerSide, setVisibleColumns, setSort, setSortModel, resetSort, setFilters,
       columnOrder, onColumnOrderChange, commitSelection, refreshData,
       columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef, allFilteredItemsRef,
       effectiveSelectedRowsRef, filtersRef, getRowIdRef, pinnedOverridesRef,
-      sortRef, visibleColumnsRef,
+      sortRef, sortModelRef, visibleColumnsRef,
       // Stable useState setters (passed as params, so listed explicitly to satisfy
       // exhaustive-deps); their identity never changes, so recreation frequency is
       // unchanged from the original inline handle.

@@ -8,6 +8,10 @@ import type {
 export type {
   ColumnFilterType,
   IDateFilterValue,
+  ConditionFilterKind,
+  ConditionOperator,
+  IFilterCondition,
+  IConditionFilterValue,
   IColumnFilterDef,
   IFilterOption,
   FilterOption,

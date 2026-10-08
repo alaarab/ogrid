@@ -492,3 +492,35 @@
     border-color: var(--colorBrandBackgroundHover, #115ea3);
   }
 }
+
+// Sort on label click (Shift+click adds a level)
+.columnName[data-sortable] {
+  cursor: pointer;
+}
+
+// Priority of this column in a multi-level sort (1 = primary)
+.sortPriority {
+  margin-left: 1px;
+  font-size: 9px;
+  font-weight: 600;
+  vertical-align: super;
+  color: var(--colorNeutralForeground2, #424242);
+}
+
+// Number / condition filter operator selects and operand inputs
+.conditionControl {
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--colorNeutralBackground1, #fff);
+  color: var(--colorNeutralForeground1, #242424);
+  border: 1px solid var(--colorNeutralStroke1, #d1d1d1);
+  border-radius: var(--borderRadiusMedium, 4px);
+
+  &:focus {
+    outline: none;
+    border-color: var(--colorBrandStroke1, #0f6cbd);
+  }
+}

@@ -43,6 +43,9 @@ sort / filter / page props as plain hook parameters, and the
 | `onSortChange` | `(sort: { field: string; direction: 'asc' \| 'desc' }) => void` | `undefined` | Callback fired when the user changes the sort. Required for controlled sort mode. |
 | `defaultSortBy` | `string` | first sortable column | Column ID to sort by initially in uncontrolled mode. Columns with `sortable: false` are never used as the default. |
 | `defaultSortDirection` | `'asc' \| 'desc'` | `undefined` | Initial sort direction in uncontrolled mode. Used together with `defaultSortBy`. |
+| `sortModel` | `ISortModelItem[]` | `undefined` | Controlled multi-level sort (`{ field, direction }` levels, primary first). Takes precedence over `sort`. |
+| `onSortModelChange` | `(sortModel: ISortModelItem[]) => void` | `undefined` | Called with every sort level when the sort changes (Shift+click a header or **Add to sort** adds levels). |
+| `defaultSortModel` | `ISortModelItem[]` | `undefined` | Initial multi-level sort in uncontrolled mode. Takes precedence over `defaultSortBy`. |
 | `workerSort` | `boolean \| 'auto'` | `false` | Offload sorting to a Web Worker to keep the main thread responsive. `true` always uses the worker; `'auto'` uses it past ~5000 rows. Columns with a custom `compare` fall back to synchronous sort. |
 
 ## Filtering

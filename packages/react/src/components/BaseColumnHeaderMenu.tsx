@@ -21,6 +21,8 @@ export interface BaseColumnHeaderMenuProps {
   onSortAsc: () => void;
   onSortDesc: () => void;
   onClearSort: () => void;
+  /** Add this column as the next sort level. Shown when `canAddToSort`. */
+  onAddToSort?: () => void;
   onAutosizeThis: () => void;
   onAutosizeAll: () => void;
   canPinLeft: boolean;
@@ -40,6 +42,8 @@ export interface BaseColumnHeaderMenuProps {
   canUnhide?: boolean;
   onHideColumn?: () => void;
   onUnhideColumns?: () => void;
+  /** The grid is sorted by other columns: offer "Add to sort". */
+  canAddToSort?: boolean;
   classNames?: ColumnHeaderMenuClassNames;
   /** Column name, used for the menu's accessible name. */
   columnName?: string;
@@ -63,6 +67,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     onSortAsc,
     onSortDesc,
     onClearSort,
+    onAddToSort,
     onAutosizeThis,
     onAutosizeAll,
     canPinLeft,
@@ -79,6 +84,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     canUnhide = false,
     onHideColumn,
     onUnhideColumns,
+    canAddToSort = false,
     classNames,
     columnName,
     getPortalTarget,
@@ -167,8 +173,9 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       canEditStructure,
       canHide,
       canUnhide,
+      canAddToSort: canAddToSort && onAddToSort != null,
     }),
-    [canPinLeft, canPinRight, canUnpin, currentSort, isSortable, isResizable, canEditStructure, canHide, canUnhide]
+    [canPinLeft, canPinRight, canUnpin, currentSort, isSortable, isResizable, canEditStructure, canHide, canUnhide, canAddToSort, onAddToSort]
   );
 
   const items = React.useMemo(() => getColumnHeaderMenuItems(menuInput), [menuInput]);
@@ -181,6 +188,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       sortAsc: onSortAsc,
       sortDesc: onSortDesc,
       clearSort: onClearSort,
+      addToSort: onAddToSort ?? (() => {}),
       autosizeThis: onAutosizeThis,
       autosizeAll: onAutosizeAll,
       insertColumnLeft: onInsertColumnLeft,
@@ -189,7 +197,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       hideColumn: onHideColumn,
       unhideColumns: onUnhideColumns,
     }),
-    [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAutosizeThis, onAutosizeAll, onInsertColumnLeft, onInsertColumnRight, onDeleteColumn, onHideColumn, onUnhideColumns]
+    [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAddToSort, onAutosizeThis, onAutosizeAll, onInsertColumnLeft, onInsertColumnRight, onDeleteColumn, onHideColumn, onUnhideColumns]
   );
 
   const getRestoreTarget = React.useCallback(() => anchorElement, [anchorElement]);

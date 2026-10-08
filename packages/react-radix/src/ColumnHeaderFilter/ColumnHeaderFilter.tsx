@@ -22,7 +22,14 @@ function FilterIcon(): React.ReactElement {
 
 const radixRenderers: FilterContentRenderers = createBaseFilterRenderers(
   { MultiSelectFilterPopover, TextFilterPopover, PeopleFilterPopover },
-  { popoverActions: styles.popoverActions, clearButton: styles.clearButton, applyButton: styles.applyButton }
+  { popoverActions: styles.popoverActions, clearButton: styles.clearButton, applyButton: styles.applyButton },
+  {
+    popoverActions: styles.popoverActions,
+    clearButton: styles.clearButton,
+    applyButton: styles.applyButton,
+    select: styles.searchInput,
+    input: styles.searchInput,
+  }
 );
 
 export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo((props) => {
@@ -31,6 +38,8 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     filterType,
     isSorted,
     isSortedDescending,
+    sortIndex,
+    onSort,
     options = [],
     isLoadingOptions = false,
     selectedUser,
@@ -51,7 +60,17 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
   return (
     <div className={styles.columnHeader} ref={headerRef as React.RefObject<HTMLDivElement>}>
       <div className={styles.headerContent}>
-        <span className={styles.columnName} title={columnName} data-header-label>
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: mouse shortcut only; keyboard users sort from the column options menu */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: mouse shortcut only; keyboard users sort from the column options menu */}
+        {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: mouse shortcut only; keyboard users sort from the column options menu */}
+        <span
+          className={styles.columnName}
+          title={columnName}
+          data-header-label
+          data-sortable={onSort ? '' : undefined}
+          onPointerDown={onSort ? handlers.handleLabelPointerDown : undefined}
+          onClick={onSort ? handlers.handleLabelClick : undefined}
+        >
           {columnName}
         </span>
       </div>
@@ -59,6 +78,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
         {isSorted && (
           <span className={styles.sortIndicator} data-sort-indicator={isSortedDescending ? 'desc' : 'asc'} aria-hidden="true">
             {isSortedDescending ? '\u25BC' : '\u25B2'}
+            {sortIndex != null && <span className={styles.sortPriority} data-sort-priority={sortIndex}>{sortIndex}</span>}
           </span>
         )}
         {filterType !== 'none' && (
@@ -87,7 +107,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
                 onOpenAutoFocus={(e: Event) => e.preventDefault()}
               >
                 <div className={styles.popoverHeader}>Filter: {columnName}</div>
-                {renderFilterContent(filterType, state, options ?? [], isLoadingOptions, selectedUser, radixRenderers)}
+                {renderFilterContent(filterType, state, options ?? [], isLoadingOptions, selectedUser, radixRenderers, columnName)}
               </Popover.Content>
             </Popover.Portal>
           </Popover.Root>

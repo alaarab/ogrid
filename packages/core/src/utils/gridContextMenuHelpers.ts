@@ -184,6 +184,8 @@ export interface ColumnHeaderMenuInput {
   canHide?: boolean;
   /** Show "Unhide columns": hidden columns sit next to this one (`allowHiding`). */
   canUnhide?: boolean;
+  /** Show "Add to sort": the grid is sorted by other columns and this one could become the next level. */
+  canAddToSort?: boolean;
 }
 
 /**
@@ -193,7 +195,7 @@ export interface ColumnHeaderMenuInput {
 export function getColumnHeaderMenuItems(input: ColumnHeaderMenuInput): IColumnHeaderMenuItem[] {
   const {
     canPinLeft, canPinRight, canUnpin, currentSort, isSortable = true, isResizable = true,
-    canEditStructure = false, canHide = false, canUnhide = false,
+    canEditStructure = false, canHide = false, canUnhide = false, canAddToSort = false,
   } = input;
 
   const items: IColumnHeaderMenuItem[] = [];
@@ -211,8 +213,9 @@ export function getColumnHeaderMenuItems(input: ColumnHeaderMenuInput): IColumnH
       // No sort applied - show both options
       items.push(
         { id: 'sortAsc', label: 'Sort ascending' },
-        { id: 'sortDesc', label: 'Sort descending', divider: isResizable },
+        { id: 'sortDesc', label: 'Sort descending', divider: isResizable && !canAddToSort },
       );
+      if (canAddToSort) items.push({ id: 'addToSort', label: 'Add to sort', divider: isResizable });
     } else {
       // Sort applied - show opposite + clear
       const oppositeSort = currentSort === 'asc' ? 'desc' : 'asc';
@@ -262,6 +265,8 @@ export interface ColumnHeaderMenuHandlers {
   onSortAsc: () => void;
   onSortDesc: () => void;
   onClearSort: () => void;
+  /** Add this column as the next sort level (ascending). */
+  onAddToSort?: () => void;
   onAutosizeThis: () => void;
   onAutosizeAll: () => void;
   onInsertColumnLeft?: () => void;

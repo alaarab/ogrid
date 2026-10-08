@@ -1,10 +1,11 @@
 ---
 sidebar_position: 2
 title: Filtering
-description: Column-level filtering with text, multi-select, date, and people filter types.
+description: Column-level filtering with text, multi-select, date, people, and number/condition filter types.
 ---
 
 import FilteringDemo from '@site/src/components/demos/FilteringDemo';
+import ConditionFilterDemo from '@site/src/components/demos/ConditionFilterDemo';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
@@ -145,6 +146,58 @@ A search-as-you-type lookup that hits your directory API. Designed for Microsoft
 The people filter requires a `dataSource` with a `searchPeople` method that returns `UserLike` objects (name, email, optional photo).
 :::
 
+### Number and condition filters
+
+Excel's number, text and date filters ("custom AutoFilter"): pick an operator, type a value, and optionally add a second condition joined with **And** or **Or**.
+
+```tsx
+{ columnId: 'salary', name: 'Salary', type: 'numeric', filterable: { type: 'number' } },
+{ columnId: 'name', name: 'Name', filterable: { type: 'condition' } },
+{ columnId: 'startDate', name: 'Start', type: 'date', filterable: { type: 'condition' } },
+```
+
+`'number'` always uses number operators. `'condition'` picks the operator set from the column `type`: numeric columns get number operators, date columns get date operators, and everything else gets text operators.
+
+<ConditionFilterDemo />
+
+| Operators | Number | Text | Date |
+|---|:-:|:-:|:-:|
+| Equals / Does not equal | ✓ | ✓ | ✓ (Is on / Is not on) |
+| Greater than, ≥, Less than, ≤ | ✓ | | ✓ (Is after, Is on or after, Is before, Is on or before) |
+| Between (inclusive) | ✓ | | ✓ |
+| Top N / Bottom N | ✓ | | |
+| Above average / Below average | ✓ | | |
+| Contains / Does not contain / Begins with / Ends with | | ✓ | |
+| Is blank / Is not blank | ✓ | ✓ | ✓ |
+
+How values are compared:
+
+- **Numbers:** numeric text such as `"1,200"` counts as a number. Blank and non-numeric cells never match a comparison, but they do match **Does not equal**.
+- **Text:** case-insensitive, against the cell's raw value.
+- **Dates:** compared by calendar day (UTC), so **Is on 2024-01-15** matches any time that day.
+- **Blank:** `null`, `undefined`, empty or whitespace-only text.
+- **Top N, Bottom N and averages** are computed over the whole column (all rows, before other columns' filters). Ties at the Nth value are included.
+
+The filter value is plain, serializable data, so it works with controlled `filters`, `getColumnState()`, and server-side data sources:
+
+```ts
+const filters: IFilters = {
+  salary: {
+    type: 'condition',
+    value: {
+      kind: 'number',
+      conditions: [
+        { operator: 'between', value: 50000, valueTo: 80000 },
+        { operator: 'blank' },
+      ],
+      join: 'or', // default 'and'
+    },
+  },
+};
+```
+
+Incomplete conditions (no operand, an unparsable number or date) are ignored; a filter with none left is removed. The filter icon shows the active state, and **Clear** in the popover removes the filter.
+
 ## Keeping filter state outside the grid
 
 By default the grid owns its filter state — filters reset when the component unmounts. To persist them (URL sync, page reload survival), pass `filters` and `onFiltersChange`:
@@ -188,6 +241,10 @@ const dataSource: IDataSource<Task> = {
     if (filters.name?.type === 'text') {
       params.set('search', filters.name.value);
     }
+    if (filters.salary?.type === 'condition') {
+      // { kind, conditions: [{ operator, value, valueTo }], join }
+      params.set('salary', JSON.stringify(filters.salary.value));
+    }
 
     const res = await fetch(`/api/tasks?${params}`);
     return res.json(); // { items: Task[], totalCount: number }
@@ -216,7 +273,7 @@ Server-side filtering pairs naturally with [pagination](./pagination). The `tota
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `filterable` | `IColumnFilterDef` | — | Set on `IColumnDef`. Enables the filter icon and defines the filter UI. |
-| `filterable.type` | `'text' \| 'multiSelect' \| 'people' \| 'date'` | — | Which filter UI to show. |
+| `filterable.type` | `'text' \| 'multiSelect' \| 'people' \| 'date' \| 'number' \| 'condition'` | — | Which filter UI to show. |
 | `filterable.filterField` | `string` | `columnId` | Data field to filter on (useful when column key differs from data key). |
 | `filterable.optionsSource` | `'api' \| 'static' \| 'years'` | auto | Where multi-select options come from. |
 | `filterable.options` | `string[]` | — | Static option list for `'static'` source. |

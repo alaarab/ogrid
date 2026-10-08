@@ -1,4 +1,10 @@
-export type ColumnFilterType = 'none' | 'text' | 'multiSelect' | 'people' | 'date';
+/**
+ * Column filter UI. `'number'` and `'condition'` both produce a `{ type: 'condition' }`
+ * filter value (operators such as greater than, between, begins with, is blank):
+ * `'number'` always uses numeric operators; `'condition'` picks numeric, date or
+ * text operators from the column's `type`.
+ */
+export type ColumnFilterType = 'none' | 'text' | 'multiSelect' | 'people' | 'date' | 'number' | 'condition';
 
 /** A filter choice with a display label and a string value used in filter state/requests. */
 export interface IFilterOption {
@@ -13,6 +19,58 @@ export type FilterOption = string | IFilterOption;
 export interface IDateFilterValue {
   from?: string;
   to?: string;
+}
+
+/** Which operator set and value coercion a condition filter uses. */
+export type ConditionFilterKind = 'text' | 'number' | 'date';
+
+/**
+ * Condition filter operators.
+ * - All kinds: `blank`, `notBlank`.
+ * - Text: `equals`, `notEquals`, `contains`, `notContains`, `beginsWith`, `endsWith` (case-insensitive).
+ * - Number and date: `equals`, `notEquals`, `greaterThan`, `greaterThanOrEqual`, `lessThan`,
+ *   `lessThanOrEqual`, `between` (inclusive). Dates compare by calendar day (UTC).
+ * - Number only: `top` / `bottom` (the N largest / smallest values, ties included),
+ *   `aboveAverage` / `belowAverage`.
+ */
+export type ConditionOperator =
+  | 'equals'
+  | 'notEquals'
+  | 'contains'
+  | 'notContains'
+  | 'beginsWith'
+  | 'endsWith'
+  | 'greaterThan'
+  | 'greaterThanOrEqual'
+  | 'lessThan'
+  | 'lessThanOrEqual'
+  | 'between'
+  | 'top'
+  | 'bottom'
+  | 'aboveAverage'
+  | 'belowAverage'
+  | 'blank'
+  | 'notBlank';
+
+/**
+ * One condition. `value` is the operand (a number for number filters and `top`/`bottom`'s N,
+ * an ISO `YYYY-MM-DD` string for date filters, text otherwise); `valueTo` is the upper bound
+ * for `between`. Numeric strings are accepted for number filters.
+ */
+export interface IFilterCondition {
+  operator: ConditionOperator;
+  value?: string | number;
+  valueTo?: string | number;
+}
+
+/**
+ * Serializable condition filter (Excel's custom AutoFilter): one or two conditions joined
+ * with AND (default) or OR. Passed to data sources unchanged inside `filters`.
+ */
+export interface IConditionFilterValue {
+  kind: ConditionFilterKind;
+  conditions: IFilterCondition[];
+  join?: 'and' | 'or';
 }
 
 export interface IColumnFilterDef {
