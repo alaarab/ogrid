@@ -14,7 +14,8 @@ export interface UseClipboardParams<T> {
   selectionRange: ISelectionRange | null;
   activeCell: IActiveCell | null;
   editable?: boolean;
-  onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
+  // biome-ignore lint/suspicious/noConfusingVoidType: Existing void handlers remain compatible; false signals a rejected mutation.
+  onCellValueChanged: ((event: ICellValueChangedEvent<T>) => boolean | void) | undefined;
   beginBatch?: () => void;
   endBatch?: () => void;
   /** When true, enables formula-aware copy/paste. */
@@ -30,7 +31,8 @@ export interface UseClipboardParams<T> {
   /** Returns true if a flat column + row has a formula. */
   hasFormula?: (col: number, row: number) => boolean;
   /** Sets or clears a formula for a flat column + row. */
-  setFormula?: (col: number, row: number, formula: string | null) => void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: Existing void handlers remain compatible; false signals a rejected mutation.
+  setFormula?: (col: number, row: number, formula: string | null) => boolean | void;
   /** Cells covered by a merged cell (not its anchor): copied as empty, skipped on paste. */
   isCoveredCell?: (row: number, col: number) => boolean;
   /** Computed value of a formula cell (flat column + row), for "paste values only" and the HTML copy. */
@@ -313,8 +315,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
           colOffset,
           flatColumns,
           setFormula: setFormula && ((col: number, row: number, formula: string | null) => {
-            pastedFormulaKeys.push(`${row}|${flatColumns[col]?.columnId}`);
-            setFormula(col, row, formula);
+            if (setFormula(col, row, formula) !== false) pastedFormulaKeys.push(`${row}|${flatColumns[col]?.columnId}`);
           }),
           // A cut moves formulas unchanged (Excel); a copy shifts them.
           source: fromGrid && !cut ? internal.source : undefined,
@@ -324,9 +325,9 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     beginBatch?.();
     try {
       const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols, formulaOptions, isCoveredCellRef.current);
-      for (const evt of pasteEvents) onCellValueChanged(evt);
+      const acceptedPasteEvents = pasteEvents.filter((evt) => onCellValueChanged(evt) !== false);
       if (cut) {
-        const cutEvents = resolveCutClear({ cut, text, pasteEvents, pastedFormulaCells: pastedFormulaKeys, anchorRow, anchorCol, items, visibleCols, rowKeyOf });
+        const cutEvents = resolveCutClear({ cut, text, pasteEvents: acceptedPasteEvents, pastedFormulaCells: pastedFormulaKeys, anchorRow, anchorCol, items, visibleCols, rowKeyOf });
         for (const evt of cutEvents) onCellValueChanged(evt);
       }
     } finally {
@@ -401,4 +402,3 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     clearClipboardRanges,
   };
 }
-

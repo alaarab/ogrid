@@ -2,7 +2,7 @@
   "name": "@alaarab/ogrid-react",
   "version": "2.18.0",
   "type": "module",
-  "description": "OGrid React – React hooks, headless components, and utilities for OGrid data grids.",
+  "description": "OGrid React \u2013 React hooks, headless components, and utilities for OGrid data grids.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
@@ -10,6 +10,9 @@
     "*": {
       "testing": [
         "dist/types/testing/index.d.ts"
+      ],
+      "data-validation": [
+        "dist/types/components/DataValidationForm.d.ts"
       ]
     }
   },
@@ -23,10 +26,15 @@
       "types": "./dist/types/testing/index.d.ts",
       "import": "./dist/esm/testing/index.js",
       "default": "./dist/esm/testing/index.js"
+    },
+    "./data-validation": {
+      "types": "./dist/types/components/DataValidationForm.d.ts",
+      "import": "./dist/esm/data-validation.js",
+      "default": "./dist/esm/data-validation.js"
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json && tsc -p tsconfig.testing.build.json && node ../../scripts/fix-dts-extensions.mjs dist/types && node ../../scripts/add-use-client.mjs dist/esm/index.js",
+    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json && tsc -p tsconfig.testing.build.json && node ../../scripts/fix-dts-extensions.mjs dist/types && node ../../scripts/add-use-client.mjs dist/esm/index.js && node ../../scripts/add-use-client.mjs dist/esm/data-validation.js",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "bun test --preload ../../bun-test.setup.ts"
   },

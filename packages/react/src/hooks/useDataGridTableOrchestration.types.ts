@@ -207,4 +207,5 @@ export interface UseDataGridTableOrchestrationResult<T> {
   headerMenu: DataGridPinningState['headerMenu'];
   /** Find & Replace panel state and the Ctrl+F / Ctrl+H handler. */
   findReplace: DataGridFindReplaceState;
+  validation: UseDataGridStateResult<T>['validation'];
 }

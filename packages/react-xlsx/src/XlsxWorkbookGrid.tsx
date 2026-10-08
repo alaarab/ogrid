@@ -25,6 +25,8 @@ export type XlsxWorkbookGridProps = Source & {
   onTruncated?: XlsxGridProps['onTruncated'];
   /** Allow cell editing. Defaults to false (read-only preview). */
   editable?: boolean;
+  /** Outline existing invalid cells with red ellipses. */
+  circleInvalidData?: boolean;
   /** Show the formatting toolbar. Defaults to `editable`. */
   toolbar?: boolean;
   /** When set, the toolbar shows an Export button that downloads the workbook under this name. */
@@ -39,7 +41,7 @@ export type XlsxWorkbookGridProps = Source & {
 let workbookGridInstanceCounter = 0;
 
 export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
-  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits, onTruncated, editable, toolbar, exportFileName, onDocument } = props;
+  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits, onTruncated, editable, circleInvalidData, toolbar, exportFileName, onDocument } = props;
   const sourceBlob = 'blob' in props ? props.blob : null;
   const sourceWorkbook = 'workbook' in props ? props.workbook : null;
   const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(sourceWorkbook);
@@ -174,6 +176,7 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
           limits={limits}
           onTruncated={onTruncated}
           editable={editable}
+          circleInvalidData={circleInvalidData}
           toolbar={toolbar}
           exportFileName={exportFileName}
         />

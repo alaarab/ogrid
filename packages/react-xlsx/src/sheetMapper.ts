@@ -73,7 +73,7 @@ export interface SheetFormatting {
   unmappedMerges: string[];
   /** Frozen panes in grid terms: data rows below the header, and leading columns. */
   frozen: { rows: number; columns: number };
-  /** Allowed values of list validations that cover a column's every loaded data row. */
+  /** @deprecated Use XlsxSheetState.dataValidations. Kept empty for compatibility. */
   listValidations: Record<string, string[]>;
   /** Sheet tab color as CSS hex, when set. */
   tabColor?: string;
@@ -468,7 +468,6 @@ export function sheetToGridData(
   for (let c = 0; c < colCount; c++) {
     const letter = indexToColumnLetter(c);
     const width = columnWidthToPx(formatting.columnWidths[letter] ?? formatting.defaultColumnWidth);
-    const listValues = formatting.listValidations[letter];
     const hidden = sheet.columns?.[c]?.hidden === true;
     columns.push({
       columnId: letter,
@@ -478,7 +477,6 @@ export function sheetToGridData(
       defaultWidth: Math.max(width, 24),
       minWidth: 24,
       ...(hidden ? { defaultVisible: false } : {}),
-      ...(listValues ? { cellEditor: 'select', cellEditorParams: { values: listValues } } : {}),
       // valueGetter omitted — ogrid reads row[columnId] by default.
     });
   }
@@ -760,31 +758,7 @@ function readFormatting(sheet: ExcelJS.Worksheet, promoted: boolean, dataRows: n
     };
   }
 
-  // List validations, approximated per column: a column gets a dropdown
-  // editor only when one list rule covers every loaded data row in it.
-  if (dataRows > 0) {
-    for (let c = 1; c <= colCount; c++) {
-      const letter = indexToColumnLetter(c - 1);
-      const first = validationAt(sheet, `${letter}${headerOffset + 1}`);
-      const formula = first?.type === 'list' ? first.formulae?.[0] : undefined;
-      if (formula === undefined) continue;
-      let covered = true;
-      for (let r = headerOffset + 2; r <= lastSheetRow && covered; r++) {
-        const dv = validationAt(sheet, `${letter}${r}`);
-        covered = dv?.type === 'list' && dv.formulae?.[0] === formula;
-      }
-      if (!covered) continue;
-      const values = listValues(sheet, String(formula));
-      if (values.length) formatting.listValidations[letter] = values;
-    }
-  }
   return formatting;
-}
-
-/** ExcelJS reads validations into a per-address map (missing from its typings). */
-function validationAt(sheet: ExcelJS.Worksheet, address: string): ExcelJS.DataValidation | undefined {
-  return (sheet as unknown as { dataValidations?: { find(a: string): ExcelJS.DataValidation | undefined } })
-    .dataValidations?.find(address);
 }
 
 /** Values of a list validation: an inline "a,b,c" list, a range (optionally on another sheet), or a defined name. */

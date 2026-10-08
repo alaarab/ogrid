@@ -363,8 +363,45 @@ export class FormulaEngine {
    * engine's current values; stores nothing. Make a new evaluator after the
    * data or formulas change: it caches parsed formulas and volatile results.
    */
-  createDetachedEvaluator(accessor: IGridDataAccessor): (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown {
-    const context = this.createContext(accessor);
+  createDetachedEvaluator(accessor: IGridDataAccessor, options?: { proposed?: { col: number; row: number; value: unknown; alias?: { sheet: string; col: number; row: number } }; preserveArrays?: boolean }): (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown {
+    const baseContext = this.createContext(accessor);
+    const proposed = options?.proposed;
+    const localValues = new Map<string, unknown>();
+    const active = new Set<string>();
+    const context: IFormulaContext = proposed ? {
+      ...baseContext,
+      getCellValue: (addr) => {
+        if ((!addr.sheet && addr.col === proposed.col && addr.row === proposed.row) || (addr.sheet === proposed.alias?.sheet && addr.col === proposed.alias?.col && addr.row === proposed.alias?.row)) return proposed.value;
+        if (addr.sheet) return baseContext.getCellValue(addr);
+        const key = toCellKey(addr.col, addr.row);
+        const ast = this.parsedFormulas.get(key);
+        if (!ast) return accessor.getCellValue(addr.col, addr.row);
+        if (localValues.has(key)) return localValues.get(key);
+        if (active.has(key)) return new FormulaError('#CIRC!');
+        active.add(key);
+        try {
+          const result = this.evaluator.evaluate(ast, { ...context, currentCell: addr });
+          const value = Array.isArray(result) ? result[0]?.[0] ?? null : result;
+          localValues.set(key, value);
+          return value;
+        } finally { active.delete(key); }
+      },
+      getRangeValues: (range) => {
+        const source = range.start.sheet ? this.sheetAccessors.get(range.start.sheet) : accessor;
+        if (!source) return [[new FormulaError('#REF!')]];
+        const minRow = Math.min(range.start.row, range.end.row), minCol = Math.min(range.start.col, range.end.col);
+        const maxRow = Math.min(Math.max(range.start.row, range.end.row), source.getRowCount() - 1);
+        const maxCol = Math.min(Math.max(range.start.col, range.end.col), source.getColumnCount() - 1);
+        if ((maxRow - minRow + 1) * (maxCol - minCol + 1) > this.maxRangeCells) throw new FormulaError('#VALUE!', 'Range too large');
+        const values: unknown[][] = [];
+        for (let r = minRow; r <= maxRow; r++) {
+          const row: unknown[] = [];
+          for (let c = minCol; c <= maxCol; c++) row.push(context.getCellValue({ ...range.start, row: r, col: c }));
+          values.push(row);
+        }
+        return values;
+      },
+    } : baseContext;
     const parsed = new Map<string, ASTNode>();
     return (formula, anchor, cell) => {
       let ast = parsed.get(formula);
@@ -375,7 +412,7 @@ export class FormulaEngine {
       const shifted = shiftReferences(ast, cell.col - anchor.col, cell.row - anchor.row);
       try {
         const result = this.evaluator.evaluate(shifted, { ...context, currentCell: { col: cell.col, row: cell.row, absCol: false, absRow: false } });
-        return Array.isArray(result) ? result[0]?.[0] ?? null : result;
+        return Array.isArray(result) && !options?.preserveArrays ? result[0]?.[0] ?? null : result;
       } catch (err) {
         if (err instanceof FormulaError) return err;
         return new FormulaError('#VALUE!', err instanceof Error ? err.message : String(err));

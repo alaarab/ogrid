@@ -10,6 +10,8 @@ import { OGrid, type IOGridProps, type ICellValueChangedEvent, type IColumnsChan
 import type { ICellNote, IColumnDef, IOGridApi, IRowsChangeEvent } from '@alaarab/ogrid-core';
 import type { IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { styleToCss, themePaletteOf, type CssStyle, type ThemePalette, type XlsxCellStyle } from './cellStyles';
+import { validationSourceResolver } from './dataValidation';
+import type { IDataValidationRule } from '@alaarab/ogrid-core';
 import { conditionalFormatsOf } from './conditionalFormats';
 import { FormatToolbar } from './FormatToolbar';
 import { gridLayoutProps, readSelection } from './gridAdapter';
@@ -44,6 +46,8 @@ export interface XlsxGridProps {
   onTruncated?: (notice: XlsxTruncationNotice) => void;
   /** Allow cell editing (values and formulas). Defaults to false (read-only preview). */
   editable?: boolean;
+  /** Outline existing invalid cells with red ellipses. */
+  circleInvalidData?: boolean;
   /** Show the formatting toolbar. Defaults to `editable`. */
   toolbar?: boolean;
   /** When set, the toolbar shows an Export button that downloads the workbook under this name. */
@@ -174,6 +178,7 @@ export function XlsxGrid({
   limits,
   onTruncated,
   editable = false,
+  circleInvalidData,
   toolbar,
   exportFileName,
 }: XlsxGridProps) {
@@ -209,6 +214,12 @@ export function XlsxGrid({
     [doc, sheetName, sheetSource, palette],
   );
   const sheets = useMemo(() => doc.sheetAccessors(), [doc]);
+  const validationResolver = useMemo(() => {
+    const sheet = workbook.getWorksheet(sheetName);
+    return sheet ? validationSourceResolver(sheet, sheets, sheetSource?.formatting.headerPromoted ? 1 : 0) : undefined;
+  }, [workbook, sheetName, sheets, sheetSource]);
+  const onDataValidationsChange = useCallback((rules: IDataValidationRule<SheetRow>[]) => doc.setDataValidations(sheetName, rules), [doc, sheetName]);
+  const namedRanges = useMemo(() => Object.fromEntries(workbook.definedNames.model.map((n) => [n.name, n.ranges[0] ?? ''])), [workbook]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<IOGridApi<SheetRow>>(null);
   const worksheet = doc.worksheet(sheetName);
@@ -300,7 +311,13 @@ export function XlsxGrid({
     formulaDataAccessor: doc.formulaDataAccessor(sheetName),
     cellReferences: true,
     formulas: true,
-    sheets,
+    sheets, namedRanges,
+    dataValidations: state.dataValidations,
+    validationSourceResolver: validationResolver,
+    validationSheet: { name: sheetName, rowOffset: source.formatting.headerPromoted ? 1 : 0 },
+    allowValidationEditing: editable,
+    circleInvalidData,
+    ...(editable ? { onDataValidationsChange } : {}),
     onFormulaRecalc,
     editable,
     allowStructureEdits: editable,

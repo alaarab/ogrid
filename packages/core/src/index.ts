@@ -431,3 +431,7 @@ export type {
 
 // Utils  -  cellNotes
 export { cellNoteKey, indexCellNotes, upsertCellNote, removeCellNote, setCellNote, getCellNoteMenuItems } from './utils';
+
+export type * from './types/dataValidationTypes';
+export { createDataValidator, validationDateSerial, replaceDataValidationRange } from './utils/dataValidation';
+export type { IDataValidationContext } from './utils/dataValidation';

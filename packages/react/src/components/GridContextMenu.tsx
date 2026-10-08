@@ -72,10 +72,11 @@ export interface GridContextMenuProps extends GridContextMenuHandlerProps {
   /** New/Edit/Delete note items for the active cell. Omit to hide them. */
   notes?: GridContextMenuNotes;
   classNames?: GridContextMenuClassNames;
+  onDataValidation?: () => void;
 }
 
 export function GridContextMenu(props: GridContextMenuProps): React.ReactElement {
-  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, structure, hiding, freeze, notes, classNames } = props;
+  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, structure, hiding, freeze, notes, classNames, onDataValidation } = props;
   const ref = React.useRef<HTMLDivElement>(null);
   const handlers = React.useMemo(
     () => getContextMenuHandlers({ onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, onClose }),
@@ -238,6 +239,7 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
           </button>
         </React.Fragment>
       ))}
+      {onDataValidation && <button type="button" role="menuitem" tabIndex={-1} className={classNames?.contextMenuItem} onClick={() => { onClose(); onDataValidation(); }}>Data validation…</button>}
       {noteItems.map((item) => (
         <React.Fragment key={item.id}>
           {item.dividerBefore && <div className={classNames?.contextMenuDivider} />}

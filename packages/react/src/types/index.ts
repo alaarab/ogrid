@@ -69,3 +69,5 @@ export type {
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './dataGridTypes';
 export type { PageSize } from '@alaarab/ogrid-core';
+
+export type { IDataValidationRule, IDataValidationFailure, DataValidationOperator, DataValidationAlertStyle, OnValidationFail } from '@alaarab/ogrid-core';

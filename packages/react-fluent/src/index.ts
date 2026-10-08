@@ -401,3 +401,4 @@ export type {
   IRowOrderChange, ICellDropEvent, UseCellDragSourceParams, CellDragSourceProps,
   CellDragPayload, UseGridDragDropParams, UseGridDragDropResult, CellDropEvent, RowDropLine,
 } from '@alaarab/ogrid-react';
+export type { IDataValidationRule, IDataValidationFailure, DataValidationOperator, DataValidationAlertStyle, OnValidationFail } from '@alaarab/ogrid-core';

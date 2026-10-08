@@ -18,12 +18,14 @@ export interface UseDataGridEditingParams<T> {
     oldValue: unknown;
     newValue: unknown;
     rowIndex: number;
-  }) => void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: Existing void handlers remain compatible; false keeps the active cell after rejection.
+  }) => boolean | void;
   setActiveCell: (cell: { rowIndex: number; columnIndex: number } | null) => void;
   setSelectionRange: (range: { startRow: number; startCol: number; endRow: number; endCol: number } | null) => void;
   colOffset: number;
   /** Formula integration: set a formula for a cell (flat column index, display row). */
-  setFormula?: (col: number, row: number, formula: string | null) => void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: Existing void handlers remain compatible; false signals a rejected mutation.
+  setFormula?: (col: number, row: number, formula: string | null) => boolean | void;
   /** Formula integration: notify a non-formula cell changed. */
   onFormulaCellChanged?: (col: number, row: number) => void;
   /** Whether formula support is enabled. */
@@ -145,12 +147,12 @@ export function useDataGridEditing<T>(
         const cols = flatColumnsRef.current;
         const colIndex = cols ? cols.findIndex((c) => c.columnId === columnId) : -1;
         if (colIndex >= 0) {
-          setFormulaRef.current(colIndex, rowIndex, newValue);
+          const accepted = setFormulaRef.current(colIndex, rowIndex, newValue) !== false;
           setEditingCell(null);
           setPopoverAnchorEl(null);
           setPendingEditorValue(undefined);
           // Advance to next row
-          if (!options?.skipAdvance) advance(rowIndex, globalColIndex, options?.move);
+          if (accepted && !options?.skipAdvance) advance(rowIndex, globalColIndex, options?.move);
           return;
         }
       }
@@ -181,13 +183,19 @@ export function useDataGridEditing<T>(
         return;
       }
 
-      onCellValueChangedRef.current?.({
+      const accepted = onCellValueChangedRef.current?.({
         item,
         columnId,
         oldValue,
         newValue,
         rowIndex,
-      });
+      }) !== false;
+      if (!accepted) {
+        setEditingCell(null);
+        setPopoverAnchorEl(null);
+        setPendingEditorValue(undefined);
+        return;
+      }
 
       // Notify formula engine that a non-formula cell changed (for dependency cascade)
       if (formulas && onFormulaCellChangedRef.current && flatColumnsRef.current) {
