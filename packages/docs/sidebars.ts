@@ -49,6 +49,7 @@ const sidebars: SidebarsConfig = {
         'features/find-replace',
         'features/cell-notes',
         'features/conditional-formatting',
+        'features/data-validation',
         'features/column-reordering',
         'features/drag-and-drop',
         'features/column-chooser',

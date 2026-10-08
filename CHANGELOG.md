@@ -33,6 +33,7 @@ All notable changes to OGrid will be documented in this file.
   `data-ogrid-allow-drag`; the `useCellDragSource({ rowId, columnId, payload })`
   hook returns the props to spread. Core adds `moveRows`, `applyRowOrder`,
   `computeRowOrderChange`, `isRowMoveNoop`, `rowIndexById` and `moveCellRange`.
+- Excel-style data validation across core, React, Radix, Fluent, and XLSX: all rule types, cell-level lists, input messages, stop/warning/information alerts, invalid-data circles, and a lazy range editor. XLSX validation edits are undoable and round-trip on export.
 
 - Formula autocomplete and argument hints, in the cell editor and the formula
   bar, in both kits: typing a name after `=`, `(`, a comma or an operator lists

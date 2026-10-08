@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { replaceDataValidationRange, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { useDataGridTableOrchestration } from '../hooks/useDataGridTableOrchestration';
 import { useColumnMeta } from '../hooks/useColumnMeta';
 import { useRenderCellContent } from '../hooks/useRenderCellContent';
@@ -167,7 +167,55 @@ export function BaseDataGridTableContent<T>(
     addStickyPosition: primitives.addStickyPosition,
   });
 
-  const renderCellContent = useRenderCellContent(o, styles, primitives);
+  const [validationEditor, setValidationEditor] = React.useState<{ columnIds: string[]; rows: number[]; formulaOffset?: { col: number; row: number }; rule?: import('@alaarab/ogrid-core').IDataValidationRule } | null>(null);
+  const openValidationEditor = () => {
+    const active = o.interaction.activeCell;
+    const range = o.interaction.selectionRange ?? (active ? { startRow: active.rowIndex, endRow: active.rowIndex, startCol: active.columnIndex - colOffset, endCol: active.columnIndex - colOffset } : null);
+    if (!range) return;
+    const columnIds = visibleCols.slice(Math.min(range.startCol, range.endCol), Math.max(range.startCol, range.endCol) + 1).map((c) => c.columnId);
+    const rows: number[] = [];
+    for (let r = Math.min(range.startRow, range.endRow); r <= Math.max(range.startRow, range.endRow); r++) {
+      const item = o.items[r];
+      if (item !== undefined) rows.push(o.validation.sheetRow(item, r));
+    }
+    if (!columnIds.length || !rows.length) return;
+    const item = o.items[Math.min(range.startRow, range.endRow)];
+    const rule = item !== undefined ? o.validation.validator.ruleFor(item, columnIds[0] ?? '', rows[0] ?? 0) : undefined;
+    const originCol = rule?.anchor?.columnId ?? rule?.columnIds[0];
+    const formulaOffset = { col: o.layout.flatColumns.findIndex((c) => c.columnId === columnIds[0]) - Math.max(0, o.layout.flatColumns.findIndex((c) => c.columnId === originCol)), row: rows.reduce((min, row) => Math.min(min, row), Infinity) - (rule?.anchor?.row ?? rule?.rows?.start ?? 0) };
+    setValidationEditor({ columnIds, rows, formulaOffset, rule: rule as import('@alaarab/ogrid-core').IDataValidationRule | undefined });
+  };
+  const applyValidation = (rule: import('@alaarab/ogrid-core').IDataValidationRule | undefined) => {
+    if (!validationEditor) return;
+    let rules = o.validation.rules;
+    const rows = [...validationEditor.rows].sort((a, b) => a - b);
+    const anchor = { columnId: validationEditor.columnIds[0] ?? '', row: rows[0] ?? 0 };
+    for (let i = 0; i < rows.length; i++) {
+      const start = rows[i] ?? 0;
+      let end = start;
+      while (rows[i + 1] === end + 1) { i++; end++; }
+      rules = replaceDataValidationRange(rules, validationEditor.columnIds, { start, end }, rule ? { ...rule, anchor } as import('@alaarab/ogrid-core').IDataValidationRule<T> : undefined);
+    }
+    o.validation.change(rules);
+    setValidationEditor(null);
+  };
+  const ValidationDialog = primitives.ValidationDialog;
+  const dialogShown = !!validationEditor || !!o.validation.alert;
+  const wasDialogShown = React.useRef(false);
+  React.useEffect(() => {
+    const restore = wasDialogShown.current && !dialogShown;
+    wasDialogShown.current = dialogShown;
+    if (!restore) return;
+    const frame = requestAnimationFrame(() => {
+      // A rapid next edit or alert owns focus already; restoration must not blur it.
+      if (wasDialogShown.current || wrapperRef.current?.querySelector('[data-ogrid-cell-editor]')) return;
+      const target = wrapperRef.current?.querySelector<HTMLElement>('tbody td[tabindex="0"]') ?? wrapperRef.current;
+      target?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [dialogShown, wrapperRef]);
+
+  const renderCellContent = useRenderCellContent(o, styles, primitives, gridProps.circleInvalidData);
 
   // Drag-and-drop: row reorder, range move and external cell drops.
   const sorted = (gridProps.sortModel?.length ?? 0) > 0 || (gridProps.sortBy ?? '') !== '';
@@ -533,6 +581,7 @@ export function BaseDataGridTableContent<T>(
               hiding={hidingMenu}
               freeze={freezeMenu}
               notes={cellNotes.menu}
+              onDataValidation={gridProps.allowValidationEditing ? openValidationEditor : undefined}
             />
             </div>,
             getContextMenuPortalTarget ? getContextMenuPortalTarget(wrapperRef.current) : document.body
@@ -545,6 +594,18 @@ export function BaseDataGridTableContent<T>(
         <div style={FIND_PANEL_HOST_STYLE} data-ogrid-find-panel="">
           <FindReplacePanel find={findReplace.find} onClose={findReplace.close} focusRequest={findReplace.focusRequest} />
         </div>
+      )}
+      {ValidationDialog && (validationEditor || o.validation.alert) && (
+        <React.Suspense fallback={null}>
+          <ValidationDialog
+            rule={validationEditor?.rule}
+            formulaOffset={validationEditor?.formulaOffset}
+            alert={o.validation.alert as import('@alaarab/ogrid-core').IDataValidationFailure | null}
+            onApply={applyValidation}
+            onClose={() => validationEditor ? setValidationEditor(null) : o.validation.respond(false)}
+            onRespond={o.validation.respond}
+          />
+        </React.Suspense>
       )}
       {/* Outside the wrapper so the editor's keys never reach the grid's key handling. */}
       <CellNotePopover

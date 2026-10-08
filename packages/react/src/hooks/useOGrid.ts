@@ -25,6 +25,7 @@ import { useOGridNameBox } from './useOGridNameBox';
 import { useOGridHiddenRows } from './useOGridHiddenRows';
 import { useOGridFreeze } from './useOGridFreeze';
 import { useLatestRef } from './useLatestRef';
+import { useValidationRules } from './useValidationRules';
 import { useOGridCellNotes } from './useOGridCellNotes';
 import { useSortFilterColumns } from './useSortFilterColumns';
 import {
@@ -249,6 +250,21 @@ export function useOGrid<T>(
     rules: props.conditionalFormats, items: sheetItems, columns, formulaEngine, formulaVersion: dgFormulaProps.formulaVersion,
   });
 
+  const validationRules = useValidationRules(props.dataValidations, props.onDataValidationsChange);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: recalculation changes the values used by validation and invalid-data circles
+  const validationContext = useMemo(() => ({
+    items: sheetItems, columns, namedRanges: props.namedRanges,
+    resolveSource: props.validationSourceResolver,
+    getValue: (col: number, row: number, sheet?: string): unknown => {
+      if (sheet) return props.sheets?.[sheet]?.getCellValue(col, row);
+      const item = sheetItems[row], column = columns[col];
+      if (formulaEngine.enabled && formulaEngine.hasFormula(col, row)) return formulaEngine.getFormulaValue(col, row);
+      return item !== undefined && column ? (column.valueGetter ? column.valueGetter(item) : (item as Record<string, unknown>)[column.columnId]) : undefined;
+    },
+    evaluateFormula: formulaEngine.enabled ? (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }, proposed?: { value: unknown }) =>
+      formulaEngine.createDetachedEvaluator({ preserveArrays: true, proposed: proposed ? { ...cell, value: proposed.value, alias: props.validationSheet ? { sheet: props.validationSheet.name, col: cell.col, row: cell.row + props.validationSheet.rowOffset } : undefined } : undefined })?.(formula, anchor, cell) : undefined,
+  }), [sheetItems, columns, props.namedRanges, props.sheets, props.validationSourceResolver, props.validationSheet, formulaEngine, dgFormulaProps.formulaVersion]);
+
   // --- Cell API and structure edits (through the table's edit path and undo history) ---
   const gridEditBridgeRef = useRef<IGridEditBridge<T> | null>(null);
   const cellApi = useOGridCellApi({ sheetItems, columns, getRowId, formulaEngine, bridgeRef: gridEditBridgeRef });
@@ -326,6 +342,9 @@ export function useOGrid<T>(
     layoutMode, suppressHorizontalScroll, stickyHeader: stickyHeader ?? true, columnReorder, responsiveColumns,
     virtualScroll, rowHeight, density, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     mergedCells, frozenRows: freeze.frozenRows, frozenColumns: freeze.frozenColumns, conditionalFormat,
+    dataValidations: validationRules.rules, onDataValidationsChange: validationRules.change,
+    allowValidationEditing: props.allowValidationEditing, circleInvalidData: props.circleInvalidData,
+    onValidationFail: props.onValidationFail, validationContext,
     rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef, hidingActions,
     freezeActions: freeze.freezeActions,
     rowDragging, onRowOrderChange, rangeMove, cellDrop, onCellDrop,
@@ -350,6 +369,7 @@ export function useOGrid<T>(
     rowResize, rowHeights, onRowResized, structureActions, hidingActions, dgNoteProps,
     freeze.frozenRows, freeze.frozenColumns, freeze.freezeActions, pinnedOverrides,
     rowDragging, onRowOrderChange, rangeMove, cellDrop, onCellDrop,
+    validationRules.rules, validationRules.change, props.allowValidationEditing, props.circleInvalidData, props.onValidationFail, validationContext,
     findReplace, findRows, setPage,
     nameBox.cellNavigatorRef, dgEmptyState, dgFormulaProps,
   ]);

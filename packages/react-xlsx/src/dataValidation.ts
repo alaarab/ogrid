@@ -1,0 +1,237 @@
+// ExcelJS validations are a sparse address/range map, omitted from its public
+// Worksheet typings. Keep source workbook rules intact until the user changes
+// validation, then replace only rules on loaded data cells.
+import type ExcelJS from 'exceljs';
+import { indexToColumnLetter, replaceDataValidationRange } from '@alaarab/ogrid-core';
+import type { IDataValidationRule, DataValidationOperator, IGridDataAccessor } from '@alaarab/ogrid-core';
+import { adjustFormulaReferences, columnLetterToIndex, tokenize, FormulaEngine } from '@alaarab/ogrid-core/formula';
+import { normalizeFormula, rebaseFormulaRows, toFileFormula } from './formulaReferences';
+import { normalizeCellValue } from './sheetMapper';
+import type { SheetRow } from './sheetMapper';
+
+interface ValidationMap { model: Record<string, ExcelJS.DataValidation | undefined> }
+function validations(sheet: ExcelJS.Worksheet): ValidationMap {
+  return (sheet as unknown as { dataValidations: ValidationMap }).dataValidations;
+}
+interface Box { top: number; bottom: number; left: number; right: number }
+function boxOf(ref: string): Box | undefined {
+  const m = /^\$?([A-Z]+)\$?(\d+)(?::\$?([A-Z]+)\$?(\d+))?$/i.exec(ref);
+  if (!m) return undefined;
+  const c = columnLetterToIndex(m[1] ?? ''), d = columnLetterToIndex(m[3] ?? m[1] ?? '');
+  const r = Number(m[2]), s = Number(m[4] ?? m[2]);
+  return { top: Math.min(r, s), bottom: Math.max(r, s), left: Math.min(c, d), right: Math.max(c, d) };
+}
+function refOf(b: Box): string {
+  const a = `${indexToColumnLetter(b.left)}${b.top}`, z = `${indexToColumnLetter(b.right)}${b.bottom}`;
+  return a === z ? a : `${a}:${z}`;
+}
+function supported(type: string): boolean { return ['list', 'whole', 'decimal', 'date', 'time', 'textLength', 'custom'].includes(type); }
+export interface ValidationLayout { headerPromoted: boolean; columnCount: number; rowCount: number }
+
+/** Header references stay in worksheet coordinates; other local refs become grid rows. */
+function fromFileFormula(value: string, offset: number, sheetName: string): string {
+  let formula = normalizeFormula(value);
+  if (offset) {
+    const insertions: number[] = [];
+    let tokens: ReturnType<typeof tokenize>;
+    try { tokens = tokenize(formula.slice(1)); } catch { return formula; }
+    let qualified = false;
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (!token) continue;
+      if (token.type === 'SHEET_REF') { qualified = true; continue; }
+      if (token.type === 'COLON') continue;
+      if (token.type === 'CELL_REF') {
+        if (!qualified && Number(/\d+$/.exec(token.value)?.[0]) <= offset) {
+          insertions.push(token.position + 1);
+          qualified = true;
+        }
+        if (tokens[i + 1]?.type !== 'COLON') qualified = false;
+      } else qualified = false;
+    }
+    for (const at of insertions.reverse()) formula = formula.slice(0, at) + `'${sheetName.replace(/'/g, "''")}'!` + formula.slice(at);
+  }
+  return rebaseFormulaRows(formula, -offset);
+}
+function ruleOf(dv: ExcelJS.DataValidation, columnIds: string[], rows: { start: number; end: number }, offset: number, sheetName: string): IDataValidationRule<SheetRow> | undefined {
+  if (!supported(dv.type)) return undefined;
+  const style = dv.errorStyle === 'warning' ? 'warning' : dv.errorStyle === 'information' ? 'information' : 'stop';
+  const base = {
+    columnIds, rows, allowBlank: dv.allowBlank === true,
+    inputMessage: { title: dv.promptTitle, text: dv.prompt ?? '', show: dv.showInputMessage === true },
+    errorAlert: { style, title: dv.errorTitle, message: dv.error, show: dv.showErrorMessage === true },
+  } as const;
+  const first: unknown = dv.formulae?.[0];
+  if (dv.type === 'list') {
+    const source = String(first ?? '');
+    return { ...base, type: 'list', ...(source.startsWith('"') ? { values: source.slice(1, -1).replace(/""/g, '"').split(',') } : { source }) };
+  }
+  if (dv.type === 'custom') return { ...base, type: 'custom', formula: fromFileFormula(String(first ?? ''), offset, sheetName) };
+  const bound = (v: unknown): number | string => {
+    // Invert ExcelJS's date-bound decoder to preserve the actual XML serial,
+    // including serials before March 1900.
+    if (v instanceof Date) return v.getTime() / 86400000 + 25569;
+    if (typeof v === 'number') return v;
+    const s = String(v ?? '');
+    if (s.trim() !== '' && Number.isFinite(Number(s))) return Number(s);
+    return fromFileFormula(s, offset, sheetName);
+  };
+  return { ...base, type: dv.type as 'whole' | 'decimal' | 'date' | 'time' | 'textLength', operator: dv.operator ?? 'between', value: bound(first), ...(dv.formulae?.[1] !== undefined ? { value2: bound(dv.formulae[1]) } : {}) };
+}
+
+/** All supported rule types, restricted to loaded cells; adjacent identical rules become row ranges. */
+export function readDataValidations(sheet: ExcelJS.Worksheet, layout: ValidationLayout): IDataValidationRule<SheetRow>[] {
+  const offset = layout.headerPromoted ? 1 : 0;
+  const groups = new Map<string, { dv: ExcelJS.DataValidation; byCol: Map<number, { start: number; end: number }[]>; origin: { col: number; row: number } }>();
+  for (const [refs, dv] of Object.entries(validations(sheet).model)) {
+    if (!dv || !supported(dv.type)) continue;
+    const key = JSON.stringify(dv);
+    let group = groups.get(key);
+    for (const ref of refs.split(/\s+/)) {
+      const b = boxOf(ref);
+      if (!b || b.bottom <= offset || b.top > layout.rowCount + offset || b.left >= layout.columnCount) continue;
+      if (!group) { group = { dv, byCol: new Map(), origin: { col: b.left, row: b.top - offset - 1 } }; groups.set(key, group); }
+      if (b.top - offset - 1 < group.origin.row || (b.top - offset - 1 === group.origin.row && b.left < group.origin.col)) group.origin = { col: b.left, row: b.top - offset - 1 };
+      for (let c = b.left; c <= Math.min(b.right, layout.columnCount - 1); c++) {
+        const ranges = group.byCol.get(c) ?? [];
+        ranges.push({ start: Math.max(0, b.top - offset - 1), end: Math.min(layout.rowCount - 1, b.bottom - offset - 1) });
+        group.byCol.set(c, ranges);
+      }
+    }
+  }
+  const out: IDataValidationRule<SheetRow>[] = [];
+  for (const group of groups.values()) {
+    const rectangles = new Map<string, { rows: { start: number; end: number }; columns: string[] }>();
+    for (const [col, intervals] of group.byCol) {
+      const merged: { start: number; end: number }[] = [];
+      for (const interval of intervals.sort((a, b) => a.start - b.start)) {
+        const prev = merged[merged.length - 1];
+        if (prev && interval.start <= prev.end + 1) prev.end = Math.max(prev.end, interval.end);
+        else merged.push({ ...interval });
+      }
+      for (const rows of merged) {
+        const key = `${rows.start}:${rows.end}`;
+        const box = rectangles.get(key) ?? { rows, columns: [] };
+        box.columns.push(indexToColumnLetter(col)); rectangles.set(key, box);
+      }
+    }
+    for (const box of rectangles.values()) {
+      const rule = ruleOf(group.dv, box.columns.sort((a, b) => columnLetterToIndex(a) - columnLetterToIndex(b)), box.rows, offset, sheet.name);
+      if (rule) out.push({ ...rule, id: `xlsx-validation-${out.length}`, anchor: { columnId: indexToColumnLetter(group.origin.col), row: group.origin.row } });
+    }
+  }
+  return out;
+}
+
+/** Resolve list sources against live workbook accessors, including header rows and defined names. */
+export function validationSourceResolver(sheet: ExcelJS.Worksheet, accessors: Record<string, IGridDataAccessor>, rowOffset = 0): (source: string, anchor?: { col: number; row: number }, cell?: { col: number; row: number }) => unknown[] | undefined {
+  let sourceEngine: FormulaEngine | undefined;
+  const workbookAccessor = (target: ExcelJS.Worksheet): IGridDataAccessor => accessors[target.name] ?? {
+    getCellValue: (col, row) => normalizeCellValue(target.findRow(row + 1)?.findCell(col + 1)?.value),
+    getRowCount: () => target.rowCount, getColumnCount: () => target.columnCount,
+  };
+  return (source, anchor, cell) => {
+    let ref = source.trim().replace(/^=/, '');
+    const named = sheet.workbook.definedNames.getRanges(ref)?.ranges;
+    if (named?.length) ref = named[0] ?? ref;
+    else if (anchor && cell) ref = adjustFormulaReferences(ref, cell.col - anchor.col, cell.row - anchor.row);
+    const bang = ref.lastIndexOf('!');
+    const name = bang >= 0 ? ref.slice(0, bang).replace(/^'|'$/g, '').replace(/''/g, "'") : sheet.name;
+    const area = bang >= 0 ? ref.slice(bang + 1) : ref;
+    const b = boxOf(area);
+    if (!b) {
+      // List expressions (OFFSET, INDIRECT, etc.) stay in worksheet coordinates,
+      // just like literal list ranges, even when the header becomes column names.
+      if (!sourceEngine) {
+        sourceEngine = new FormulaEngine({ namedRanges: Object.fromEntries(sheet.workbook.definedNames.model.map((n) => [n.name, n.ranges[0] ?? ''])), limits: { maxRangeCells: 100000 } });
+        for (const target of sheet.workbook.worksheets) sourceEngine.registerSheet(target.name, workbookAccessor(target));
+      }
+      const position = { col: cell?.col ?? 0, row: (cell?.row ?? 0) + rowOffset };
+      const result = sourceEngine.createDetachedEvaluator(workbookAccessor(sheet), { preserveArrays: true })(`=${ref}`, position, position);
+      if (result && typeof result === 'object' && 'type' in result && String(result.type).startsWith('#')) return [];
+      return (Array.isArray(result) ? result.flat(Infinity) : [result]).filter((value) => value != null && value !== '');
+    }
+    if ((b.bottom - b.top + 1) * (b.right - b.left + 1) > 100000) return [];
+    const target = sheet.workbook.getWorksheet(name), accessor = accessors[name];
+    if (!target) return [];
+    const out: unknown[] = [];
+    for (let r = b.top; r <= b.bottom; r++) for (let c = b.left; c <= b.right; c++) {
+      const value = accessor ? accessor.getCellValue(c, r - 1) : normalizeCellValue(target.findRow(r)?.findCell(c + 1)?.value);
+      if (value != null && value !== '') out.push(value);
+    }
+    return out;
+  };
+}
+
+function subtractBox(b: Box, cut: Box): Box[] {
+  if (b.bottom < cut.top || b.top > cut.bottom || b.right < cut.left || b.left > cut.right) return [b];
+  const out: Box[] = [];
+  if (b.top < cut.top) out.push({ ...b, bottom: cut.top - 1 });
+  if (b.bottom > cut.bottom) out.push({ ...b, top: cut.bottom + 1 });
+  const top = Math.max(b.top, cut.top), bottom = Math.min(b.bottom, cut.bottom);
+  if (b.left < cut.left) out.push({ ...b, top, bottom, right: cut.left - 1 });
+  if (b.right > cut.right) out.push({ ...b, top, bottom, left: cut.right + 1 });
+  return out;
+}
+
+/** Replace loaded validation cells, preserving header/out-of-limit originals and unsupported rules. */
+export function writeDataValidations(sheet: ExcelJS.Worksheet, rules: IDataValidationRule<SheetRow>[], layout: ValidationLayout, items?: SheetRow[]): void {
+  const offset = layout.headerPromoted ? 1 : 0;
+  const model = validations(sheet).model;
+  const loaded = { top: offset + 1, bottom: offset + layout.rowCount, left: 0, right: layout.columnCount - 1 };
+  for (const [refs, dv] of Object.entries(model)) {
+    if (!dv || !supported(dv.type)) continue;
+    delete model[refs];
+    for (const ref of refs.split(/\s+/)) {
+      const b = boxOf(ref);
+      if (!b) { model[ref] = dv; continue; }
+      for (const rest of subtractBox(b, loaded)) model[refOf(rest)] = dv;
+    }
+  }
+  let effective: IDataValidationRule<SheetRow>[] = [];
+  for (const rule of rules) {
+    const start = Math.max(0, rule.rows?.start ?? 0), end = Math.min(layout.rowCount - 1, rule.rows?.end ?? layout.rowCount - 1);
+    if (!rule.rowFilter) effective = replaceDataValidationRange(effective, rule.columnIds, { start, end }, rule);
+    else {
+      if (!items) throw new Error('XLSX validation export with rowFilter requires the sheet rows.');
+      for (let row = start; row <= end; row++) {
+        const item = items[row];
+        if (item !== undefined && rule.rowFilter(item, row)) effective = replaceDataValidationRange(effective, rule.columnIds, { start: row, end: row }, { ...rule, rowFilter: undefined, anchor: rule.anchor ?? { columnId: rule.columnIds[0] ?? 'A', row: start } });
+      }
+    }
+  }
+  for (const rule of effective) {
+    const start = Math.max(0, rule.rows?.start ?? 0), end = Math.min(layout.rowCount - 1, rule.rows?.end ?? layout.rowCount - 1);
+    if (start > end) continue;
+    const anchor = rule.anchor ?? { columnId: rule.columnIds[0] ?? 'A', row: rule.rows?.start ?? 0 };
+    for (const columnId of rule.columnIds) {
+      const col = columnLetterToIndex(columnId);
+      if (col < 0 || col >= layout.columnCount) continue;
+      const formula = (v: number | string | undefined): number | string | undefined => {
+        if (typeof v !== 'string' || !v.startsWith('=')) return v;
+        return toFileFormula(rebaseFormulaRows(adjustFormulaReferences(v, col - columnLetterToIndex(anchor.columnId), start - anchor.row), offset));
+      };
+      let formulae: unknown[] = rule.type === 'list' ? [rule.values ? `"${rule.values.map(String).join(',').replace(/"/g, '""')}"` : adjustFormulaReferences(rule.source?.replace(/^=/, '') ?? '', col - columnLetterToIndex(anchor.columnId), start - anchor.row)]
+        : rule.type === 'custom' ? [formula(rule.formula)] : [formula(rule.value), ...(rule.value2 !== undefined ? [formula(rule.value2)] : [])];
+      if (rule.type === 'date') {
+        // ExcelJS date validation formulae must be Dates; passing a serial is
+        // interpreted as milliseconds since 1970 by its XML writer.
+        formulae = formulae.map((value) => {
+          const serial = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : undefined;
+          return serial !== undefined ? new Date((serial - 25569) * 86400000) : value;
+        });
+      }
+      const dv = {
+        type: rule.type, formulae,
+        allowBlank: rule.allowBlank === true,
+        ...('operator' in rule ? { operator: rule.operator as DataValidationOperator } : {}),
+        showInputMessage: rule.inputMessage?.show !== false && !!rule.inputMessage?.text,
+        promptTitle: rule.inputMessage?.title, prompt: rule.inputMessage?.text,
+        showErrorMessage: rule.errorAlert?.show !== false,
+        errorStyle: rule.errorAlert?.style === 'stop' || !rule.errorAlert ? 'stop' : rule.errorAlert.style,
+        errorTitle: rule.errorAlert?.title, error: rule.errorAlert?.message,
+      } as ExcelJS.DataValidation;
+      model[refOf({ left: col, right: col, top: start + offset + 1, bottom: end + offset + 1 })] = dv;
+    }
+  }
+}

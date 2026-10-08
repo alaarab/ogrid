@@ -542,3 +542,7 @@ export type {
 } from '@alaarab/ogrid-core';
 export { useConditionalFormatting } from './hooks/useConditionalFormatting';
 export type { UseConditionalFormattingParams } from './hooks/useConditionalFormatting';
+
+export type { IDataValidationRule, IDataValidationFailure, DataValidationOperator, DataValidationAlertStyle, OnValidationFail } from '@alaarab/ogrid-core';
+
+export type { DataValidationDialogProps } from './components/BaseDataGridTable.types';

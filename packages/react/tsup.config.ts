@@ -23,6 +23,6 @@ const shared: Options = {
 // Build the optional feature independently: sharing its hook with the public
 // hook re-export would hoist drag code into the initial table chunk.
 export default defineConfig([
-  { ...shared, splitting: true, entry: ['src/index.ts', 'src/testing/index.ts'] },
+  { ...shared, splitting: true, entry: { index: 'src/index.ts', 'testing/index': 'src/testing/index.ts', 'data-validation': 'src/components/DataValidationForm.tsx' } },
   { ...shared, entry: { DragDataGridTable: 'src/components/DragDataGridTable.tsx' } },
 ]);
