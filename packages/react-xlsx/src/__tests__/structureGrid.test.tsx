@@ -6,6 +6,33 @@ import { XlsxWorkbookGrid } from '../XlsxWorkbookGrid';
 import { XlsxWorkbookDocument } from '../xlsxDocument';
 import { workbookFromBlob } from '../sheetMapper';
 
+test.each(['Insert 2 columns left', 'Insert 2 columns right', 'Delete 2 columns'])('%s exports as one Undo/Redo action', async (label) => {
+  const wb = new ExcelJS.Workbook();
+  wb.addWorksheet('Data').addRows([['Name', 'Qty', 'Price', 'Total'], ['one', 2, 3, 6]]);
+  const input = await workbookFromBlob(new Blob([await wb.xlsx.writeBuffer()]));
+  let doc: XlsxWorkbookDocument | undefined;
+  const { container } = render(<XlsxWorkbookGrid workbook={input} height={400} editable onDocument={(d) => { doc = d; }} />);
+  await screen.findByText('one');
+  fireEvent.pointerDown(container.querySelector('thead [data-col-header-index="1"]') as HTMLElement, { button: 0 });
+  fireEvent.pointerDown(container.querySelector('thead [data-col-header-index="2"]') as HTMLElement, { button: 0, shiftKey: true });
+  const cell = container.querySelector('[data-row-index="0"][data-col-index="1"]') as HTMLElement;
+  fireEvent.contextMenu(cell);
+  fireEvent.click(await screen.findByText(label));
+  const length = label.startsWith('Delete') ? 2 : 6;
+  await waitFor(() => expect(doc?.sheet('Data')?.columns).toHaveLength(length));
+  if (!doc) throw new Error('Missing document');
+  const values = async () => (await workbookFromBlob(await doc!.toBlob())).getWorksheet('Data')?.getRow(2).values;
+  const changed = label.startsWith('Delete') ? [undefined, 'one', 6] : label.endsWith('left')
+    ? [undefined, 'one', undefined, undefined, 2, 3, 6] : [undefined, 'one', 2, 3, undefined, undefined, 6];
+  expect(await values()).toEqual(changed);
+  fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  await waitFor(() => expect(doc?.sheet('Data')?.columns).toHaveLength(4));
+  expect(await values()).toEqual([undefined, 'one', 2, 3, 6]);
+  fireEvent.click(screen.getByRole('button', { name: 'Redo' }));
+  await waitFor(() => expect(doc?.sheet('Data')?.columns).toHaveLength(length));
+  expect(await values()).toEqual(changed);
+});
+
 test('editable XLSX menus persist structure changes, and Undo restores the worksheet', async () => {
   const wb = new ExcelJS.Workbook();
   wb.addWorksheet('Data').addRows([['Name', 'Qty'], ['one', 1], ['two', 2]]);

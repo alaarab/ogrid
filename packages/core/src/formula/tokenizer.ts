@@ -198,15 +198,14 @@ export function tokenize(input: string): Token[] {
     }
 
     // 7. Cell references / identifiers  -  start with $ or letter
-    if (ch === '$' || isLetter(ch)) {
+    if (ch === '$' || ch === '_' || isLetter(ch)) {
       const start = pos;
       // Consume identifier: letters, digits, $, _
       while (isIdentChar(input[pos])) {
         pos++;
       }
-      // Allow a single dot in function names (e.g. STDEV.S, PERCENTILE.INC)
-      // Only consume the dot if it is followed by more letters (not a decimal number)
-      if (pos < input.length && input[pos] === '.' && isLetter(input[pos + 1])) {
+      // Excel prefixes can contain several dotted components (_xlfn._xlws.FILTER).
+      while (input[pos] === '.' && (isLetter(input[pos + 1]) || input[pos + 1] === '_')) {
         pos++; // consume '.'
         while (isWordChar(input[pos])) {
           pos++;
@@ -221,8 +220,10 @@ export function tokenize(input: string): Token[] {
         continue;
       }
 
-      // If immediately followed by '('  to  FUNCTION token
-      if (pos < input.length && input[pos] === '(') {
+      // Whitespace between a function name and '(' does not make it an address.
+      let next = pos;
+      while (input[next] !== undefined && /\s/.test(input[next] as string)) next++;
+      if (input[next] === '(') {
         tokens.push({ type: 'FUNCTION', value: word, position: start });
         continue;
       }

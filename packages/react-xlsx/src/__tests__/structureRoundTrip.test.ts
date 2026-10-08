@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import ExcelJS from 'exceljs';
+import { createRequire } from 'node:module';
 import { XlsxWorkbookDocument } from '../xlsxDocument';
 import { workbookFromBlob } from '../sheetMapper';
 
@@ -39,7 +40,116 @@ async function reread(doc: XlsxWorkbookDocument): Promise<ExcelJS.Workbook> {
   return workbookFromBlob(await doc.toBlob());
 }
 
+async function documentFrom(wb: ExcelJS.Workbook): Promise<XlsxWorkbookDocument> {
+  return new XlsxWorkbookDocument(await workbookFromBlob(new Blob([await wb.xlsx.writeBuffer()])), { headerRow: 'none', maxCols: 10 });
+}
+
 describe('XLSX structural round trips', () => {
+  test('prefixed shared-formula dependents retain their own relative references when appending a row', async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Data');
+    ws.addRows([[1], [2]]);
+    ws.getCell('B1').value = { formula: '_xlfn.XLOOKUP(A1,$A$1:$A$2,$A$1:$A$2)', shareType: 'shared', ref: 'B1:B2', result: 1 };
+    ws.getCell('B2').value = { sharedFormula: 'B1', result: 2 };
+    const doc = await documentFrom(wb);
+    doc.insertRows('Data', 2);
+    const out = (await reread(doc)).getWorksheet('Data');
+    expect(out?.getCell('B1').formula).toBe('_xlfn.XLOOKUP(A1,$A$1:$A$2,$A$1:$A$2)');
+    expect(out?.getCell('B2').formula).toBe('_xlfn.XLOOKUP(A2,$A$1:$A$2,$A$1:$A$2)');
+  });
+
+  test('an untranslatable shared formula rejects the edit without changing the file or history', async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Data');
+    ws.addRows([[1], [2]]);
+    ws.getCell('B1').value = { formula: 'SUM(Table1[Amount])+A1', shareType: 'shared', ref: 'B1:B2', result: 1 };
+    ws.getCell('B2').value = { sharedFormula: 'B1', result: 2 };
+    const doc = await documentFrom(wb);
+    expect(() => doc.insertRows('Data', 2)).toThrow(/shared formula/i);
+    expect(doc.canUndo('Data')).toBe(false);
+    expect((await reread(doc)).getWorksheet('Data')?.getCell('B2').value).toEqual({ sharedFormula: 'B1', result: 2 });
+  });
+
+  test('array metadata survives edits on another sheet and follows edits on its own sheet', async () => {
+    const wb = new ExcelJS.Workbook();
+    wb.addWorksheet('Data').addRows([[1], [2]]);
+    const ws = wb.addWorksheet('Arrays');
+    ws.addRows([[10, 20], [null, null, 10], [null, null, 20]]);
+    ws.getCell('C2').value = { formula: 'TRANSPOSE(A1:B1)', shareType: 'array', ref: 'C2:C3', result: 10 };
+    const doc = await documentFrom(wb);
+    doc.insertRows('Data', 0);
+    expect((await reread(doc)).getWorksheet('Arrays')?.getCell('C2').value).toEqual({ formula: 'TRANSPOSE(A1:B1)', shareType: 'array', ref: 'C2:C3', result: 10 });
+    doc.insertRows('Arrays', 0);
+    doc.insertColumns('Arrays', 0);
+    expect((await reread(doc)).getWorksheet('Arrays')?.getCell('D3').value).toEqual({ formula: 'TRANSPOSE(B2:C2)', shareType: 'array', ref: 'D3:D4', result: 10 });
+    doc.undo('Arrays');
+    expect((await reread(doc)).getWorksheet('Arrays')?.getCell('C3').value).toMatchObject({ shareType: 'array', ref: 'C3:C4' });
+  });
+
+  for (const axis of ['rows', 'columns'] as const) {
+    test(`deleting a ${axis} rule anchor rebases relative references but deletes absolute targets`, async () => {
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Data');
+      ws.addRows([[1, 2, 3], [2, 3, 4], [3, 4, 5]]);
+      const ref = axis === 'rows' ? 'A1:A3' : 'A1:C1';
+      const formula = 'AND(A1>0,$A1>0,A$1>0,$A$1>0)';
+      (ws as unknown as { dataValidations: { add: (ref: string, rule: ExcelJS.DataValidation) => void } }).dataValidations.add(ref, { type: 'custom', formulae: [formula] });
+      ws.addConditionalFormatting({ ref, rules: [{ type: 'expression', priority: 1, formulae: [formula], style: { font: { bold: true } } }] });
+      const doc = await documentFrom(wb);
+      if (axis === 'rows') doc.deleteRows('Data', 0);
+      else doc.deleteColumns('Data', 0);
+      const out = (await reread(doc)).getWorksheet('Data') as ExcelJS.Worksheet;
+      const expected = axis === 'rows' ? 'AND(A1>0,$A1>0,#REF!>0,#REF!>0)' : 'AND(A1>0,#REF!>0,A$1>0,#REF!>0)';
+      for (const address of axis === 'rows' ? ['A1', 'A2'] : ['A1', 'B1']) expect(out.getCell(address).dataValidation.formulae).toEqual([expected]);
+      expect(out.conditionalFormattings[0]).toMatchObject({ ref: axis === 'rows' ? 'A1:A2' : 'A1:B1', rules: [{ formulae: [expected] }] });
+    });
+  }
+
+  test.each([
+    ['LOG10 (A1)', 'LOG10 (A2)', 'insert'],
+    ['SUM(A1 : A5)', 'SUM(A1:A4)', 'delete'],
+  ])('whitespace in %s survives a serialized structure edit', async (formula, expected, operation) => {
+    const wb = new ExcelJS.Workbook();
+    wb.addWorksheet('Data').addRows([[1], [2], [3], [4], [5]]);
+    // Put the formula on the edited sheet in a surviving cell.
+    wb.getWorksheet('Data')!.getCell('B5').value = { formula, result: 1 };
+    const doc = await documentFrom(wb);
+    if (operation === 'insert') doc.insertRows('Data', 0);
+    else doc.deleteRows('Data', 0);
+    expect((await reread(doc)).getWorksheet('Data')?.getCell(operation === 'insert' ? 'B6' : 'B4').formula).toBe(expected);
+  });
+
+  test('conditional-format formulas rebase when their first area is deleted', async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Data');
+    ws.addRows([[1, 2, 3], [2, 3, 4], [3, 4, 5]]);
+    ws.addConditionalFormatting({ ref: 'A1:A2 C2:C3', rules: [
+      { type: 'expression', priority: 1, formulae: ['A1>0'], style: { font: { bold: true } } },
+    ] });
+    const doc = await documentFrom(wb);
+    doc.deleteColumns('Data', 0);
+    const cf = (await reread(doc)).getWorksheet('Data')?.conditionalFormattings[0];
+    expect(cf?.ref).toBe('B2:B3');
+    expect(cf?.rules[0]).toMatchObject({ formulae: ['B2>0'] });
+  });
+
+  test('column properties at XFD prevent insertion from exporting out-of-bounds column XML', async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Data');
+    ws.getCell('A1').value = 1;
+    ws.getColumn('XFD').width = 23;
+    const doc = await documentFrom(wb);
+    expect(() => doc.insertColumns('Data', 0)).toThrow(/worksheet limits/);
+    const blob = await doc.toBlob();
+    const require = createRequire(import.meta.url);
+    const JSZip = createRequire(require.resolve('exceljs'))('jszip');
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const xml: string = await zip.file('xl/worksheets/sheet1.xml').async('string');
+    const columns = [...xml.matchAll(/<col\b[^>]*\bmax="(\d+)"/g)];
+    expect(columns.map((m) => Number(m[1]))).toEqual([16384]);
+    expect((await workbookFromBlob(blob)).getWorksheet('Data')?.getColumn('XFD').width).toBe(23);
+    expect(doc.canUndo('Data')).toBe(false);
+  });
   for (const axis of ['rows', 'columns'] as const) {
     test(`inserting ${axis} shifts values, references and Excel metadata, with undo and redo`, async () => {
       const input = await fixture();
@@ -102,7 +212,7 @@ describe('XLSX structural round trips', () => {
       expect(out.getWorksheet('Other')?.getCell('A2').formula).toBe("'Sales Data'!#REF!");
       expect(out.definedNames.getRanges('Band').ranges).toEqual(axis === 'rows' ? ["'Sales Data'!$D$4:$D$5"] : []);
       expect(ws.model.merges).toEqual(axis === 'rows' ? ['B4:C4'] : ['B4:C5']);
-      expect(ws.getCell(axis === 'rows' ? 'E4' : 'D4').dataValidation).toMatchObject({ type: 'custom', formulae: ['#REF!>0'] });
+      expect(ws.getCell(axis === 'rows' ? 'E4' : 'D4').dataValidation).toMatchObject({ type: 'custom', formulae: [axis === 'rows' ? 'D4>0' : '#REF!>0'] });
       expect(ws.conditionalFormattings.map((cf) => cf.ref)).toEqual(axis === 'rows' ? ['D4:D5 B2:B3'] : ['B2:B3']);
       expect(ws.views[0]).toMatchObject(axis === 'rows'
         ? { xSplit: 4, ySplit: 3 } : { xSplit: 3, ySplit: 4 });

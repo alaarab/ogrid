@@ -412,9 +412,14 @@ export class XlsxWorkbookDocument {
   /** Delete `count` rows at an index, or an array of data indexes, as one undo step. */
   deleteRows(sheetName: string, index: number | readonly number[], count = 1): void {
     if (count < 0) throw new RangeError('Count must be nonnegative');
+    this.deleteStructure(sheetName, 'row', index, count);
+  }
+
+  private deleteStructure(sheetName: string, axis: StructureAxis, index: number | readonly number[], count: number): void {
     if (typeof index !== 'number') {
       const indexes = [...new Set(index)].sort((a, b) => b - a);
-      const length = this.state(sheetName)?.rows.length ?? 0;
+      const state = this.state(sheetName);
+      const length = (axis === 'row' ? state?.rows.length : state?.columns.length) ?? 0;
       if (indexes.some((i) => !Number.isInteger(i) || i < 0 || i >= length)) throw new RangeError('Structure edit is outside the loaded sheet');
       if (this.batchOpen) { this.batchOpen = false; this.history.endBatch(); }
       this.history.beginBatch();
@@ -423,13 +428,13 @@ export class XlsxWorkbookDocument {
           const high = indexes[i] as number;
           let low = high;
           while (indexes[i + 1] === low - 1) { low--; i++; }
-          this.changeStructure(sheetName, 'row', low, -(high - low + 1));
+          this.changeStructure(sheetName, axis, low, -(high - low + 1));
           i++;
         }
       } finally { this.history.endBatch(); }
       return;
     }
-    this.changeStructure(sheetName, 'row', index, -count);
+    this.changeStructure(sheetName, axis, index, -count);
   }
 
   /** Insert blank worksheet columns before a zero-based column index. */
@@ -438,10 +443,10 @@ export class XlsxWorkbookDocument {
     this.changeStructure(sheetName, 'col', index, count);
   }
 
-  /** Delete `count` worksheet columns starting at a zero-based column index. */
-  deleteColumns(sheetName: string, index: number, count = 1): void {
+  /** Delete `count` columns at an index, or an array of column indexes, as one undo step. */
+  deleteColumns(sheetName: string, index: number | readonly number[], count = 1): void {
     if (count < 0) throw new RangeError('Count must be nonnegative');
-    this.changeStructure(sheetName, 'col', index, -count);
+    this.deleteStructure(sheetName, 'col', index, count);
   }
 
   private copyState(state: MutableSheetState): MutableSheetState {
@@ -466,7 +471,9 @@ export class XlsxWorkbookDocument {
     const offset = state.source.formatting.headerPromoted ? 1 : 0;
     const limit = axis === 'row' ? 1_048_576 - offset : 16_384;
     const worksheet = this.worksheet(sheetName) as ExcelJS.Worksheet;
-    const fileLength = axis === 'row' ? worksheet.rowCount - offset : worksheet.columnCount;
+    // columnCount only counts cells; property-only columns still move on insert.
+    const fileLength = axis === 'row' ? worksheet.rowCount - offset
+      : Math.max(worksheet.columnCount, worksheet.columns?.length ?? 0);
     if (count > 0 && Math.max(length, fileLength) + count > limit) throw new RangeError('Structure edit exceeds Excel worksheet limits');
     if (this.batchOpen) { this.batchOpen = false; this.history.endBatch(); }
     const before = this.snapshot();

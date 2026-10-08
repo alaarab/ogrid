@@ -67,8 +67,10 @@ import type {
 export interface IColumnsChangeEvent<T> {
   /** Whether the column was inserted or deleted. */
   type: 'insert' | 'delete';
-  /** The inserted or deleted column. */
+  /** The inserted or deleted column (the first change in a bulk action). */
   column: IColumnDef<T>;
+  /** All columns in a bulk action, in operation order. One event covers the entire action. */
+  changes?: Array<{ column: IColumnDef<T>; index: number }>;
   /**
    * Flat (leaf) index of the column: where it now sits for an insert, where it
    * sat before a delete. Formula column letters follow this index.

@@ -235,8 +235,8 @@ export function XlsxGrid({
     else doc.deleteRows(sheetName, event.indexes);
   }, [doc, sheetName]);
   const onColumnsChange = useCallback((event: IColumnsChangeEvent<SheetRow>) => {
-    if (event.type === 'insert') doc.insertColumns(sheetName, event.index);
-    else doc.deleteColumns(sheetName, event.index);
+    if (event.type === 'insert') doc.insertColumns(sheetName, event.index, event.changes?.length ?? 1);
+    else doc.deleteColumns(sheetName, event.changes?.map((change) => change.index) ?? event.index);
   }, [doc, sheetName]);
   const onColumnResized = useCallback((columnId: string, width: number) => doc.setColumnWidth(sheetName, columnId, width), [doc, sheetName]);
   const getSelection = useCallback(

@@ -234,6 +234,19 @@ describe('cellAddressUtils', () => {
       expect(adjustFormulaReferences('=SUM(A1:A5)', 0, 1)).toBe('=SUM(A2:A6)');
     });
 
+    it.each(['_xlfn.XLOOKUP', '_xlfn._xlws.FILTER'])('translates references in Excel-prefixed %s formulas', (fn) => {
+      expect(adjustFormulaReferences(`=${fn}(A1,$A$1:$A$3,B$1:B$3)`, 1, 1))
+        .toBe(`=${fn}(B2,$A$1:$A$3,C$1:C$3)`);
+    });
+
+    it('preserves function names separated from parentheses by whitespace', () => {
+      expect(adjustFormulaReferences('=LOG10 \t(A1)', 0, 1)).toBe('=LOG10 \t(A2)');
+    });
+
+    it('rejects an unsupported translation when the caller requires strict expansion', () => {
+      expect(() => adjustFormulaReferences('=SUM(Table1[Amount])+A1', 0, 1, true)).toThrow();
+    });
+
     // The previous implementation regex-replaced the raw string, so anything
     // shaped like <letters><digits> was rewritten  -  including function names,
     // text inside string literals, and named ranges.

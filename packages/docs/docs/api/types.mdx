@@ -267,6 +267,7 @@ Passed to `onColumnsChange` when a column is inserted or deleted.
 interface IColumnsChangeEvent<T> {
   type: 'insert' | 'delete';
   column: IColumnDef<T>;
+  changes?: Array<{ column: IColumnDef<T>; index: number }>;
   index: number;
   columns: (IColumnDef<T> | IColumnGroupDef<T>)[];
 }
@@ -275,7 +276,8 @@ interface IColumnsChangeEvent<T> {
 | Name | Type | Description |
 |------|------|-------------|
 | `type` | `'insert' \| 'delete'` | Whether the column was inserted or deleted. |
-| `column` | `IColumnDef<T>` | The inserted or deleted column. |
+| `column` | `IColumnDef<T>` | The inserted or deleted column, or the first change in a bulk action. |
+| `changes` | `Array<{ column: IColumnDef<T>; index: number }>` | Present for bulk actions. All inserted or deleted columns in operation order; one event covers the complete action. |
 | `index` | `number` | Leaf (flattened) index: where the column now sits, or where it sat before a delete. |
 | `columns` | `(IColumnDef<T> \| IColumnGroupDef<T>)[]` | The complete `columns` value after the change. Pass it to your state setter. |
 
