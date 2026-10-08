@@ -138,3 +138,5 @@ fill handle keep using pointer events, so they do not conflict. During a row
 drag or a range move the grid sets `data-ogrid-dragging-row` on the wrapper, and
 while an external drag hovers a cell it sets `data-ogrid-drop-target` on that
 cell for styling.
+
+A move that includes a read-only source cell, including a spill child, is rejected before any destination changes. Copying can read computed spill values. Move the editable spill anchor on its own to move its formula; the spill recalculates at the destination. Frozen rows and columns use the same sheet coordinates and undo path.

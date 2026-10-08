@@ -352,6 +352,10 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Range moves reject protected source cells before writing destinations,
+  including dynamic-array spill children. Spill anchors can move across frozen
+  panes and restore their spill with one undo step.
+
 - XLSX structural undo/redo snapshots retain their own spill output caches, so
   a later formula recalculation cannot change the restored array values.
 
