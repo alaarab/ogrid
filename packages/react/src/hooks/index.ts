@@ -35,6 +35,13 @@ export type {
   CellClipboardCopyEvent,
   CellClipboardPasteEvent,
 } from './useCellClipboard';
+export { useFindReplace, formatReplaceStatus } from './useFindReplace';
+export type {
+  UseFindReplaceParams,
+  UseFindReplaceResult,
+  FindReplaceMode,
+  FindReplaceResult,
+} from './useFindReplace';
 export { useGridFocus } from './useGridFocus';
 export type {
   UseGridFocusParams,
@@ -100,6 +107,9 @@ export type {
   DataGridViewModelState,
   DataGridPinningState,
 } from './useDataGridState';
+export type { DataGridFindReplaceState } from './useDataGridFindReplace';
+export { useFindReplacePanel } from './useFindReplacePanel';
+export type { UseFindReplacePanelResult } from './useFindReplacePanel';
 export { useDataGridLayout } from './useDataGridLayout';
 export type { UseDataGridLayoutParams, UseDataGridLayoutResult } from './useDataGridLayout';
 export { useDataGridEditing } from './useDataGridEditing';

@@ -71,6 +71,9 @@ export {
   useRangeSelection,
   useFillHandle,
   useCellClipboard,
+  useFindReplace,
+  useFindReplacePanel,
+  formatReplaceStatus,
   useGridFocus,
   useActiveCell,
   useCellEditing,
@@ -132,6 +135,10 @@ export type {
   UseCellClipboardResult,
   CellClipboardCopyEvent,
   CellClipboardPasteEvent,
+  UseFindReplaceParams,
+  UseFindReplaceResult,
+  FindReplaceMode,
+  FindReplaceResult,
   UseGridFocusParams,
   UseGridFocusResult,
   GridFocusCellProps,
@@ -164,6 +171,8 @@ export type {
   DataGridContextMenuState,
   DataGridViewModelState,
   DataGridPinningState,
+  DataGridFindReplaceState,
+  UseFindReplacePanelResult,
   UseColumnHeaderFilterStateParams,
   UseColumnHeaderFilterStateResult,
   UseTextFilterStateParams,
@@ -294,6 +303,7 @@ export type {
   HeaderSelectAllRenderProps,
   BooleanCellRenderProps,
   PopoverEditorRenderProps,
+  FindReplacePanelProps,
 } from './components/BaseDataGridTable';
 export { CellErrorBoundary } from './components/CellErrorBoundary';
 export type { CellErrorBoundaryProps } from './components/CellErrorBoundary';
@@ -411,6 +421,29 @@ export type {
   ColumnHeaderMenuHandlers,
   BooleanCellSelectHandlers,
 } from './utils';
+
+// Find & replace (pure helpers from core, for headless use alongside useFindReplace)
+export {
+  DEFAULT_FIND_OPTIONS,
+  findMatches,
+  findNextMatchIndex,
+  planReplace,
+  replaceInCellText,
+  cellTextMatches,
+  getFindCellText,
+  formatFindStatus,
+} from '@alaarab/ogrid-core';
+export type {
+  FindLookIn,
+  FindSearchOrder,
+  FindScope,
+  IFindOptions,
+  IFindMatch,
+  IFindSource,
+  IFindFormulaEdit,
+  IReplacePlan,
+  IPlanReplaceParams,
+} from '@alaarab/ogrid-core';
 
 // Shared component props & renderers (for UI packages to consume)
 export { renderFilterContent, createBaseFilterRenderers } from './components/ColumnHeaderFilterRenderers';

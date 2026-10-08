@@ -124,5 +124,6 @@ export function useDataGridTableOrchestration<T>(
     menuPosition, handleCellContextMenu, closeContextMenu,
     headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError,
     headerMenu: pinning.headerMenu,
+    findReplace: state.findReplace,
   };
 }

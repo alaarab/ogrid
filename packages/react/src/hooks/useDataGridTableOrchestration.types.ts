@@ -10,6 +10,7 @@ import type {
   DataGridViewModelState,
   DataGridPinningState,
 } from './useDataGridState';
+import type { DataGridFindReplaceState } from './useDataGridFindReplace';
 import type { UseColumnResizeResult } from './useColumnResize';
 import type { UseColumnReorderResult } from './useColumnReorder';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
@@ -185,4 +186,6 @@ export interface UseDataGridTableOrchestrationResult<T> {
 
   // Pinning shortcuts
   headerMenu: DataGridPinningState['headerMenu'];
+  /** Find & Replace panel state and the Ctrl+F / Ctrl+H handler. */
+  findReplace: DataGridFindReplaceState;
 }
