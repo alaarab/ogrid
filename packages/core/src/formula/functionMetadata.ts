@@ -56,6 +56,11 @@ const CRITERIA_PAIRS = 'criteria_range1, criteria1, [criteria_range2, criteria2]
 const TEXT_SPLIT_TAIL = '[instance_num], [match_mode], [match_end], [if_not_found]';
 
 const BUILT_INS: Record<string, Entry> = {
+  UNIQUE: [R, 'array, [by_col], [exactly_once]', 'Returns distinct rows or columns.'],
+  FILTER: [R, 'array, include, [if_empty]', 'Returns the rows or columns matching a Boolean array.'],
+  SORT: [R, 'array, [sort_index], [sort_order], [by_col]', 'Sorts an array by one row or column.'],
+  SORTBY: [R, 'array, by_array1, [sort_order1], [by_array2, sort_order2], ...', 'Sorts an array by one or more matching arrays.'],
+  RANDARRAY: [M, '[rows], [columns], [min], [max], [whole_number]', 'Returns an array of random numbers.'],
   ABS: [M, 'number', 'Returns the absolute value of a number.'],
   ACOS: [M, 'number', 'Returns the arccosine of a number, in radians.'],
   ADDRESS: [R, 'row_num, column_num, [abs_num], [a1], [sheet_text]', 'Returns a cell reference as text, given row and column numbers.'],

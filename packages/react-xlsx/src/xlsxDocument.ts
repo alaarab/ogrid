@@ -9,7 +9,7 @@
 // through exactly as ExcelJS read it.
 
 import ExcelJS from 'exceljs';
-import { UndoRedoStack, triggerBlobDownload, type ICellNote, type IColumnDef, type RowId } from '@alaarab/ogrid-core';
+import { UndoRedoStack, triggerBlobDownload, type ICellNote, type IColumnDef, type RowId, type ISpillRange } from '@alaarab/ogrid-core';
 import { createBuiltInFunctions, tokenize, type IGridDataAccessor, type IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { applyStyleEdit, styleHas, type StyleEdit, type XlsxCellStyle } from './cellStyles';
 import { XLSX_MIME_TYPE } from './exportToXlsx';
@@ -72,6 +72,7 @@ interface MutableSheetState {
   initialRowHeights: Map<number, number>;
   rowHeights: Map<number, number>;
   formulaResults: Map<string, unknown>;
+  spillRanges: ISpillRange[];
   columns: IColumnDef<SheetRow>[];
   columnIndex: Map<string, number>;
   history: UndoRedoStack<Op>;
@@ -189,6 +190,22 @@ export class XlsxWorkbookDocument {
       if (cached !== undefined) formulaResults.set(cellKey(row.__rowIdx, column.columnId), cached);
       row[column.columnId] = f.formula;
     }
+    // Array children are caches, not independent input cells. Keep caches
+    // separately so the engine can spill into their empty source cells.
+    for (const range of source.arrayRanges ?? []) {
+      const anchor = rows[range.anchorRow];
+      const anchorColumn = source.columns[range.anchorCol];
+      if (!anchor || !anchorColumn || !isFormulaText(anchor[anchorColumn.columnId])) continue;
+      for (let r = range.anchorRow; r <= Math.min(range.endRow, rows.length - 1); r++) {
+        for (let c = range.anchorCol; c <= Math.min(range.endCol, source.columns.length - 1); c++) {
+          if (r === range.anchorRow && c === range.anchorCol) continue;
+          const row = rows[r], column = source.columns[c];
+          if (!row || !column) continue;
+          formulaResults.set(cellKey(row.__rowIdx, column.columnId), row[column.columnId]);
+          row[column.columnId] = '';
+        }
+      }
+    }
     const notes = readSheetNotes(worksheet, source);
     const state: MutableSheetState = {
       name,
@@ -206,6 +223,7 @@ export class XlsxWorkbookDocument {
       initialRowHeights: source.formatting.rowHeights,
       rowHeights: new Map(source.formatting.rowHeights),
       formulaResults,
+      spillRanges: source.arrayRanges ?? [],
       columns: source.columns,
       columnIndex: new Map(source.columns.map((c, i) => [c.columnId, i])),
       history: new UndoRedoStack<Op>(100),
@@ -400,6 +418,7 @@ export class XlsxWorkbookDocument {
   recordFormulaResults(sheetName: string, result: IRecalcResult): void {
     const state = this.sheets.get(sheetName);
     if (!state) return;
+    if (result.spillRanges) state.spillRanges = result.spillRanges;
     for (const cell of result.updatedCells) {
       const row = state.rows[cell.row];
       const column = state.columns[cell.col];
@@ -455,8 +474,9 @@ export class XlsxWorkbookDocument {
           const column = state?.columns[col];
           if (state && dataRow && column) {
             const v = dataRow[column.columnId];
-            if (!isFormulaText(v)) return v;
             const key = cellKey(dataRow.__rowIdx, column.columnId);
+            const spilled = state.spillRanges.some(r => col >= r.anchorCol && col <= r.endCol && row - offset >= r.anchorRow && row - offset <= r.endRow);
+            if (!isFormulaText(v) && !spilled) return v;
             if (state.formulaResults.has(key)) return state.formulaResults.get(key);
           }
           return normalizeCellValue(worksheet.findRow(row + 1)?.findCell(col + 1)?.value);
@@ -565,6 +585,41 @@ export class XlsxWorkbookDocument {
           cell.value = { ...(v as ExcelJS.CellFormulaValue), result: r } as ExcelJS.CellValue;
         }
       }
+    }
+
+    // Refresh all output caches, including children removed by a resize or
+    // anchor deletion. Never turn a child into another formula.
+    for (const [key, cached] of state.formulaResults) {
+      const colon = key.indexOf(':');
+      const rowId = Number(key.slice(0, colon)), columnId = key.slice(colon + 1);
+      const row = this.rowIndexOf(state, rowId), col = state.columnIndex.get(columnId);
+      if (row < 0 || col === undefined) continue;
+      const raw = state.rows[row]?.[columnId];
+      if (!isFormulaText(raw) && (raw === '' || raw == null)) ws.getCell(sheetRowOf(row), col + 1).value = resultValue(cached) ?? null;
+      // A recalculated array can become a scalar or #SPILL!. Its old file
+      // extent must no longer claim the child cells (including obstructions).
+      if (isFormulaText(raw) && !state.spillRanges.some(r => r.anchorCol === col && r.anchorRow === row)) {
+        const cell = ws.getCell(sheetRowOf(row), col + 1);
+        const value = cell.value;
+        if (value && typeof value === 'object' && 'formula' in value && 'shareType' in value && value.shareType === 'array') {
+          const result = resultValue(cached);
+          cell.value = { formula: value.formula, ...(result !== undefined ? { result } : {}) } as ExcelJS.CellFormulaValue;
+        }
+      }
+    }
+    for (const spill of state.spillRanges) {
+      const row = state.rows[spill.anchorRow], column = state.columns[spill.anchorCol];
+      if (!row || !column) continue;
+      const formula = row[column.columnId];
+      if (!isFormulaText(formula)) continue;
+      const anchor = ws.getCell(sheetRowOf(spill.anchorRow), spill.anchorCol + 1);
+      const end = ws.getCell(sheetRowOf(spill.endRow), spill.endCol + 1);
+      const cached = resultValue(state.formulaResults.get(cellKey(row.__rowIdx, column.columnId)));
+      anchor.value = {
+        formula: toFileFormula(rebaseFormulaRows(formula, offset)),
+        shareType: 'array', ref: `${anchor.address}:${end.address}`,
+        ...(cached !== undefined ? { result: cached } : {}),
+      } as ExcelJS.CellFormulaValue;
     }
 
     // Styles: rewrite only cells whose style object changed.

@@ -34,6 +34,7 @@ const SINGLE_CHAR_OPERATORS: Record<string, TokenType> = {
   '%': 'PERCENT',
   '&': 'AMPERSAND',
   '=': 'EQ',
+  '@': 'AT',
 };
 
 const DELIMITERS: Record<string, TokenType> = {
@@ -64,8 +65,11 @@ export function tokenize(input: string): Token[] {
     }
 
     if (ch === '#') {
-      const error = /^(#REF!|#DIV\/0!|#VALUE!|#NAME\?|#CIRC!|#ERROR!|#N\/A|#NUM!)/i.exec(input.slice(pos));
-      if (!error) throw new FormulaError('#ERROR!', 'Invalid error literal');
+      const error = /^(#REF!|#DIV\/0!|#VALUE!|#NAME\?|#CIRC!|#ERROR!|#N\/A|#NUM!|#SPILL!|#CALC!)/i.exec(input.slice(pos));
+      if (!error) {
+        tokens.push({ type: 'HASH', value: '#', position: pos++ });
+        continue;
+      }
       tokens.push({ type: 'ERROR_LITERAL', value: error[0].toUpperCase(), position: pos });
       pos += error[0].length;
       continue;

@@ -616,6 +616,8 @@ export interface IOGridDataGridProps<T> {
   formulas?: boolean;
   /** Get the formula engine's computed value for a cell, or undefined if no formula. */
   getFormulaValue?: (col: number, row: number) => unknown;
+  /** Successful spill containing the cell (sheet coordinates). */
+  getSpillRange?: (col: number, row: number) => import('@alaarab/ogrid-core').ISpillRange | undefined;
   /** Check if a cell has a formula. */
   hasFormula?: (col: number, row: number) => boolean;
   /** Get the formula string for a cell. */

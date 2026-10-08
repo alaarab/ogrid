@@ -153,8 +153,8 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
   function unary(): ASTNode {
     const t = peek();
 
-    if (t && (t.type === 'MINUS' || t.type === 'PLUS')) {
-      const op = t.type === 'MINUS' ? '-' : '+';
+    if (t && (t.type === 'MINUS' || t.type === 'PLUS' || t.type === 'AT')) {
+      const op = t.type === 'MINUS' ? '-' : t.type === 'AT' ? '@' : '+';
       advance();
       if (++depth > MAX_FORMULA_DEPTH) throw new FormulaError('#VALUE!', 'Formula too deep');
       let operand: ASTNode;
@@ -167,6 +167,12 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
 
   function postfix(): ASTNode {
     let node = primary();
+
+    if (peek()?.type === 'HASH') {
+      advance();
+      if (node.kind !== 'cellRef') return errorNode('Spill operator requires a cell reference');
+      node = { kind: 'spillRef', address: node.address };
+    }
 
     if (peek()?.type === 'PERCENT') {
       advance();
@@ -292,17 +298,19 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
       return errorNode(`Expected "(" after function name "${name}"`);
     }
 
+    const argument = (): ASTNode => peek()?.type === 'COMMA' || peek()?.type === 'RPAREN'
+      ? { kind: 'value', value: undefined } : expression();
     const args: ASTNode[] = [];
     if (name === 'LET') return letCall(args);
 
     // Parse comma-separated arguments (if any)
     const first = peek();
     if (first && first.type !== 'RPAREN' && first.type !== 'EOF') {
-      args.push(expression());
+      args.push(argument());
 
       while (peek()?.type === 'COMMA') {
         advance(); // consume ','
-        args.push(expression());
+        args.push(argument());
       }
     }
 

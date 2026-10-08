@@ -76,7 +76,13 @@ const WORKSHEET_FUNCTIONS = new Set(['FILTER', 'SORT']);
  * quoted sheet names are left untouched.
  */
 export function toFileFormula(formula: string): string {
-  const body = formula.startsWith('=') ? formula.slice(1) : formula;
+  const rawBody = formula.startsWith('=') ? formula.slice(1) : formula;
+  // Excel serializes spill references as ANCHORARRAY, not a literal '#'.
+  const intersected = rawBody.replace(/"(?:[^"]|"")*"|@((?:'(?:[^']|'')*'!|[A-Za-z_][A-Za-z0-9_]*!)?\$?[A-Za-z]{1,3}\$?\d+(?::\$?[A-Za-z]{1,3}\$?\d+)?#?)|'(?:[^']|'')*'/g,
+    (match, ref: string | undefined) => ref ? `_xlfn.SINGLE(${ref})` : match);
+  const body = intersected.replace(/"(?:[^"]|"")*"|((?:'(?:[^']|'')*'!|[A-Za-z_][A-Za-z0-9_]*!)?\$?[A-Za-z]{1,3}\$?\d+)#|'(?:[^']|'')*'/g,
+    (match, ref: string | undefined) => ref ? `_xlfn.ANCHORARRAY(${ref})` : match);
+
   return body.replace(
     /"(?:[^"]|"")*"|'(?:[^']|'')*'|(?<![A-Za-z0-9_.])((?:_xlfn\.|_xlws\.)*)([A-Za-z][A-Za-z0-9_.]*)(?=\s*\()/g,
     (match, prefix: string | undefined, name: string | undefined) => {
@@ -89,7 +95,11 @@ export function toFileFormula(formula: string): string {
 }
 
 export function normalizeFormula(formula: string): string {
-  const normalized = formula.replace(
+  const spillRefs = formula.replace(/"(?:[^"]|"")*"|(?:_xlfn\.)?ANCHORARRAY\(((?:'(?:[^']|'')*'!|[A-Za-z_][A-Za-z0-9_]*!)?\$?[A-Za-z]{1,3}\$?\d+)\)|'(?:[^']|'')*'/gi,
+    (match, ref: string | undefined) => ref ? `${ref}#` : match);
+  const intersections = spillRefs.replace(/"(?:[^"]|"")*"|(?:_xlfn\.)?SINGLE\(((?:'(?:[^']|'')*'!|[A-Za-z_][A-Za-z0-9_]*!)?\$?[A-Za-z]{1,3}\$?\d+(?::\$?[A-Za-z]{1,3}\$?\d+)?#?)\)|'(?:[^']|'')*'/gi,
+    (match, ref: string | undefined) => ref ? `@${ref}` : match);
+  const normalized = intersections.replace(
     /"(?:[^"]|"")*"|'(?:[^']|'')*'|(?:_xlfn\.|_xlws\.)+(?=[A-Za-z_][A-Za-z0-9_.]*\s*\()/gi,
     (match) => match.startsWith('"') || match.startsWith("'") ? match : '',
   );

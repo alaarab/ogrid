@@ -93,7 +93,7 @@ describe('FormulaEngine audit regressions', () => {
 
     const start = performance.now();
     engine.setFormula(0, 2, '=SEQUENCE(1000000000,1,7)', accessor);
-    expect(engine.getValue(0, 2)).toBe(7);
+    expect(isError(engine.getValue(0, 2), '#VALUE!')).toBe(true);
     engine.setFormula(0, 3, '=SUBSTITUTE("abc","","x",1000000000000)', accessor);
     expect(engine.getValue(0, 3)).toBe('abc');
     expect(performance.now() - start).toBeLessThan(3000);

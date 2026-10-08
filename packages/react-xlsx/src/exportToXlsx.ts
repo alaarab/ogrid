@@ -3,8 +3,8 @@
 // the two exporters are interchangeable at the call site.
 
 import ExcelJS from 'exceljs';
-import { triggerBlobDownload, type CsvColumn } from '@alaarab/ogrid-core';
-import { rebaseFormulaRows } from './formulaReferences';
+import { triggerBlobDownload, type CsvColumn, type ISpillRange } from '@alaarab/ogrid-core';
+import { rebaseFormulaRows, toFileFormula } from './formulaReferences';
 
 export const XLSX_MIME_TYPE =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -12,6 +12,8 @@ export const XLSX_MIME_TYPE =
 export interface XlsxExportOptions {
   /** Worksheet name. Defaults to 'Sheet1'. */
   sheetName?: string;
+  /** Current spill extents, with cached child values supplied by getValue. */
+  spillRanges?: ISpillRange[];
   /**
    * Formula cells to emit, in the same `{col, row, formula}` shape
    * `sheetToGridData` produces on import (0-based data coordinates, header
@@ -51,9 +53,13 @@ export function workbookFromGridData<T>(
       const item = items[f.row];
       if (column === undefined || item === undefined) continue;
       const result = toCellValue(getValue(item, column.columnId));
+      const spill = options.spillRanges?.find(r => r.anchorCol === f.col && r.anchorRow === f.row);
+      const array = spill ? { shareType: 'array' as const, ref: `${ws.getCell(f.row + 2, f.col + 1).address}:${ws.getCell(spill.endRow + 2, spill.endCol + 1).address}` } : {};
+
       // +1 for 1-based ExcelJS coordinates, +1 more on the row for the header.
       ws.getCell(f.row + 2, f.col + 1).value = {
-        formula: rebaseFormulaRows(f.formula.replace(/^=/, ''), 1),
+        ...array,
+        formula: toFileFormula(rebaseFormulaRows(f.formula, 1)),
         result,
       } as ExcelJS.CellFormulaValue;
     }
@@ -94,6 +100,7 @@ function toCellValue(v: unknown): ExcelJS.CellValue {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
   if (typeof v === 'boolean' || typeof v === 'string') return v;
   if (v instanceof Date) return v;
+  if (typeof v === 'object' && 'type' in v && typeof v.type === 'string' && v.type.startsWith('#')) return { error: v.type } as ExcelJS.CellErrorValue;
   return String(v);
 }
 
