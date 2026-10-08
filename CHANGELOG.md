@@ -6,6 +6,12 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- `@alaarab/ogrid-react-xlsx`: editable row/column insertion and deletion in
+  grid menus and `XlsxWorkbookDocument.insertRows`, `deleteRows`,
+  `insertColumns`, `deleteColumns`. Structural edits shift local/cross-sheet
+  formulas, defined range names, styles, merges, validations, conditional
+  formatting, notes, hyperlinks, dimensions, hidden state and frozen panes.
+  `onTruncated` reports visible mapping/CSV limits to hosts.
 - Formula autocomplete and argument hints, in the cell editor and the formula
   bar, in both kits: typing a name after `=`, `(`, a comma or an operator lists
   matching functions (prefix matches first, then contains) and named ranges,
@@ -287,6 +293,11 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- `@alaarab/ogrid-react-xlsx`: edits use one chronological workbook undo
+  history to preserve cross-sheet consistency. The default cell cap is
+  5,100,000 (100k data rows × 50 columns plus a header), with direct row
+  mapping and fewer initialization copies; a repeatable dense benchmark
+  documents ExcelJS's memory cost.
 - Shift+Space in a data cell selects the row as a cell range when
   `rowSelection` is off (it did nothing before). The name box renders as an
   `<input>` (same `aria-label`) instead of an `<output>`.

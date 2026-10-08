@@ -1,6 +1,6 @@
 // An editable view of an ExcelJS workbook: the grid state of every sheet the
-// user has opened (values, styles, merges, column widths), a per-sheet undo
-// history covering all of it, and export back to .xlsx.
+// user has opened (values, styles, merges, column widths), a shared workbook
+// undo history covering all of it, and export back to .xlsx.
 //
 // Export starts from a copy of the source workbook and writes back only what
 // changed. Everything this package does not model (rich text, hyperlinks,
@@ -15,6 +15,8 @@ import { applyBorderSides, applyStyleEdit, borderSidesForCell, styleHas, type Bo
 import { XLSX_MIME_TYPE } from './exportToXlsx';
 import { readSheetNotes, writeSheetNotes } from './cellNotes';
 import { rebaseFormulaRows, toFileFormula } from './formulaReferences';
+import { cloneWorkbook, editWorkbookStructure } from './workbookStructure';
+import type { StructureAxis } from '@alaarab/ogrid-core/formula';
 import type { IMergedCell, XlsxSelection } from './gridAdapter';
 import {
   cellKey,
@@ -32,7 +34,14 @@ type Op =
   | { t: 'cell'; rowId: number; columnId: string; before: unknown; after: unknown }
   | { t: 'style'; key: string; before: XlsxCellStyle | undefined; after: XlsxCellStyle | undefined }
   | { t: 'merges'; before: IMergedCell[]; after: IMergedCell[] }
-  | { t: 'notes'; before: ICellNote[]; after: ICellNote[] };
+  | { t: 'notes'; before: ICellNote[]; after: ICellNote[] }
+  | { t: 'structure'; before: DocumentSnapshot; after: DocumentSnapshot };
+
+interface DocumentSnapshot {
+  workbook: ExcelJS.Workbook | undefined;
+  sheets: Map<string, MutableSheetState>;
+  extents: Map<string, { rowCount: number; columnCount: number }>;
+}
 
 /** One sheet's live grid state. Read-only for consumers; change it through the document. */
 export interface XlsxSheetState {
@@ -55,7 +64,7 @@ export interface XlsxSheetState {
   readonly rowHeights: ReadonlyMap<number, number>;
   /** Latest formula results reported by the grid's engine, by cellKey. */
   readonly formulaResults: ReadonlyMap<string, unknown>;
-  /** The grid's columns, built once per sheet. */
+  /** The grid's columns, rebuilt after structural edits. */
   readonly columns: IColumnDef<SheetRow>[];
 }
 
@@ -79,8 +88,6 @@ interface MutableSheetState {
   formulaResults: Map<string, unknown>;
   columns: IColumnDef<SheetRow>[];
   columnIndex: Map<string, number>;
-  history: UndoRedoStack<Op>;
-  batchOpen: boolean;
 }
 
 /**
@@ -140,6 +147,11 @@ export class XlsxWorkbookDocument {
   private readonly listeners = new Set<() => void>();
   private versionValue = 0;
   private accessors: Record<string, IGridDataAccessor> | null = null;
+  private editedWorkbook: ExcelJS.Workbook | undefined;
+  private extents = new Map<string, { rowCount: number; columnCount: number }>();
+  private readonly history = new UndoRedoStack<{ sheetName: string; op: Op }>(100);
+  private batchOpen = false;
+  private batchToken = 0;
 
   constructor(workbook: ExcelJS.Workbook, options: SheetToGridDataOptions = {}) {
     this.workbook = workbook;
@@ -172,18 +184,23 @@ export class XlsxWorkbookDocument {
     return this.state(name);
   }
 
-  private state(name: string): MutableSheetState | undefined {
+  /** Current sheet metadata, including structural changes; the input workbook stays untouched. */
+  worksheet(name: string): ExcelJS.Worksheet | undefined {
+    return (this.editedWorkbook ?? this.workbook).getWorksheet(name);
+  }
+
+  private state(name: string, mappedSource?: SheetGridData): MutableSheetState | undefined {
     const existing = this.sheets.get(name);
     if (existing) return existing;
-    const worksheet = this.workbook.getWorksheet(name);
+    const worksheet = this.worksheet(name);
     if (!worksheet) return undefined;
-    const source = sheetToGridData(worksheet, this.options);
+    const source = mappedSource ?? sheetToGridData(worksheet, this.options, this.extents.get(name));
     const sheetNames = new Set(this.sheetNames);
     const functions = createBuiltInFunctions();
     // Engine-evaluable formulas live in the rows as formula text, which the
     // grid's engine follows (formulas + host-owned undo). The rest keep their
     // cached result in the row; export leaves those cells untouched.
-    const rows = source.rows.map((r) => ({ ...r }));
+    const rows = source.rows.slice();
     const formulaResults = new Map<string, unknown>();
     for (const f of source.initialFormulas) {
       const column = source.columns[f.col];
@@ -192,7 +209,8 @@ export class XlsxWorkbookDocument {
       const cached = row[column.columnId];
       if (cached !== undefined && !engineCanEvaluate(f, sheetNames, functions)) continue;
       if (cached !== undefined) formulaResults.set(cellKey(row.__rowIdx, column.columnId), cached);
-      row[column.columnId] = f.formula;
+      if (row === source.rows[f.row]) rows[f.row] = { ...row };
+      (rows[f.row] as SheetRow)[column.columnId] = f.formula;
     }
     const notes = readSheetNotes(worksheet, source);
     const state: MutableSheetState = {
@@ -215,8 +233,6 @@ export class XlsxWorkbookDocument {
       formulaResults,
       columns: source.columns,
       columnIndex: new Map(source.columns.map((c, i) => [c.columnId, i])),
-      history: new UndoRedoStack<Op>(100),
-      batchOpen: false,
     };
     this.sheets.set(name, state);
     return state;
@@ -227,16 +243,18 @@ export class XlsxWorkbookDocument {
   private record(state: MutableSheetState, ops: Op[]): void {
     if (ops.length === 0) return;
     // Edits arriving in the same task (a paste, a fill) are one undo step.
-    if (!state.batchOpen) {
-      state.batchOpen = true;
-      state.history.beginBatch();
+    if (!this.batchOpen) {
+      this.batchOpen = true;
+      this.history.beginBatch();
+      const token = ++this.batchToken;
       queueMicrotask(() => {
-        state.batchOpen = false;
-        state.history.endBatch();
+        if (!this.batchOpen || this.batchToken !== token) return;
+        this.batchOpen = false;
+        this.history.endBatch();
         this.emit();
       });
     }
-    state.history.push(ops);
+    this.history.push(ops.map((op) => ({ sheetName: state.name, op })));
   }
 
   private rowIndexOf(state: MutableSheetState, rowId: RowId): number {
@@ -247,7 +265,13 @@ export class XlsxWorkbookDocument {
   }
 
   private applyOp(state: MutableSheetState, op: Op, direction: 'after' | 'before'): void {
-    if (op.t === 'cell') {
+    if (op.t === 'structure') {
+      const snapshot = op[direction];
+      this.editedWorkbook = snapshot.workbook;
+      this.extents = new Map(snapshot.extents);
+      this.sheets.clear();
+      for (const [name, sheet] of snapshot.sheets) this.sheets.set(name, this.copyState(sheet));
+    } else if (op.t === 'cell') {
       const index = this.rowIndexOf(state, op.rowId);
       const row = state.rows[index];
       if (!row) return;
@@ -413,6 +437,108 @@ export class XlsxWorkbookDocument {
     this.commit(state, [{ t: 'notes', before: state.notes, after: notes }]);
   }
 
+  /** Insert blank data rows before a zero-based grid index (below any promoted header). */
+  insertRows(sheetName: string, index: number, count = 1): void {
+    if (count < 0) throw new RangeError('Count must be nonnegative');
+    this.changeStructure(sheetName, 'row', index, count);
+  }
+
+  /** Delete `count` rows at an index, or an array of data indexes, as one undo step. */
+  deleteRows(sheetName: string, index: number | readonly number[], count = 1): void {
+    if (count < 0) throw new RangeError('Count must be nonnegative');
+    this.deleteStructure(sheetName, 'row', index, count);
+  }
+
+  private deleteStructure(sheetName: string, axis: StructureAxis, index: number | readonly number[], count: number): void {
+    if (typeof index !== 'number') {
+      const indexes = [...new Set(index)].sort((a, b) => b - a);
+      const state = this.state(sheetName);
+      const length = (axis === 'row' ? state?.rows.length : state?.columns.length) ?? 0;
+      if (indexes.some((i) => !Number.isInteger(i) || i < 0 || i >= length)) throw new RangeError('Structure edit is outside the loaded sheet');
+      if (this.batchOpen) { this.batchOpen = false; this.history.endBatch(); }
+      this.history.beginBatch();
+      try {
+        for (let i = 0; i < indexes.length;) {
+          const high = indexes[i] as number;
+          let low = high;
+          while (indexes[i + 1] === low - 1) { low--; i++; }
+          this.changeStructure(sheetName, axis, low, -(high - low + 1));
+          i++;
+        }
+      } finally { this.history.endBatch(); }
+      return;
+    }
+    this.changeStructure(sheetName, axis, index, -count);
+  }
+
+  /** Insert blank worksheet columns before a zero-based column index. */
+  insertColumns(sheetName: string, index: number, count = 1): void {
+    if (count < 0) throw new RangeError('Count must be nonnegative');
+    this.changeStructure(sheetName, 'col', index, count);
+  }
+
+  /** Delete `count` columns at an index, or an array of column indexes, as one undo step. */
+  deleteColumns(sheetName: string, index: number | readonly number[], count = 1): void {
+    if (count < 0) throw new RangeError('Count must be nonnegative');
+    this.deleteStructure(sheetName, 'col', index, count);
+  }
+
+  private copyState(state: MutableSheetState): MutableSheetState {
+    return { ...state, rows: state.rows.slice(), styles: new Map(state.styles), formulaResults: new Map(state.formulaResults) };
+  }
+
+  private snapshot(): DocumentSnapshot {
+    return {
+      workbook: this.editedWorkbook,
+      sheets: new Map([...this.sheets].map(([name, state]) => [name, this.copyState(state)])),
+      extents: new Map(this.extents),
+    };
+  }
+
+  private changeStructure(sheetName: string, axis: StructureAxis, index: number, count: number): void {
+    if (!Number.isInteger(index) || index < 0 || !Number.isInteger(count)) throw new RangeError('Structure edits require integer indexes and counts');
+    if (!count) return;
+    const state = this.state(sheetName);
+    if (!state) return;
+    const length = axis === 'row' ? state.rows.length : state.columns.length;
+    if (index > length || (count < 0 && index - count > length)) throw new RangeError('Structure edit is outside the loaded sheet');
+    const offset = state.source.formatting.headerPromoted ? 1 : 0;
+    const limit = axis === 'row' ? 1_048_576 - offset : 16_384;
+    const worksheet = this.worksheet(sheetName) as ExcelJS.Worksheet;
+    // columnCount only counts cells; property-only columns still move on insert.
+    const fileLength = axis === 'row' ? worksheet.rowCount - offset
+      : Math.max(worksheet.columnCount, worksheet.columns?.length ?? 0);
+    if (count > 0 && Math.max(length, fileLength) + count > limit) throw new RangeError('Structure edit exceeds Excel worksheet limits');
+    if (this.batchOpen) { this.batchOpen = false; this.history.endBatch(); }
+    const before = this.snapshot();
+    const current = cloneWorkbook(this.editedWorkbook ?? this.workbook);
+    for (const sheet of this.sheets.values()) {
+      const ws = current.getWorksheet(sheet.name);
+      if (ws) this.writeSheet(sheet, ws);
+    }
+    const next = editWorkbookStructure(current, sheetName, axis, index + 1 + (axis === 'row' ? offset : 0), count);
+    this.editedWorkbook = next;
+    this.extents.set(sheetName, {
+      rowCount: state.rows.length + offset + (axis === 'row' ? count : 0),
+      columnCount: state.columns.length + (axis === 'col' ? count : 0),
+    });
+    const opened = [...this.sheets.values()];
+    this.sheets.clear();
+    for (const previous of opened) {
+      // Keep header interpretation stable when deleting the first data row or inserting a blank column.
+      const ws = next.getWorksheet(previous.name);
+      if (!ws) continue;
+      const source = sheetToGridData(ws, {
+        ...this.options, headerRow: previous.source.formatting.headerPromoted ? 'header' : 'none',
+      }, this.extents.get(previous.name));
+      if (previous.source.parseTruncated) source.parseTruncated = true;
+      this.state(previous.name, source);
+    }
+    const after = this.snapshot();
+    this.history.push([{ sheetName, op: { t: 'structure', before, after } }]);
+    this.emit();
+  }
+
   /** Record a column resize from the grid (pixels). Not part of undo history, like the grid's own resizes. */
   setColumnWidth(sheetName: string, columnId: string, px: number): void {
     const state = this.state(sheetName);
@@ -455,31 +581,35 @@ export class XlsxWorkbookDocument {
   }
 
   canUndo(sheetName: string): boolean {
-    return this.sheets.get(sheetName)?.history.canUndo ?? false;
+    return this.sheets.has(sheetName) && this.history.canUndo;
   }
 
   canRedo(sheetName: string): boolean {
-    return this.sheets.get(sheetName)?.history.canRedo ?? false;
+    return this.sheets.has(sheetName) && this.history.canRedo;
   }
 
   undo(sheetName: string): void {
     const state = this.sheets.get(sheetName);
     if (!state) return;
-    if (state.batchOpen) { state.batchOpen = false; state.history.endBatch(); }
-    const ops = state.history.undo();
+    if (this.batchOpen) { this.batchOpen = false; this.history.endBatch(); }
+    const ops = this.history.undo();
     if (!ops) return;
-    for (let i = ops.length - 1; i >= 0; i--) this.applyOp(state, ops[i] as Op, 'before');
-    state.rows = state.rows.slice();
+    for (const entry of ops.slice().reverse()) {
+      const owner = this.sheets.get(entry.sheetName);
+      if (owner) { this.applyOp(owner, entry.op, 'before'); owner.rows = owner.rows.slice(); }
+    }
     this.emit();
   }
 
   redo(sheetName: string): void {
     const state = this.sheets.get(sheetName);
     if (!state) return;
-    const ops = state.history.redo();
+    const ops = this.history.redo();
     if (!ops) return;
-    for (const op of ops) this.applyOp(state, op, 'after');
-    state.rows = state.rows.slice();
+    for (const entry of ops) {
+      const owner = this.sheets.get(entry.sheetName);
+      if (owner) { this.applyOp(owner, entry.op, 'after'); owner.rows = owner.rows.slice(); }
+    }
     this.emit();
   }
 
@@ -506,10 +636,10 @@ export class XlsxWorkbookDocument {
             const key = cellKey(dataRow.__rowIdx, column.columnId);
             if (state.formulaResults.has(key)) return state.formulaResults.get(key);
           }
-          return normalizeCellValue(worksheet.findRow(row + 1)?.findCell(col + 1)?.value);
+          return normalizeCellValue(this.worksheet(name)?.findRow(row + 1)?.findCell(col + 1)?.value);
         },
-        getRowCount: () => worksheet.rowCount,
-        getColumnCount: () => worksheet.columnCount,
+        getRowCount: () => this.worksheet(name)?.rowCount ?? 0,
+        getColumnCount: () => this.worksheet(name)?.columnCount ?? 0,
       };
     }
     this.accessors = accessors;
@@ -526,7 +656,7 @@ export class XlsxWorkbookDocument {
    */
   async toWorkbook(): Promise<ExcelJS.Workbook> {
     const out = new ExcelJS.Workbook();
-    await out.xlsx.load(await this.workbook.xlsx.writeBuffer());
+    await out.xlsx.load(await (this.editedWorkbook ?? this.workbook).xlsx.writeBuffer());
     let valuesChanged = false;
     for (const state of this.sheets.values()) {
       const ws = out.getWorksheet(state.name);

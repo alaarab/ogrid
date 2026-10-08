@@ -118,7 +118,7 @@ export interface SheetToGridDataOptions {
   /** Maximum worksheet columns to load (default 1,000). */
   maxCols?: number;
   /**
-   * Maximum rows × columns to map (default 5,000,000). A few-KB xlsx with
+   * Maximum rows × columns to map (default 5,100,000). A few-KB xlsx with
    * one far-away cell has a used range of billions of cells; this keeps the
    * grid from allocating that rectangle. Rows are dropped from the bottom
    * to fit. XLSX parsing itself is bounded only by WorkbookLoadOptions byte checks.
@@ -128,7 +128,7 @@ export interface SheetToGridDataOptions {
 
 export const DEFAULT_MAX_ROWS = 1_048_576;
 export const DEFAULT_MAX_COLS = 1_000;
-export const DEFAULT_MAX_CELLS = 5_000_000;
+export const DEFAULT_MAX_CELLS = 5_100_000;
 export const DEFAULT_MAX_FILE_BYTES = 50 * 1024 * 1024;
 export const DEFAULT_MAX_UNCOMPRESSED_BYTES = 200 * 1024 * 1024;
 
@@ -350,6 +350,8 @@ function parseDelimited(
 export function sheetToGridData(
   sheet: ExcelJS.Worksheet | null | undefined,
   options: SheetToGridDataOptions = {},
+  /** Minimum extent used by the document to retain newly inserted blank rows/columns. */
+  extent?: { rowCount: number; columnCount: number },
 ): SheetGridData {
   if (!sheet) return { columns: [], rows: [], initialFormulas: [], formatting: emptyFormatting() };
 
@@ -368,31 +370,36 @@ export function sheetToGridData(
     });
     if (rowHasValue && rowNumber > usedRows) usedRows = rowNumber;
   });
-  if (!usedCols || !usedRows) return { columns: [], rows: [], initialFormulas: [], formatting: emptyFormatting(sheet) };
+  usedRows = Math.max(usedRows, extent?.rowCount ?? 0);
+  usedCols = Math.max(usedCols, extent?.columnCount ?? 0);
+  if (!usedCols) return { columns: [], rows: [], initialFormulas: [], formatting: emptyFormatting(sheet) };
 
   const maxCols = sanitizeLimit(options.maxCols, DEFAULT_MAX_COLS);
   const maxRows = sanitizeLimit(options.maxRows, DEFAULT_MAX_ROWS);
   const maxCells = sanitizeLimit(options.maxCells, DEFAULT_MAX_CELLS);
   const colCount = Math.min(usedCols, maxCols, maxCells);
-  const rowCount = Math.min(usedRows, maxRows, Math.max(1, Math.floor(maxCells / colCount)));
+  const rowCount = Math.min(usedRows, maxRows, Math.floor(maxCells / colCount));
   const truncated = colCount < usedCols || rowCount < usedRows
     ? { rowCount: usedRows, columnCount: usedCols }
     : undefined;
 
-  // Build raw cell matrix (rowCount × colCount) plus formulas.
-  // ExcelJS uses 1-based row/column indexing; our matrix and the
-  // initialFormulas it emits stay 0-based to match the rest of OGrid.
-  const matrix: unknown[][] = new Array(rowCount);
-  for (let r = 0; r < rowCount; r++) matrix[r] = new Array(colCount).fill('');
+  // Map directly into grid rows, avoiding a second 5-million-cell matrix.
+  const letters = Array.from({ length: colCount }, (_, c) => indexToColumnLetter(c));
+  const mappedRows: SheetRow[] = new Array(rowCount);
+  for (let r = 0; r < rowCount; r++) {
+    const row: SheetRow = { __rowIdx: r };
+    for (const letter of letters) row[letter] = '';
+    mappedRows[r] = row;
+  }
   const initialFormulas: SheetGridData['initialFormulas'] = [];
   sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     if (rowNumber > rowCount) return;
-    const out = matrix[rowNumber - 1] as unknown[];
+    const out = mappedRows[rowNumber - 1] as SheetRow;
     row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
       if (colNumber > colCount) return;
       // Merged-away cells report their master's value; the merge model shows it once.
       if (cell.type === ExcelJS.ValueType.Merge) return;
-      out[colNumber - 1] = readCellValue(cell, colNumber - 1, rowNumber - 1, initialFormulas);
+      out[letters[colNumber - 1] as string] = readCellValue(cell, colNumber - 1, rowNumber - 1, initialFormulas);
     });
   });
 
@@ -401,11 +408,12 @@ export function sheetToGridData(
   // titles. 'none' restores legacy behaviour for callers that want to
   // see all rows as data (e.g. when they strip headers themselves).
   const mode = options.headerRow ?? 'auto';
-  const headerRow = matrix[0] ?? [];
+  const headerRow = letters.map((letter) => mappedRows[0]?.[letter] ?? '');
   const promote =
     mode === 'header' ||
-    (mode === 'auto' && matrix.length > 1 && looksLikeHeaderRow(headerRow));
-  const dataMatrix = promote ? matrix.slice(1) : matrix;
+    (mode === 'auto' && mappedRows.length > 1 && looksLikeHeaderRow(headerRow));
+  const rows = promote ? mappedRows.slice(1) : mappedRows;
+  rows.forEach((row, index) => { row.__rowIdx = index; });
   const headerNames = promote
     ? uniqueHeaderNames(headerRow)
     : null;
@@ -414,7 +422,7 @@ export function sheetToGridData(
   // don't disqualify a column from being numeric/date — only conflicting
   // non-empty cells do. Sample the *data* rows so a string header row
   // doesn't pin every column to 'text'.
-  const sample = Math.min(dataMatrix.length, SAMPLE_SIZE);
+  const sample = Math.min(rows.length, SAMPLE_SIZE);
   const types: ('text' | 'numeric' | 'date' | 'boolean')[] = new Array(colCount).fill('text');
   for (let c = 0; c < colCount; c++) {
     let allNum = true;
@@ -422,7 +430,7 @@ export function sheetToGridData(
     let allBool = true;
     let saw = false;
     for (let r = 0; r < sample; r++) {
-      const v = dataMatrix[r]?.[c];
+      const v = rows[r]?.[letters[c] as string];
       if (v === '' || v === null || v === undefined) continue;
       saw = true;
       if (typeof v !== 'number') allNum = false;
@@ -436,7 +444,7 @@ export function sheetToGridData(
     else if (allBool) types[c] = 'boolean';
   }
 
-  const formatting = readFormatting(sheet, promote, dataMatrix.length, colCount);
+  const formatting = readFormatting(sheet, promote, rows.length, colCount);
 
   // Build columns + rows keyed by letter. An explicit defaultWidth is
   // critical: without it, ogrid sizes columns to fit the widest cell
@@ -462,14 +470,6 @@ export function sheetToGridData(
       // valueGetter omitted — ogrid reads row[columnId] by default.
     });
   }
-
-  const rows: SheetRow[] = dataMatrix.map((arr, rowIdx) => {
-    const obj = { __rowIdx: rowIdx } as SheetRow;
-    for (let c = 0; c < colCount; c++) {
-      obj[indexToColumnLetter(c)] = arr[c];
-    }
-    return obj;
-  });
 
   // Re-index initialFormulas onto the post-strip data. Anything that was
   // on the header row itself is dropped (it no longer exists in `rows`);

@@ -229,12 +229,24 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
     latest.current.onColumnOrderChange?.(next);
   }, [latest, setInternalColumnOrder]);
 
+  const pendingColumnEvents = useRef<IColumnsChangeEvent<T>[]>([]);
+  const batchColumns = useCallback((action: () => void) => {
+    const events: IColumnsChangeEvent<T>[] = [];
+    pendingColumnEvents.current = events;
+    try { action(); } finally { pendingColumnEvents.current = []; }
+    const first = events[0];
+    if (first) latest.current.onColumnsChange?.({
+      ...first, columns: columnsRef.current,
+      ...(events.length > 1 ? { changes: events.map(({ column, index }) => ({ column, index })) } : {}),
+    });
+  }, [latest]);
+
   const putColumn = useCallback((at: number, column: IColumnDef<T>) => {
     const before = flattenColumns(columnsRef.current);
     const next = insertColumnAt(columnsRef.current, at, column as IColumnDef<T> | IColumnGroupDef<T>);
     columnsRef.current = next;
     const event: IColumnsChangeEvent<T> = { type: 'insert', column, index: at, columns: next };
-    latest.current.onColumnsChange?.(event);
+    pendingColumnEvents.current.push(event);
     // A reordered grid shows columns by `columnOrder`: place the new one next to its neighbor there too.
     const order = orderRef.current;
     if (order) {
@@ -248,29 +260,27 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
       else nextOrder.push(column.columnId);
       setOrder(nextOrder);
     }
-  }, [latest, setOrder]);
+  }, [setOrder]);
 
   const takeColumn = useCallback((columnId: string): { column: IColumnDef<T>; index: number } | null => {
     const result = removeColumnById(columnsRef.current, columnId);
     if (!result) return null;
     columnsRef.current = result.columns;
     const column = result.column as IColumnDef<T>;
-    latest.current.onColumnsChange?.({ type: 'delete', column, index: result.index, columns: result.columns });
+    pendingColumnEvents.current.push({ type: 'delete', column, index: result.index, columns: result.columns });
     const order = orderRef.current;
     if (order?.includes(columnId)) setOrder(order.filter((id) => id !== columnId));
     return { column, index: result.index };
-  }, [latest, setOrder]);
+  }, [setOrder]);
 
   const insertColumnsInternal = useCallback((index: number, columns: IColumnDef<T>[]) => {
     const total = flattenColumns(columnsRef.current).length;
     const at = Math.max(0, Math.min(total, Math.trunc(index) || 0));
     const formulas = shiftFormulas([{ axis: 'col', at, count: columns.length }]);
-    columns.forEach((c, i) => {
-      putColumn(at + i, c);
-    });
+    batchColumns(() => columns.forEach((c, i) => { putColumn(at + i, c); }));
     let current = columns.map((column, i) => ({ column, index: at + i }));
     record(
-      () => {
+      () => batchColumns(() => {
         // Right to left, so each recorded index is the column's index before the undo.
         current = columns
           .slice()
@@ -279,13 +289,13 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
           .filter((r): r is { column: IColumnDef<T>; index: number } => r !== null)
           .sort((a, b) => a.index - b.index);
         restoreFormulas(formulas?.before);
-      },
-      () => {
+      }),
+      () => batchColumns(() => {
         for (const { column, index: i } of current) putColumn(i, column);
         restoreFormulas(formulas?.after);
-      },
+      }),
     );
-  }, [shiftFormulas, putColumn, record, takeColumn, restoreFormulas]);
+  }, [shiftFormulas, putColumn, record, takeColumn, restoreFormulas, batchColumns]);
 
   const newColumns = useCallback((count: number): IColumnDef<T>[] => {
     const ids = flattenColumns(columnsRef.current).map((c) => c.columnId);
@@ -327,21 +337,28 @@ export function useOGridStructureEdits<T>(params: UseOGridStructureEditsParams<T
     if (targets.length === 0) return;
     // Right to left, so each shift sees the columns to its left unmoved.
     const formulas = shiftFormulas(targets.map((t) => ({ axis: 'col' as const, at: t.index, count: -1 })));
-    const takeAll = () => targets
-      .map((t) => takeColumn(t.id))
-      .filter((r): r is { column: IColumnDef<T>; index: number } => r !== null);
+    const takeAll = () => {
+      const removed: Array<{ column: IColumnDef<T>; index: number }> = [];
+      batchColumns(() => {
+        for (const t of targets) {
+          const taken = takeColumn(t.id);
+          if (taken) removed.push(taken);
+        }
+      });
+      return removed;
+    };
     let removed = takeAll();
     record(
-      () => {
+      () => batchColumns(() => {
         for (const r of removed.slice().sort((a, b) => a.index - b.index)) putColumn(r.index, r.column);
         restoreFormulas(formulas?.before);
-      },
+      }),
       () => {
         removed = takeAll();
         restoreFormulas(formulas?.after);
       },
     );
-  }, [latest, shiftFormulas, takeColumn, record, putColumn, restoreFormulas]);
+  }, [latest, shiftFormulas, takeColumn, record, putColumn, restoreFormulas, batchColumns]);
 
   const deleteColumn = useCallback((columnId: string) => deleteColumns([columnId]), [deleteColumns]);
 
