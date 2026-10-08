@@ -28,14 +28,14 @@ function Inner() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
       <div className="live-demo__controls">{notes.length} note{notes.length === 1 ? '' : 's'}</div>
       <div style={{ flex: 1, minHeight: 0 }}>
-        <OGrid<Item>
+        <OGrid
           columns={[
             { columnId: 'item', name: 'Item', defaultWidth: 160, sortable: true },
             { columnId: 'qty', name: 'Qty', type: 'numeric', sortable: true },
             { columnId: 'price', name: 'Price', type: 'numeric', sortable: true },
           ]}
           data={rows}
-          getRowId={(r) => r.id}
+          getRowId={(r: Item) => r.id}
           cellNotes={notes}
           onCellNotesChange={setNotes}
           cellNoteAuthor="You"

@@ -49,7 +49,7 @@ export default function MergedCellsDemo() {
           <OGrid
             columns={salesColumns}
             data={salesRows}
-            getRowId={(r) => r.id}
+            getRowId={(r: SalesRow) => r.id}
             mergedCells={mergedCells}
             defaultPageSize={25}
           />
