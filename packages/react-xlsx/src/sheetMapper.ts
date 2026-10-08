@@ -20,6 +20,7 @@ import { adjustFormulaReferences, parseCellRef, tokenize } from '@alaarab/ogrid-
 import { normalizeFormula, rebaseFormulaRows } from './formulaReferences';
 import type { XlsxCellStyle } from './cellStyles';
 import type { IMergedCell } from './gridAdapter';
+import { attachSourceArchive } from './sourceArchive';
 
 /**
  * Output of sheetToGridData. Feeds straight into <OGrid> as
@@ -162,6 +163,9 @@ export async function workbookFromBlob(blob: Blob, options: WorkbookLoadOptions 
     checkZipSizes(buf, sanitizeLimit(options.maxUncompressedBytes, DEFAULT_MAX_UNCOMPRESSED_BYTES));
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buf);
+    const { readSourceArchive } = await import('./ooxmlMedia');
+    const source = await readSourceArchive(buf, wb);
+    if (source) attachSourceArchive(wb, source);
     return wb;
   }
   // Fallback: assume CSV-ish text and count separators outside quotes.
