@@ -32,7 +32,13 @@ export {
   workbookFromBlob,
   sheetToGridData,
   listSheets,
+  cellKey,
+  columnWidthToPx,
+  pxToColumnWidth,
+  isDefaultStyle,
+  DEFAULT_COLUMN_WIDTH_CHARS,
   type SheetGridData,
+  type SheetFormatting,
   type SheetRow,
   type SheetToGridDataOptions,
   type WorkbookLoadOptions,
@@ -49,6 +55,21 @@ export {
   XLSX_MIME_TYPE,
   type XlsxExportOptions,
 } from './exportToXlsx';
+export { XlsxWorkbookDocument, type XlsxSheetState } from './xlsxDocument';
+export { FormatToolbar, type FormatToolbarProps } from './FormatToolbar';
+export { formatWithNumFmt, formatGeneral, isDateFormat, type FormattedValue } from './numFmt';
+export {
+  styleToCss,
+  colorToCss,
+  applyStyleEdit,
+  themePaletteOf,
+  NUMBER_FORMAT_PRESETS,
+  DEFAULT_THEME_PALETTE,
+  type XlsxCellStyle,
+  type StyleEdit,
+  type ThemePalette,
+} from './cellStyles';
+export { readSelection, type IMergedCell, type XlsxSelection } from './gridAdapter';
 
 export interface MountOptions {
   /** Pre-parsed workbook (use this OR blob, not both). */
@@ -63,6 +84,14 @@ export interface MountOptions {
   headerRow?: 'auto' | 'header' | 'none';
   /** Load limits for untrusted files; see {@link XlsxWorkbookGridProps.limits}. */
   limits?: XlsxWorkbookGridProps['limits'];
+  /** Allow cell editing. Defaults to false. */
+  editable?: boolean;
+  /** Show the formatting toolbar. Defaults to `editable`. */
+  toolbar?: boolean;
+  /** Toolbar Export button file name; omit to hide the button. */
+  exportFileName?: string;
+  /** Receives the editable document (for `await doc.toBlob()`). */
+  onDocument?: XlsxWorkbookGridProps['onDocument'];
 }
 
 const mountedRoots = new WeakMap<Element, { root: Root; pendingUnmount: boolean; generation: number }>();
