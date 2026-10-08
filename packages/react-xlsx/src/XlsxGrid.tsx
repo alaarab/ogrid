@@ -4,10 +4,10 @@
 // styles, merges, undo) lives in an XlsxWorkbookDocument so it survives
 // sheet switches and can be exported.
 
-import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type ExcelJS from 'exceljs';
-import { OGrid, type IOGridProps, type ICellValueChangedEvent } from '@alaarab/ogrid-react-radix';
-import type { ICellNote, IColumnDef } from '@alaarab/ogrid-core';
+import { OGrid, type IOGridProps, type ICellValueChangedEvent, type IColumnsChangeEvent } from '@alaarab/ogrid-react-radix';
+import type { ICellNote, IColumnDef, IRowsChangeEvent } from '@alaarab/ogrid-core';
 import type { IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { styleToCss, themePaletteOf, type CssStyle, type ThemePalette, type XlsxCellStyle } from './cellStyles';
 import { conditionalFormatsOf } from './conditionalFormats';
@@ -37,12 +37,24 @@ export interface XlsxGridProps {
    * When a sheet exceeds them a notice above the grid says what was cut.
    */
   limits?: Omit<WorkbookLoadOptions, 'headerRow'>;
+  /** Called when the displayed sheet is limited (including CSV parser limits). */
+  onTruncated?: (notice: XlsxTruncationNotice) => void;
   /** Allow cell editing (values and formulas). Defaults to false (read-only preview). */
   editable?: boolean;
   /** Show the formatting toolbar. Defaults to `editable`. */
   toolbar?: boolean;
   /** When set, the toolbar shows an Export button that downloads the workbook under this name. */
   exportFileName?: string;
+}
+
+export interface XlsxTruncationNotice {
+  sheetName: string;
+  loadedRows: number;
+  loadedColumns: number;
+  /** Full worksheet extent, if known; CSV parsing can stop before it is known. */
+  rowCount?: number;
+  columnCount?: number;
+  parseTruncated: boolean;
 }
 
 /**
@@ -157,6 +169,7 @@ export function XlsxGrid({
   density = 'compact',
   headerRow,
   limits,
+  onTruncated,
   editable = false,
   toolbar,
   exportFileName,
@@ -171,16 +184,26 @@ export function XlsxGrid({
   const doc = (documentProp ?? ownDocument) as XlsxWorkbookDocument;
   useSyncExternalStore(doc.subscribe, doc.getVersion, doc.getVersion);
   const state = doc.sheet(sheetName);
+  const onTruncatedRef = useRef(onTruncated);
+  onTruncatedRef.current = onTruncated;
+  const sourceForNotice = state?.source;
+  useEffect(() => {
+    if (!sourceForNotice || (!sourceForNotice.truncated && !sourceForNotice.parseTruncated)) return;
+    onTruncatedRef.current?.({
+      sheetName, loadedRows: sourceForNotice.rows.length, loadedColumns: sourceForNotice.columns.length,
+      ...sourceForNotice.truncated, parseTruncated: sourceForNotice.parseTruncated === true,
+    });
+  }, [sourceForNotice, sheetName]);
   const palette = useMemo(() => themePaletteOf(workbook), [workbook]);
   const columns = useStyledColumns(state, palette, editable);
   const sheetSource = state?.source;
   const conditionalFormats = useMemo(
-    () => sheetSource && conditionalFormatsOf(workbook.getWorksheet(sheetName), {
+    () => sheetSource && conditionalFormatsOf(doc.worksheet(sheetName), {
       headerPromoted: sheetSource.formatting.headerPromoted,
       columnCount: sheetSource.columns.length,
       rowCount: sheetSource.rows.length,
     }, palette),
-    [workbook, sheetName, sheetSource, palette],
+    [doc, sheetName, sheetSource, palette],
   );
   const sheets = useMemo(() => doc.sheetAccessors(), [doc]);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -213,6 +236,16 @@ export function XlsxGrid({
   }, [doc, sheetName]);
   const onFormulaRecalc = useCallback((r: IRecalcResult) => doc.recordFormulaResults(sheetName, r), [doc, sheetName]);
   const onCellNotesChange = useCallback((notes: ICellNote[]) => doc.setNotes(sheetName, notes), [doc, sheetName]);
+  const blankRowId = useRef(-1);
+  const createRow = useCallback((): SheetRow => ({ __rowIdx: blankRowId.current-- }), []);
+  const onRowsChange = useCallback((event: IRowsChangeEvent<SheetRow>) => {
+    if (event.type === 'insert') doc.insertRows(sheetName, event.indexes[0] ?? 0, event.rows.length);
+    else doc.deleteRows(sheetName, event.indexes);
+  }, [doc, sheetName]);
+  const onColumnsChange = useCallback((event: IColumnsChangeEvent<SheetRow>) => {
+    if (event.type === 'insert') doc.insertColumns(sheetName, event.index, event.changes?.length ?? 1);
+    else doc.deleteColumns(sheetName, event.changes?.map((change) => change.index) ?? event.index);
+  }, [doc, sheetName]);
   const onColumnResized = useCallback((columnId: string, width: number) => doc.setColumnWidth(sheetName, columnId, width), [doc, sheetName]);
   const getSelection = useCallback(
     () => readSelection(wrapperRef.current, (attr) => {
@@ -258,7 +291,8 @@ export function XlsxGrid({
     sheets,
     onFormulaRecalc,
     editable,
-    ...(editable ? { onCellValueChanged } : {}),
+    allowStructureEdits: editable,
+    ...(editable ? { onCellValueChanged, onRowsChange, onColumnsChange, createRow } : {}),
     onUndo,
     onRedo,
     canUndo: doc.canUndo(sheetName),

@@ -22,6 +22,7 @@ export type XlsxWorkbookGridProps = Source & {
   headerRow?: SheetToGridDataOptions['headerRow'];
   /** Per-sheet load limits; see {@link XlsxGridProps.limits}. */
   limits?: XlsxGridProps['limits'];
+  onTruncated?: XlsxGridProps['onTruncated'];
   /** Allow cell editing. Defaults to false (read-only preview). */
   editable?: boolean;
   /** Show the formatting toolbar. Defaults to `editable`. */
@@ -38,7 +39,7 @@ export type XlsxWorkbookGridProps = Source & {
 let workbookGridInstanceCounter = 0;
 
 export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
-  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits, editable, toolbar, exportFileName, onDocument } = props;
+  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits, onTruncated, editable, toolbar, exportFileName, onDocument } = props;
   const sourceBlob = 'blob' in props ? props.blob : null;
   const sourceWorkbook = 'workbook' in props ? props.workbook : null;
   const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(sourceWorkbook);
@@ -171,6 +172,7 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
           density={density}
           headerRow={headerRow}
           limits={limits}
+          onTruncated={onTruncated}
           editable={editable}
           toolbar={toolbar}
           exportFileName={exportFileName}

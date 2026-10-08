@@ -26,7 +26,7 @@ import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type ExcelJS from 'exceljs';
 import { XlsxWorkbookGrid, type XlsxWorkbookGridProps } from './XlsxWorkbookGrid';
-export { XlsxGrid, type XlsxGridProps } from './XlsxGrid';
+export { XlsxGrid, type XlsxGridProps, type XlsxTruncationNotice } from './XlsxGrid';
 export { XlsxWorkbookGrid, type XlsxWorkbookGridProps } from './XlsxWorkbookGrid';
 export {
   workbookFromBlob,
@@ -91,6 +91,7 @@ export interface MountOptions {
   headerRow?: 'auto' | 'header' | 'none';
   /** Load limits for untrusted files; see {@link XlsxWorkbookGridProps.limits}. */
   limits?: XlsxWorkbookGridProps['limits'];
+  onTruncated?: XlsxWorkbookGridProps['onTruncated'];
   /** Allow cell editing. Defaults to false. */
   editable?: boolean;
   /** Show the formatting toolbar. Defaults to `editable`. */

@@ -309,6 +309,25 @@ export function createStructureEditTests(OGrid: OGridComponent): void {
   });
 
   describe('structure menus (allowStructureEdits)', () => {
+    it.each(['Insert 2 columns left', 'Insert 2 columns right', 'Delete 2 columns'])('%s delivers the complete action and undoes/redoes in one step', async (label) => {
+      const onColumnsChange = jest.fn();
+      const { container } = renderGrid({ allowStructureEdits: true, cellReferences: true }, { onColumnsChange });
+      fireEvent.pointerDown(container.querySelector('thead [data-col-header-index="1"]') as HTMLElement, { button: 0 });
+      fireEvent.pointerDown(container.querySelector('thead [data-col-header-index="2"]') as HTMLElement, { button: 0, shiftKey: true });
+      fireEvent.contextMenu(td(container, 1, 'qty').querySelector('[data-row-index]') as HTMLElement);
+      fireEvent.click(await screen.findByText(label));
+      const changed = label.startsWith('Delete') ? ['name', 'total'] : label.endsWith('left')
+        ? ['name', 'column1', 'column2', 'qty', 'price', 'total']
+        : ['name', 'qty', 'price', 'column1', 'column2', 'total'];
+      expect(headerIds(container)).toEqual(changed);
+      expect(onColumnsChange).toHaveBeenCalledTimes(1);
+      expect(onColumnsChange.mock.calls[0]?.[0].columns.map((c: IColumnDef<Row>) => c.columnId)).toEqual(changed);
+      undo(container);
+      expect(headerIds(container)).toEqual(['name', 'qty', 'price', 'total']);
+      redo(container);
+      expect(headerIds(container)).toEqual(changed);
+    });
+
     it('the context menu has no structure items without allowStructureEdits', async () => {
       const { container } = renderGrid();
       await openContextMenu(container, 2, 'name');

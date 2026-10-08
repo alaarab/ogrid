@@ -79,15 +79,17 @@ export function formatAddress(addr: ICellAddress): string {
  * @param formula   The formula string (e.g. "=A1+B1")
  * @param colDelta  Column offset to apply to relative column references
  * @param rowDelta  Row offset to apply to relative row references
+ * @param strict    Throw when tokenization fails, for callers that must reject an unsafe translation.
  * @returns The adjusted formula string. Out-of-bounds references become "#REF!".
  */
-export function adjustFormulaReferences(formula: string, colDelta: number, rowDelta: number): string {
+export function adjustFormulaReferences(formula: string, colDelta: number, rowDelta: number, strict = false): string {
   if (colDelta === 0 && rowDelta === 0) return formula;
 
   let tokens: Token[];
   try {
     tokens = tokenize(formula.startsWith('=') ? formula.slice(1) : formula);
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     // Malformed formula  -  leave it untouched rather than corrupt it.
     return formula;
   }

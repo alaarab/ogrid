@@ -82,6 +82,7 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 - Fill handle: drag to fill cells (Excel-style)
 - Undo / redo: full edit history with Ctrl+Z / Ctrl+Y, batch operation support
 - Premium inputs: optional calendar date picker and more via `@alaarab/ogrid-react-inputs`
+- Optional XLSX editor: import/export workbooks, insert/delete rows and columns with shifted formulas and metadata, and virtualize large sheets with visible load limits (`@alaarab/ogrid-react-xlsx`)
 
 **Selection & Navigation**
 - Spreadsheet selection: click-and-drag range selection with active cell highlight
@@ -128,7 +129,10 @@ Core owns types and pure TypeScript utilities with zero dependencies. The React 
 |-------|------|
 | React + Radix | 54 KB |
 | React + Fluent | 55 KB |
+| Self-contained XLSX browser bundle (includes React and ExcelJS) | 554 KB |
 | AG Grid Community (comparison) | ~339 KB |
+
+The optional XLSX packages measure 459.30 kB (`react-xlsx`, including dependencies) and 452.43 kB (`react-xlsx-browser`) with the size gate's Brotli compression. Load the XLSX editor route lazily to keep it out of an app's initial bundle. See [XLSX limits and measurements](packages/docs/docs/features/xlsx-import.mdx#large-sheets) for the memory cost of large workbooks.
 
 ## Quick Start
 

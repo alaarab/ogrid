@@ -71,8 +71,9 @@ function SingleSheet({ file }: { file: Blob }) {
 | `density` | `'compact' \| 'normal' \| 'comfortable'` | `'compact'` | Row height. |
 | `onSheetChange` | `(name: string) => void` | — | Fired when the user clicks a sheet tab. |
 | `headerRow` | `'auto' \| 'header' \| 'none'` | `'auto'` | Whether to promote row 1 to the header. `'auto'` detects strings-only top rows; `'header'` forces it; `'none'` uses A/B/C letters. |
-| `limits` | `{ maxRows?, maxCols?, maxCells? }` | 1,048,576 rows / 1,000 cols / 5,000,000 cells | Load caps per sheet. A small file can declare a huge used range; anything past the caps is dropped and a notice is shown above the grid. |
-| `editable` | `boolean` | `false` | Allow editing values and formulas. Off, the grid is a read-only preview. |
+| `limits` | `{ maxRows?, maxCols?, maxCells?, maxFileBytes?, maxUncompressedBytes? }` | 1,048,576 rows / 1,000 cols / 5,100,000 cells; 50 MiB file / 200 MiB inflated ZIP | Per-sheet mapping caps and file parsing checks. A notice shows when mapping or CSV parsing is limited. |
+| `onTruncated` | `(notice: XlsxTruncationNotice) => void` | — | Reports the displayed sheet name, loaded row/column counts, full extent when known, and `parseTruncated` for CSV. |
+| `editable` | `boolean` | `false` | Allow editing values, formulas, rows and columns through the grid menus. Off, the grid is a read-only preview. |
 | `toolbar` | `boolean` | `editable` | Show the formatting toolbar above the grid. |
 | `exportFileName` | `string` | — | Adds an **Export .xlsx** button to the toolbar that downloads the edited workbook under this name. |
 | `onDocument` | `(doc: XlsxWorkbookDocument) => void` | — | Receives the editable document once the workbook loads. Keep it to export from your own UI. |
@@ -99,9 +100,18 @@ function Editor({ file }: { file: Blob }) {
 }
 ```
 
-With `editable`, cells take values and formulas (`=SUM(B1:B3)`; typed numbers become numbers, as in Excel). The toolbar applies to the selected range: bold, italic, underline, strikethrough, fill color, font color, font family, font size (8–72), a borders menu (all, outside, inside, top, bottom, left, right or none, with line style and color), left/center/right alignment, a number format menu (General, Number, Currency, Percent, Date), and merge/unmerge. The cell context menu also has Freeze panes / Freeze top row / Freeze first column / Unfreeze panes. Edits and formatting share one undo history per sheet (Ctrl+Z / Ctrl+Y or the toolbar buttons); edits made in one go, like a paste, undo as one step. Switching sheet tabs keeps each sheet's edits.
+With `editable`, cells take values and formulas (`=SUM(B1:B3)`; typed numbers become numbers, as in Excel). Cell and column menus insert and delete rows or columns. The toolbar applies to the selected range: bold, italic, underline, strikethrough, fill color, font color, font family, font size (8–72), a borders menu (all, outside, inside, top, bottom, left, right or none, with line style and color), left/center/right alignment, a number format menu (General, Number, Currency, Percent, Date), and merge/unmerge. The cell context menu also has Freeze panes / Freeze top row / Freeze first column / Unfreeze panes. Edits, formatting and structure changes share one chronological workbook undo history (Ctrl+Z / Ctrl+Y or the toolbar buttons). Undo can revert a change on another sheet; this keeps cross-sheet references consistent. Edits made in one go, like a paste, undo as one step. Switching sheet tabs keeps each sheet's edits.
 
-`XlsxWorkbookDocument` is the editable model behind the grid. Build one yourself (`new XlsxWorkbookDocument(workbook, { headerRow })`) to drive edits from code: `setCellValues`, `applyStyle`, `mergeCells`, `unmergeCells`, `undo`, `redo`, then `toWorkbook()` / `toBlob()` / `download()`.
+`XlsxWorkbookDocument` is the editable model behind the grid. Build one yourself (`new XlsxWorkbookDocument(workbook, { headerRow })`) to drive edits from code: `setCellValues`, `applyStyle`, `mergeCells`, `unmergeCells`, `insertRows`, `deleteRows`, `insertColumns`, `deleteColumns`, `undo`, `redo`, then `toWorkbook()` / `toBlob()` / `download()`.
+
+```ts
+doc.insertRows('Orders', 0, 2);    // two blank data rows below a promoted header
+doc.deleteRows('Orders', [1, 3]); // noncontiguous data indexes, one undo step
+doc.insertColumns('Orders', 2);   // blank column before C
+doc.deleteColumns('Orders', 2, 1);
+```
+
+Indexes are zero-based grid positions. Inserted rows and columns start blank, with default formatting. Existing cells, styles, notes, hyperlinks, merges, validation coverage, conditional-format ranges, heights, widths, hidden state and frozen boundaries move with the edit. Local and cross-sheet A1 references (absolute and relative), whole-row/column references and defined range names shift, including on unopened sheets. Deleted references become `#REF!`; partially deleted ranges shrink. A defined range name whose entire range is deleted is removed because ExcelJS cannot retain an error-valued name. Shared formulas expand into individual formulas. The input workbook stays unchanged.
 
 Grid formulas count rows under the promoted header, so with a header row `B1` in the grid is `B2` in Excel. Export translates formulas back to sheet coordinates and adds the `_xlfn.` prefix Excel requires for newer functions such as `CONCAT` and `XLOOKUP`.
 
@@ -112,6 +122,7 @@ Export starts from a copy of the source workbook and writes back only what chang
 | Feature | Shown in the grid | Editable | Saved on export |
 |---|---|---|---|
 | Values (numbers, text, dates, booleans) | Yes | Yes | Yes |
+| Row and column insertion/deletion | Yes | Cell and column menus; document API | Yes, including shifted references and worksheet metadata |
 | Formulas, including cross-sheet references | Yes, evaluated live | Yes | Yes, with the latest result; Excel recalculates on open after edits |
 | Formulas the engine can't evaluate (unknown functions, references into the promoted header row) | Cached result | Overwrite only | Yes, original formula unchanged |
 | Font: bold, italic, underline, strikethrough, color, size, family | Yes | Bold, italic, underline, color, size and family | Yes |
@@ -124,13 +135,16 @@ Export starts from a copy of the source workbook and writes back only what chang
 | Other style properties (protection, text rotation, …) | No | No | Yes, kept when a cell's style is edited |
 | Column widths | Yes | Yes (resize) | Yes |
 | Hidden columns | Hidden | No | Yes |
-| Row heights | No, grid rows are uniform | No | Yes |
-| Merged cells | Pending the grid's `mergedCells` support | Merge / unmerge | Yes |
-| Frozen panes | Frozen rows and columns shown | Freeze via the cell context menu | Yes, as a frozen `ws.views` entry |
+| Row heights | Yes, scaled from sheet heights | Yes (resize) | Yes; shift with rows |
+| Merged cells | Yes | Merge / unmerge | Yes; shift, expand or shrink with structure edits |
+| Frozen panes | Frozen rows and columns shown | Freeze via the cell context menu | Yes; boundaries shift with structure edits |
 | List data validation | Dropdown editor when one list rule covers every loaded row of a column | No | Yes, every validation kept |
 | Other data validation (number, date, length, custom) | No | No | Yes |
 | Every sheet, in order, with names and tab colors | Tabs with color | No | Yes |
-| Rich text, hyperlinks, comments, conditional formatting, defined names, print setup, images | Rich text and hyperlinks as plain text | Overwriting replaces with plain text | Yes, when not edited |
+| Cell notes | Yes | Yes | Yes; shift with their cells |
+| Conditional formatting | Supported rules render in the grid | No | Yes; ranges and rule formulas shift |
+| Defined range names | Used by the workbook; named formulas show cached results | No | Yes; ranges shift |
+| Rich text, hyperlinks, print setup, images | Rich text and hyperlinks as plain text | Overwriting replaces with plain text | ExcelJS-supported content kept; cell hyperlinks shift |
 | Header row (row 1) when promoted to column names | As column headers | No | Yes, unchanged |
 
 Known gaps:
@@ -140,11 +154,28 @@ Known gaps:
 - Sorting a column sorts formula cells by their formula text, not their result.
 - Text that starts with `=` in the source file is treated as a formula.
 - Sheets cut down by `limits` save the loaded part's edits; the rest of the sheet is kept as it was.
+- Structural edits also move the unloaded part of a truncated sheet, but the grid remains subject to its load caps. Structured table references, table extents, 3D references and drawing/chart anchors are not structurally rewritten. Use Excel for structural edits in workbooks that depend on these features.
+- XLSX parsing, export and structural snapshots use ExcelJS's full in-memory workbook. Virtual scrolling bounds rendered rows, not workbook memory. Structural undo retains workbook snapshots and can be expensive on dense sheets.
 - Excel's locale short date (`m/d/yyyy`, built-in format 14) displays as `YYYY-MM-DD`. Other number formats render in en-US style.
 
 ### Untrusted files
 
 Only populated cells are read, and each sheet is capped by `limits`. `sheetToGridData(sheet, { maxRows, maxCols, maxCells })` applies the same caps and returns `truncated: { rowCount, columnCount }` (the full size) when it cut the sheet.
+
+### Large sheets
+
+The default cell cap allows 100,000 data rows × 50 columns plus a header. Rows are virtualized without pagination; sheets wider than 100 columns also virtualize columns. Mapping builds grid rows directly rather than allocating an intermediate cell matrix. The document copies only formula-bearing rows when it initializes editable state.
+
+Limits describe the mapped rectangle, including blank cells between populated cells and the promoted header. A file with one far-away cell can therefore hit a cap. ZIP byte checks happen before ExcelJS parses, but ExcelJS parsing is not streaming. Dense files with long strings or many styles may require more memory and may exceed the 200 MiB uncompressed-byte default even when their dimensions fit. Lower the limits for mobile or memory-constrained hosts.
+
+Run the repeatable dense numeric benchmark with `bun packages/react-xlsx/scripts/benchmark-large-sheet.mjs`. The unit suite separately opens a real sparse 100k × 50 `.xlsx`, verifies the last cell and full dimensions, and guards mapping against accidental quadratic work.
+
+Measured on Linux x64 with Bun 1.4.0 and ExcelJS 4.4.0: a dense numeric 100k × 50 file was 14.06 MiB. Opening it in a fresh process took 33.6 seconds to parse and 3.37 seconds to initialize the editable document, with peak RSS of 3,900 MiB. These are one machine's measurements under shared load, not browser guarantees; formula-heavy or styled files can cost more. To separate opening from fixture creation:
+
+```bash
+bun packages/react-xlsx/scripts/benchmark-large-sheet.mjs --write /tmp/large.xlsx
+bun packages/react-xlsx/scripts/benchmark-large-sheet.mjs --read /tmp/large.xlsx
+```
 
 `@alaarab/ogrid-react-xlsx` requires React 18 or 19.
 
