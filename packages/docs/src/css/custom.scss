@@ -340,6 +340,39 @@ table[class*='__dataTable'] {
   contain: layout style;
 }
 
+/* Control row above a demo grid (API buttons, readouts) */
+.live-demo__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 0;
+  font-size: 0.8rem;
+  color: var(--ogrid-fg-secondary);
+
+  button {
+    padding: 3px 10px;
+    font-family: var(--ifm-font-family-monospace);
+    font-size: 0.75rem;
+    color: var(--ogrid-fg);
+    background: var(--ogrid-header-bg);
+    border: 1px solid var(--ogrid-border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover {
+      border-color: var(--ogrid-accent);
+      background: var(--ogrid-hover-bg);
+    }
+  }
+}
+
+.live-demo__readout {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ogrid-accent);
+}
+
 /* ── Grid Skeleton / Loading State ── */
 @keyframes skeleton-shimmer {
   0% { background-position: -200% center; }
