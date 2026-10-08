@@ -1,3 +1,4 @@
+import { resolveReference } from '../references';
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
 import { asArray, checkArraySize } from '../arrays';
 import { FormulaError } from '../types';
@@ -14,7 +15,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const refArg = args[0];
+      const refArg = resolveReference(args[0], context);
       if (refArg === undefined) {
         return new FormulaError('#REF!', 'INDIRECT: missing reference');
       }
@@ -57,7 +58,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
       let baseCol: number;
       let baseRow: number;
 
-      const refArg = args[0];
+      const refArg = resolveReference(args[0], context);
       if (refArg !== undefined && refArg.kind === 'cellRef') {
         baseCol = refArg.address.col;
         baseRow = refArg.address.row;
@@ -209,7 +210,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 0,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const arg = args[0];
+      const arg = resolveReference(args[0], context);
       if (arg === undefined) {
         return (context.currentCell?.row ?? 0) + 1;
       }
@@ -242,7 +243,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 0,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const arg = args[0];
+      const arg = resolveReference(args[0], context);
       if (arg === undefined) {
         return (context.currentCell?.col ?? 0) + 1;
       }
@@ -274,7 +275,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const arg = args[0];
+      const arg = resolveReference(args[0], context);
       if (arg !== undefined && arg.kind === 'range') {
         return Math.abs(arg.end.row - arg.start.row) + 1;
       }
@@ -295,7 +296,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const arg = args[0];
+      const arg = resolveReference(args[0], context);
       if (arg !== undefined && arg.kind === 'range') {
         return Math.abs(arg.end.col - arg.start.col) + 1;
       }
@@ -316,11 +317,11 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
-      const array1Arg = args[0];
+      const array1Arg = resolveReference(args[0], context);
       if (array1Arg === undefined || array1Arg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'MMULT: array1 must be a range');
       }
-      const array2Arg = args[1];
+      const array2Arg = resolveReference(args[1], context);
       if (array2Arg === undefined || array2Arg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'MMULT: array2 must be a range');
       }
@@ -356,7 +357,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
-      const arrayArg = args[0];
+      const arrayArg = resolveReference(args[0], context);
       if (arrayArg === undefined || arrayArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'MDETERM: argument must be a range');
       }
@@ -393,7 +394,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
-      const arrayArg = args[0];
+      const arrayArg = resolveReference(args[0], context);
       if (arrayArg === undefined || arrayArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'MINVERSE: argument must be a range');
       }

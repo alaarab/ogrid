@@ -1,10 +1,12 @@
+import { resolveReference } from '../references';
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode, ICellAddress } from '../types';
 import { FormulaError } from '../types';
 import { wildcard } from '../wildcard';
 import { toNumber, compareValues, evalArg } from '../evaluator';
 
 /** A reference argument's bounds, or undefined when the argument isn't a reference. */
-function referenceBounds(arg: ASTNode | undefined): { start: ICellAddress; end: ICellAddress; rows: number; cols: number } | undefined {
+function referenceBounds(node: ASTNode | undefined, context: IFormulaContext): { start: ICellAddress; end: ICellAddress; rows: number; cols: number } | undefined {
+  const arg = resolveReference(node, context);
   if (arg?.kind === 'cellRef') return { start: arg.address, end: arg.address, rows: 1, cols: 1 };
   if (arg?.kind !== 'range') return undefined;
   const start = { ...arg.start, row: Math.min(arg.start.row, arg.end.row), col: Math.min(arg.start.col, arg.end.col) };
@@ -37,9 +39,9 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       if (rawLookup instanceof FormulaError) return rawLookup;
       const lookupValue = lookupKey(rawLookup ?? 0);
       if (lookupValue instanceof FormulaError) return lookupValue;
-      const source = referenceBounds(args[1]);
+      const source = referenceBounds(args[1], context);
       if (!source) return new FormulaError('#VALUE!', 'LOOKUP lookup_vector must be a reference');
-      const resultRef = args.length >= 3 ? referenceBounds(args[2]) : undefined;
+      const resultRef = args.length >= 3 ? referenceBounds(args[2], context) : undefined;
       if (args.length >= 3 && !resultRef) return new FormulaError('#VALUE!', 'LOOKUP result_vector must be a reference');
       if (resultRef && resultRef.rows > 1 && resultRef.cols > 1) return new FormulaError('#N/A', 'LOOKUP result_vector must be one row or column');
 
@@ -77,7 +79,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       if (rawLookup instanceof FormulaError) return rawLookup;
       const lookupValue = lookupKey(rawLookup ?? 0);
       if (lookupValue instanceof FormulaError) return lookupValue;
-      const source = referenceBounds(args[1]);
+      const source = referenceBounds(args[1], context);
       if (!source) return new FormulaError('#VALUE!', 'XMATCH lookup_array must be a reference');
       if (source.rows > 1 && source.cols > 1) return new FormulaError('#VALUE!', 'XMATCH lookup_array must be one row or column');
       const modes: number[] = [];
@@ -126,7 +128,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
     maxArgs: 4,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const lookupArg = args[0];
-      const tableArg = args[1];
+      const tableArg = resolveReference(args[1], context);
       const colArg = args[2];
       if (lookupArg === undefined || colArg === undefined) {
         return new FormulaError('#VALUE!', 'VLOOKUP requires lookup_value, table_array, and col_index');
@@ -208,7 +210,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       // Arg 0: range
-      const rangeArg = args[0];
+      const rangeArg = resolveReference(args[0], context);
       if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'INDEX first argument must be a range');
       }
@@ -239,7 +241,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       const cols = Math.abs(rangeArg.end.col - rangeArg.start.col) + 1;
       if (Math.trunc(rowNum) === 0 || Math.trunc(colNum) === 0) {
         if (rowNum < 0 || rowNum > rows || colNum < 0 || colNum > cols) return new FormulaError('#REF!', 'INDEX out of bounds');
-        const data = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
+        const data = (context.getArrayRangeValues ?? context.getRangeValues)({ start: rangeArg.start, end: rangeArg.end });
         const selected = rowNum === 0 ? data : [data[Math.trunc(rowNum) - 1] ?? []];
         return colNum === 0 ? selected : selected.map(row => [row[Math.trunc(colNum) - 1]]);
       }
@@ -256,7 +258,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
     maxArgs: 4,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const lookupArg = args[0];
-      const tableArg = args[1];
+      const tableArg = resolveReference(args[1], context);
       const rowIdxArg = args[2];
       if (lookupArg === undefined || rowIdxArg === undefined) {
         return new FormulaError('#VALUE!', 'HLOOKUP requires lookup_value, table_array, and row_index');
@@ -327,7 +329,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       const lookupValue = evaluator.evaluate(lookupArg, context);
       if (lookupValue instanceof FormulaError) return lookupValue;
       // lookup_array
-      const lookupArrayArg = args[1];
+      const lookupArrayArg = resolveReference(args[1], context);
       if (lookupArrayArg === undefined || lookupArrayArg.kind !== 'range' && lookupArrayArg.kind !== 'spillRef') {
         return new FormulaError('#VALUE!', 'XLOOKUP lookup_array must be a range');
       }
@@ -335,7 +337,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       if (lookupResult instanceof FormulaError) return lookupResult;
       const lookupArray = lookupResult as unknown[][];
       // return_array
-      const returnArrayArg = args[2];
+      const returnArrayArg = resolveReference(args[2], context);
       if (returnArrayArg === undefined || returnArrayArg.kind !== 'range' && returnArrayArg.kind !== 'spillRef') {
         return new FormulaError('#VALUE!', 'XLOOKUP return_array must be a range');
       }
@@ -436,7 +438,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       if (lookupValue instanceof FormulaError) return lookupValue;
 
       // Arg 1: lookup range (must be a RangeNode, should be 1D)
-      const rangeArg = args[1];
+      const rangeArg = resolveReference(args[1], context);
       if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'MATCH lookup_array must be a range');
       }

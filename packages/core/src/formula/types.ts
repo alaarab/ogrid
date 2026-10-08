@@ -192,6 +192,8 @@ export interface IFormulaContext {
   now(): Date;
   /** Resolve the array owned by a spill anchor, or #REF! when it has no spill. */
   getSpillValues?(address: ICellAddress): unknown;
+  /** Resolve a spill anchor to a sheet-qualified range, preserving reference geometry. */
+  getSpillRange?(address: ICellAddress): ICellRange | FormulaError;
   /** Address of the formula being evaluated, when supplied by the engine. */
   currentCell?: ICellAddress;
   /** Optional shared work budget for built-in functions. */
@@ -279,6 +281,10 @@ export interface IGridDataAccessor {
   getCellValue(col: number, row: number): unknown;
   getRowCount(): number;
   getColumnCount(): number;
+  /** True for every cell in a merged block, including its master. */
+  isCellMerged?(col: number, row: number): boolean;
+  /** Successful spill at this anchor, in this accessor's sheet coordinates. */
+  getSpillRange?(col: number, row: number): ISpillRange | undefined;
   /** Optional: whether a sheet row is hidden. SUBTOTAL 101-111 leave hidden rows out. */
   isRowHidden?(row: number): boolean;
 }

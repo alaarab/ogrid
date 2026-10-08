@@ -12,6 +12,7 @@ import type {
 } from './types';
 import { FormulaError } from './types';
 import { asArray, mapArrays } from './arrays';
+import { resolveReference } from './references';
 import { dateToSerial } from './functions/date/shared';
 import { MAX_FORMULA_DEPTH, MAX_FORMULA_STEPS, MAX_RANGE_CELLS, MAX_TEXT_LENGTH } from './limits';
 
@@ -337,6 +338,14 @@ export class FormulaEvaluator implements IEvaluator {
     if (ELEMENTWISE_FUNCTIONS.has(name)) {
       const values = args.map(arg => this.evaluate(arg, context));
       if (values.some(Array.isArray)) return mapArrays(values, context, cells => fn.evaluate(cells.map(literalNode), context, this));
+      // Keep the original AST for functions such as ISBLANK that distinguish
+      // cell references from literals, but reuse the values already read.
+      return fn.evaluate(args, context, {
+        evaluate: (arg, argContext) => {
+          const index = args.indexOf(arg);
+          return index >= 0 && argContext === context ? values[index] : this.evaluate(arg, argContext);
+        },
+      });
     }
     return fn.evaluate(args, context, this);
   }
@@ -390,6 +399,7 @@ export class FormulaEvaluator implements IEvaluator {
     operand: ASTNode,
     context: IFormulaContext
   ): unknown {
+    if (op === '@') operand = resolveReference(operand, context) ?? operand;
     if (op === '@' && operand.kind === 'range') {
       const minRow = Math.min(operand.start.row, operand.end.row), maxRow = Math.max(operand.start.row, operand.end.row);
       const minCol = Math.min(operand.start.col, operand.end.col), maxCol = Math.max(operand.start.col, operand.end.col);

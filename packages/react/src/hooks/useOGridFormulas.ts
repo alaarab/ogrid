@@ -119,7 +119,7 @@ export function useOGridFormulaBar<T>(
 export function useOGridFormulas<T>(
   props: Pick<
     IOGridProps<T>,
-    'formulas' | 'initialFormulas' | 'onFormulaRecalc' | 'formulaFunctions' | 'namedRanges' | 'formulaLimits' | 'sheets' | 'onUndo'
+    'formulas' | 'initialFormulas' | 'onFormulaRecalc' | 'formulaFunctions' | 'namedRanges' | 'formulaLimits' | 'sheets' | 'onUndo' | 'mergedCells' | 'getRowId'
   >,
   sheetItems: T[],
   columns: IColumnDef<T>[],
@@ -129,6 +129,17 @@ export function useOGridFormulas<T>(
   isRowHidden?: (row: number) => boolean,
 ) {
   const { formulas, initialFormulas, onFormulaRecalc, formulaFunctions, namedRanges, formulaLimits, sheets } = props;
+  const { mergedCells, getRowId } = props;
+  const isCellMerged = useMemo(() => {
+    if (!formulas || !mergedCells?.length) return undefined;
+    const rows = new Map(sheetItems.map((item, row) => [getRowId(item), row]));
+    const cols = new Map(columns.map((column, col) => [column.columnId, col]));
+    const bounds = mergedCells.map(merge => ({
+      row: rows.get(merge.rowId) ?? -1, col: cols.get(merge.columnId) ?? -1,
+      rows: merge.rowSpan ?? 1, cols: merge.colSpan ?? 1,
+    })).filter(b => b.row >= 0 && b.col >= 0);
+    return (col: number, row: number) => bounds.some(b => row >= b.row && row < b.row + b.rows && col >= b.col && col < b.col + b.cols);
+  }, [formulas, mergedCells, getRowId, sheetItems, columns]);
   const [formulaVersion, setFormulaVersion] = useState(0);
   const wrappedOnFormulaRecalc = useCallback((result: IRecalcResult) => {
     setFormulaVersion(v => v + 1);
@@ -146,6 +157,7 @@ export function useOGridFormulas<T>(
     sheets,
     formulasFromData: formulasFollowData(props.onUndo != null),
     isRowHidden,
+    isCellMerged,
   });
 
   const activeCell = useOGridActiveCell();

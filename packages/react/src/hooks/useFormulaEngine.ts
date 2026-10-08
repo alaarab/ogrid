@@ -61,6 +61,8 @@ export interface UseFormulaEngineParams<T> {
    * changes only when the hidden rows (or `items`) do.
    */
   isRowHidden?: (row: number) => boolean;
+  /** Merge occupancy in sheet coordinates; every cell in a merge blocks spills. */
+  isCellMerged?: (col: number, row: number) => boolean;
 }
 
 export interface UseFormulaEngineResult {
@@ -185,8 +187,12 @@ function adoptDataFormulas<T>(
     return engine.loadFormulas(Array.from(merged.values()), accessor);
   }
   const updatedCells: IRecalcResult['updatedCells'] = [];
-  for (const f of set) updatedCells.push(...engine.setFormula(f.col, f.row, f.formula, accessor).updatedCells);
-  return { updatedCells };
+  let result: IRecalcResult = { updatedCells };
+  for (const f of set) {
+    result = engine.setFormula(f.col, f.row, f.formula, accessor);
+    updatedCells.push(...result.updatedCells);
+  }
+  return { ...result, updatedCells };
 }
 
 function sameValue(a: unknown, b: unknown): boolean {
@@ -211,6 +217,7 @@ export function useFormulaEngine<T>(
     sheets,
     formulasFromData = false,
     isRowHidden,
+    isCellMerged,
   } = params;
 
   // Refs for stable access in callbacks
@@ -218,6 +225,7 @@ export function useFormulaEngine<T>(
   const flatColumnsRef = useLatestRef(flatColumns);
   const onFormulaRecalcRef = useLatestRef(onFormulaRecalc);
   const isRowHiddenRef = useLatestRef(isRowHidden);
+  const isCellMergedRef = useLatestRef(isCellMerged);
 
   // Lazy engine instance  -  persists across renders, created once when formulas is enabled
   const engineRef = useRef<FormulaEngine | null>(null);
@@ -245,14 +253,21 @@ export function useFormulaEngine<T>(
   const createAccessor = useCallback(
     (): IGridDataAccessor => {
       const accessor = createGridDataAccessor(itemsRef.current, flatColumnsRef.current);
-      const hidden = isRowHiddenRef.current;
-      return hidden ? { ...accessor, isRowHidden: hidden } : accessor;
+      return { ...accessor, isRowHidden: isRowHiddenRef.current, isCellMerged: isCellMergedRef.current };
     },
-    [itemsRef, flatColumnsRef, isRowHiddenRef],
+    [itemsRef, flatColumnsRef, isRowHiddenRef, isCellMergedRef],
   );
 
+  const reportedSpillsRef = useRef<ISpillRange[]>([]);
   const report = useCallback((result: IRecalcResult): void => {
-    if (result.updatedCells.length > 0) onFormulaRecalcRef.current?.(result);
+    const previous = reportedSpillsRef.current;
+    const next = result.spillRanges;
+    const spillsChanged = next !== undefined && (previous.length !== next.length || next.some((range, i) => {
+      const old = previous[i];
+      return !old || old.anchorCol !== range.anchorCol || old.anchorRow !== range.anchorRow || old.endCol !== range.endCol || old.endRow !== range.endRow;
+    }));
+    if (next) reportedSpillsRef.current = next;
+    if (result.updatedCells.length > 0 || spillsChanged) onFormulaRecalcRef.current?.(result);
   }, [onFormulaRecalcRef]);
 
   // Register sheet accessors. Tracks which engine they were registered on, so a
@@ -282,8 +297,12 @@ export function useFormulaEngine<T>(
     if (changed.length === 0) return;
     const accessor = createAccessor();
     const updatedCells: IRecalcResult['updatedCells'] = [];
-    for (const name of changed) updatedCells.push(...engine.onSheetChanged(name, accessor).updatedCells);
-    report({ updatedCells });
+    let result: IRecalcResult = { updatedCells };
+    for (const name of changed) {
+      result = engine.onSheetChanged(name, accessor);
+      updatedCells.push(...result.updatedCells);
+    }
+    report({ ...result, updatedCells });
   }, [engine, sheets, createAccessor, report]);
 
   // Load initial formulas once per engine (so again after formulas are toggled off and on)
@@ -312,8 +331,20 @@ export function useFormulaEngine<T>(
     if (initialLoadedEngineRef.current === current) initialLoadedEngineRef.current = next;
     engineRef.current = next;
     const result = next.loadFormulas(current.getAllFormulas(), createAccessor());
+    // A fresh engine cannot report children that belonged only to its
+    // predecessor. Include them so serializers clear caches after a resize.
+    const reported = new Set(result.updatedCells.map(cell => cell.cellKey));
+    for (const formula of current.getAllFormulas()) {
+      const spill = current.getSpillRange(formula.col, formula.row);
+      if (!spill) continue;
+      for (let row = spill.anchorRow; row <= spill.endRow; row++) for (let col = spill.anchorCol; col <= spill.endCol; col++) {
+        const cellKey = `${col},${row}`;
+        if (!reported.has(cellKey)) result.updatedCells.push({ cellKey, col, row, oldValue: current.getValue(col, row), newValue: next.getValue(col, row) });
+      }
+    }
     // Report only the cells whose value differs from the old engine's.
     report({
+      ...result,
       updatedCells: result.updatedCells
         .map((c) => ({ ...c, oldValue: current.getValue(c.col, c.row) }))
         .filter((c) => !sameValue(c.oldValue, c.newValue)),
@@ -330,6 +361,7 @@ export function useFormulaEngine<T>(
   const syncedItemsRef = useRef(items);
   const syncedColumnsRef = useRef(flatColumns);
   const syncedHiddenRef = useRef(isRowHidden);
+  const syncedMergedRef = useRef(isCellMerged);
   // Engine whose formulas were last brought in line with the data (formulasFromData).
   const dataFormulasEngineRef = useRef<FormulaEngine | null>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: pendingTick is the deliberate trigger that flushes queued notifications; engine re-runs it when formulas are switched on so formulasFromData loads the data's formulas
@@ -338,21 +370,22 @@ export function useFormulaEngine<T>(
     const columnsChanged = syncedColumnsRef.current !== flatColumns;
     // Hidden rows changing re-evaluates SUBTOTAL 101-111 like a data change.
     const hiddenChanged = syncedHiddenRef.current !== isRowHidden;
-    const dataChanged = prevItems !== items || columnsChanged || hiddenChanged;
+    const dataChanged = prevItems !== items || columnsChanged || hiddenChanged || syncedMergedRef.current !== isCellMerged;
     syncedItemsRef.current = items;
     syncedColumnsRef.current = flatColumns;
     syncedHiddenRef.current = isRowHidden;
+    syncedMergedRef.current = isCellMerged;
     const pending = pendingCellsRef.current;
     pendingCellsRef.current = [];
     const current = engineRef.current;
     if (!current) return;
-    let adopted: IRecalcResult['updatedCells'] = [];
+    let adopted: IRecalcResult = { updatedCells: [] };
     if (formulasFromData) {
       const fresh = dataFormulasEngineRef.current !== current;
       dataFormulasEngineRef.current = current;
       if (fresh || dataChanged) {
-        adopted = adoptDataFormulas(current, fresh || columnsChanged ? null : prevItems, items, flatColumns, createAccessor()).updatedCells;
-        if (!dataChanged) report({ updatedCells: adopted });
+        adopted = adoptDataFormulas(current, fresh || columnsChanged ? null : prevItems, items, flatColumns, createAccessor());
+        if (!dataChanged) report(adopted);
       }
     } else {
       dataFormulasEngineRef.current = null;
@@ -360,11 +393,11 @@ export function useFormulaEngine<T>(
     if (dataChanged) {
       const result = current.recalcAll(createAccessor());
       // Adopted formulas already changed their values, so the recalc alone would not report them.
-      report({ updatedCells: [...adopted, ...result.updatedCells].filter((c) => !sameValue(c.oldValue, c.newValue)) });
+      report({ ...result, updatedCells: [...adopted.updatedCells, ...result.updatedCells].filter((c) => !sameValue(c.oldValue, c.newValue)) });
     } else if (pending.length > 0) {
       report(current.onCellsChanged(pending, createAccessor()));
     }
-  }, [items, flatColumns, pendingTick, createAccessor, report, formulasFromData, engine, isRowHidden]);
+  }, [items, flatColumns, pendingTick, createAccessor, report, formulasFromData, engine, isRowHidden, isCellMerged]);
 
   const getFormulaValue = useCallback((col: number, row: number): unknown => {
     return engineRef.current?.getValue(col, row);

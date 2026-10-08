@@ -7,7 +7,7 @@ function logicalArgs(args: ASTNode[], context: IFormulaContext, evaluator: IEval
   const result: boolean[] = [];
   for (const arg of args) {
     const values = expandArgs([arg], context, evaluator);
-    const reference = arg.kind === 'range' || arg.kind === 'cellRef' || arg.kind === 'functionCall' && ['INDIRECT', 'OFFSET'].includes(arg.name);
+    const reference = arg.kind === 'range' || arg.kind === 'spillRef' || arg.kind === 'cellRef' || arg.kind === 'functionCall' && ['INDIRECT', 'OFFSET'].includes(arg.name);
     for (const value of values) {
       if (value instanceof FormulaError) return value;
       if (reference && (value === null || value === undefined || typeof value === 'string')) continue;

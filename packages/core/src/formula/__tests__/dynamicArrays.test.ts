@@ -58,6 +58,70 @@ describe('dynamic array evaluation', () => {
 });
 
 describe('spill lifecycle', () => {
+  it('does not spend the range budget again for nested scalar functions', () => {
+    const { accessor } = fixture([[1, ''], [2], [3]]);
+    const engine = new FormulaEngine({ limits: { maxRangeCells: 3 } });
+    engine.setFormula(5, 0, '=ABS(ROUND(ABS(SUM(A1:A3)),0))', accessor);
+    expect(engine.getValue(5, 0)).toBe(6);
+    engine.setFormula(5, 0, '=ISBLANK(B1)', accessor);
+    expect(engine.getValue(5, 0)).toBe(true);
+    engine.setFormula(5, 0, '=ISBLANK("")', accessor);
+    expect(engine.getValue(5, 0)).toBe(false);
+  });
+
+  it.each([0, 1])('blocks merges intersecting an array, including its anchor (merge starts at %s)', col => {
+    const { engine, accessor } = fixture([[]]);
+    const merged = { ...accessor, isCellMerged: (c: number, r: number) => r === 0 && c >= col && c <= col + 1 };
+    engine.setFormula(0, 0, '=SEQUENCE(1,3)', merged);
+    expect((engine.getValue(0, 0) as FormulaError).type).toBe('#SPILL!');
+    expect(engine.getSpillRange(0, 0)).toBeUndefined();
+    engine.recalcAll(accessor);
+    expect(engine.getValue(2, 0)).toBe(3);
+  });
+
+  it.each([
+    ['COUNTIF(D1#,">0")', 3], ['SUMIF(D1#,">1")', 5], ['AVERAGEIF(D1#,">1")', 2.5],
+    ['COUNTIFS(D1#,">0",D1#,"<3")', 2], ['SUMIFS(D1#,D1#,">1")', 5],
+    ['AVERAGEIFS(D1#,D1#,">1")', 2.5], ['MAXIFS(D1#,D1#,">1")', 3], ['MINIFS(D1#,D1#,">1")', 2],
+    ['INDEX(D1#,2)', 2], ['MATCH(2,D1#,0)', 2], ['XMATCH(2,D1#)', 2], ['LOOKUP(2,D1#)', 2],
+    ['VLOOKUP(2,D1#,1,FALSE)', 2], ['HLOOKUP(1,D1#,3,FALSE)', 3],
+    ['COUNTBLANK(D1#)', 0], ['ISREF(D1#)', true], ['ROW(D1#)', 1], ['COLUMN(D1#)', 4],
+    ['SUBTOTAL(9,D1#)', 6], ['SUMSQ(D1#)', 14],
+  ])('accepts a spill range in %s', (formula, expected) => {
+    const { engine, accessor } = fixture([[]]);
+    engine.loadFormulas([{ col: 3, row: 0, formula: '=SEQUENCE(3)' }, { col: 5, row: 0, formula: `=${formula}` }], accessor);
+    expect(engine.getValue(5, 0)).toBe(expected);
+  });
+
+  it('intersects spill geometry vertically, horizontally and on another sheet', () => {
+    const { engine, accessor } = fixture([[]]);
+    engine.setFormula(0, 0, '=SEQUENCE(3)', accessor);
+    engine.setFormula(4, 1, '=@A1#', accessor);
+    engine.setFormula(4, 3, '=@A1#', accessor);
+    expect(engine.getValue(4, 1)).toBe(2);
+    expect((engine.getValue(4, 3) as FormulaError).type).toBe('#VALUE!');
+    engine.setFormula(1, 4, '=SEQUENCE(1,3,10)', accessor);
+    engine.setFormula(2, 6, '=@B5#', accessor);
+    expect(engine.getValue(2, 6)).toBe(11);
+    engine.registerSheet('Arrays', {
+      ...accessor,
+      getCellValue: (col, row) => col === 0 ? row + 10 : undefined,
+      getSpillRange: () => ({ anchorCol: 0, anchorRow: 0, endCol: 0, endRow: 2 }),
+    });
+    engine.setFormula(4, 1, '=@Arrays!A1#', accessor);
+    expect(engine.getValue(4, 1)).toBe(11);
+  });
+
+  it('keeps trailing blanks in zero-index INDEX output and downstream ROWS', () => {
+    const { engine, accessor } = fixture([[7]]);
+    engine.loadFormulas([
+      { col: 3, row: 0, formula: '=INDEX(A1:A5,0,1)' },
+      { col: 5, row: 0, formula: '=ROWS(D1#)' },
+    ], accessor);
+    expect(engine.getValue(5, 0)).toBe(5);
+    expect(engine.getSpillRange(3, 4)?.endRow).toBe(4);
+  });
+
   it('spills values, exposes the anchor, and copies only the formula at the anchor', () => {
     const { engine, accessor } = fixture();
     const changes = engine.setFormula(3, 0, '=SEQUENCE(2,2)', accessor);

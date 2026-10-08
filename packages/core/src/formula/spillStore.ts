@@ -64,6 +64,7 @@ export class SpillStore {
     if (range.endCol >= 16384 || range.endRow >= 1048576) return new FormulaError('#SPILL!', 'Spill exceeds worksheet bounds');
     for (let r = row; r <= range.endRow; r++) for (let c = col; c <= range.endCol; c++) {
       const child = toCellKey(c, r);
+      if (accessor.isCellMerged?.(c, r)) return new FormulaError('#SPILL!', 'Spill intersects merged cells');
       if (child === key) continue;
       const raw = c < accessor.getColumnCount() && r < accessor.getRowCount() ? accessor.getCellValue(c, r) : undefined;
       if (hasFormula(child) || this.owners.has(child) || (raw !== undefined && raw !== null && raw !== '')) return new FormulaError('#SPILL!', 'Spill range is blocked');
