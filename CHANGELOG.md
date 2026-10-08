@@ -4,6 +4,26 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Merged cells: `mergedCells?: IMergedCell[]` on `OGrid` and `DataGridTable`
+  (`{ rowId, columnId, rowSpan?, colSpan? }`, spans counted over displayed rows
+  and visible columns). The anchor renders across the block and covered cells
+  are skipped. Like Excel, the active cell is the anchor, arrow keys and Tab
+  move over the block as one cell, range selection grows to whole merges, copy
+  writes the anchor value once (covered cells empty), paste fills only the
+  anchor, and editing edits the anchor. A merge whose anchor isn't displayed is
+  ignored; spans are clipped at the end of the page, at the pinned/unpinned
+  column boundary and at the frozen-row boundary; under virtual scrolling the
+  visible part of a block is drawn. Not applied to windowed data sources.
+  `@alaarab/ogrid-core` exports `resolveMergedCells`, `expandRangeToMerges` and
+  `isCoveredCell`.
+- Frozen top rows: `frozenRows?: number` keeps the first N displayed rows
+  sticky below the header while the body scrolls, with a divider under the last
+  one (`--ogrid-frozen-divider`). Works with pinned columns (sticky on both
+  axes) and virtual scrolling (frozen rows are always rendered); keyboard
+  navigation scrolls rows out from under them.
+
 ### Fixed
 
 - Clicking a cell whose text is wider than its fixed-width column no longer

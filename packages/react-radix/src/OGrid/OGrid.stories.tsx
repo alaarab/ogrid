@@ -871,3 +871,25 @@ export const Formulas: Story = {
     );
   },
 };
+
+/** Excel-style merged cells and frozen top rows (with a pinned first column). */
+export const MergedCellsAndFrozenRows: Story = {
+  render: () => {
+    const data = makeProjects(60);
+    const pinnedColumns = columns.map((c, i) => (i === 0 ? { ...c, pinned: 'left' as const } : c));
+    return (
+      <OGrid
+        data={data}
+        columns={pinnedColumns}
+        getRowId={(r) => r.id}
+        frozenRows={2}
+        mergedCells={[
+          { rowId: 'proj-3', columnId: 'status', rowSpan: 3 },
+          { rowId: 'proj-7', columnId: 'owner', rowSpan: 2, colSpan: 2 },
+          { rowId: 'proj-1', columnId: 'status', colSpan: 2 },
+        ]}
+        defaultPageSize={50}
+      />
+    );
+  },
+};
