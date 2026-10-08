@@ -56,6 +56,9 @@ export type {
   IColumnReorderConfig,
   ISheetDef,
   IFormulaCellWriter,
+  IRowsChangeEvent,
+  IColumnsChangeEvent,
+  IGridStructureActions,
 } from './types';
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './types';
 
@@ -148,6 +151,7 @@ export type {
   UseKeyboardNavigationParams,
   UseUndoRedoResult,
   UseUndoRedoParams,
+  UndoableAction,
   UseUndoRedoFormulaCells,
   UseFillHandleResult,
   UseFillHandleParams,
@@ -236,7 +240,7 @@ export {
 } from './components/BaseInlineCellEditor';
 export type { BaseInlineCellEditorProps } from './components/BaseInlineCellEditor';
 export { GridContextMenu } from './components/GridContextMenu';
-export type { GridContextMenuProps, GridContextMenuClassNames } from './components/GridContextMenu';
+export type { GridContextMenuProps, GridContextMenuClassNames, GridContextMenuStructure } from './components/GridContextMenu';
 export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export type { MarchingAntsOverlayProps } from './components/MarchingAntsOverlay';
 export { FormulaBar } from './components/FormulaBar';
@@ -335,6 +339,7 @@ export {
   COLUMN_HEADER_MENU_ITEMS,
   getContextMenuHandlers,
   getColumnHeaderMenuItems,
+  getStructureMenuItems,
   formatShortcut,
   getPaginationViewModel,
   PAGE_SIZE_OPTIONS,
@@ -362,6 +367,7 @@ export {
   computeTabNavigation,
   rangesEqual,
   resolveMergedCells,
+  remapMergedCells,
   expandRangeToMerges,
   isCoveredCell,
   clampSelectionToBounds,

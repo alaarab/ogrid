@@ -1,0 +1,164 @@
+---
+sidebar_position: 5.5
+title: Structure Editing
+description: Insert and delete rows and columns, resize individual rows, and read or write cells through the grid API
+---
+
+import StructureEditingDemo from '@site/src/components/demos/StructureEditingDemo';
+
+# Structure Editing
+
+Spreadsheet-style structure edits: insert and delete rows and columns from the
+context menu or the [grid API](../api/grid-api#structure-methods), drag a row
+number's bottom edge to resize that row, and read or write single cells with
+`getCellValue` / `setCellValue`. Every change is one undo step (Ctrl+Z / Ctrl+Y),
+and with [formulas](./formulas) on, formula cells and their references move the
+way they do in Excel.
+
+## Live Demo
+
+<StructureEditingDemo />
+
+## Quick Example
+
+`data` and `columns` are props, so the grid reports structure changes and you
+store the new arrays, the same way `onCellValueChanged` reports edits:
+
+```tsx
+import { useRef, useState } from 'react';
+import { OGrid, type IOGridApi, type IColumnDef } from '@alaarab/ogrid-react-radix';
+
+let nextId = 1000;
+
+function Sheet() {
+  const apiRef = useRef<IOGridApi<Row>>(null);
+  const [data, setData] = useState<Row[]>(rows);
+  const [columns, setColumns] = useState<IColumnDef<Row>[]>(initialColumns);
+
+  return (
+    <OGrid
+      ref={apiRef}
+      columns={columns}
+      data={data}
+      getRowId={(r) => r.id}
+      editable
+      cellReferences
+      allowStructureEdits
+      rowResize
+      createRow={() => ({ id: nextId++ })}
+      onCellValueChanged={(e) =>
+        setData((prev) => prev.map((r) => (r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r)))
+      }
+      onRowsChange={(e) => setData(e.data)}
+      onColumnsChange={(e) => setColumns(e.columns)}
+    />
+  );
+}
+```
+
+## Context and column menus
+
+With `allowStructureEdits`, the cell context menu gets **Insert row above**,
+**Insert row below**, **Delete row**, **Insert column left**, **Insert column
+right** and **Delete column**. They act on the selected cells: select three rows
+and the items read "Insert 3 rows above" and "Delete 3 rows". The column header
+menu gets the three column items for its column.
+
+- The insert-row items need `createRow`, which builds a blank row with a new unique id.
+- Row items need client-side `data` and `onRowsChange`; column items need `onColumnsChange`.
+- New columns are blank and editable, with ids `column1`, `column2`, ... (the first free one).
+- New rows show next to the row they were inserted beside, even while a sort is active.
+  The next sort or filter change places them by the sort, like any edited row.
+
+## Grid API
+
+| Method | Description |
+|--------|-------------|
+| `getCellValue(rowId, columnId)` | The cell's value: a formula cell's result, otherwise `valueGetter` or `row[columnId]`. |
+| `setCellValue(rowId, columnId, value)` | Writes through the edit path: `valueParser`, `onCellValueChanged`, undo history, and `=` formulas when `formulas` is on. Works for rows on other pages. |
+| `insertRows(index, rows?)` | Inserts before `index` in `data`; without `rows`, one row from `createRow`. |
+| `deleteRows(rowIds)` | Deletes rows by id. |
+| `insertColumn(index, column?)` | Inserts so the column becomes leaf column `index`; without `column`, a blank one. |
+| `deleteColumn(columnId)` | Deletes a column (the field stays in the row data). |
+
+Several calls in one handler build on each other, e.g. `insertRows(0, [a]); insertRows(0, [b])`
+reports `data` with `b, a, ...` in the second event. Read cells back after the grid re-renders.
+
+## Formulas
+
+Formula cells address rows by their index in `data` and columns by their index
+in the flattened `columns`, so a structure edit moves them:
+
+- Formula cells below an inserted row (or right of an inserted column) move with it.
+- References at or past the change shift, relative and absolute (`$A$1`) alike.
+- A reference to a deleted row or column becomes `#REF!`. A range that loses part
+  of its rows shrinks; one that loses all of them becomes `#REF!`.
+- Undo restores the formulas exactly as they were.
+
+Limitations:
+
+- Named ranges (`namedRanges`) and references into other sheets (`Sheet2!A1`) are not shifted.
+- When the host owns undo (`onUndo`), formulas live in the data as text and the
+  grid does not rewrite that text on structure edits.
+
+## Undo
+
+Structure edits join the grid's internal undo history together with cell edits.
+When you pass `onUndo`, you own the history: record the `onRowsChange` /
+`onColumnsChange` events in it yourself.
+
+## Row resize
+
+`rowResize` adds a drag handle to the bottom edge of every row number (needs
+`showRowNumbers` or `cellReferences`), like Excel's row boundary. Heights are kept
+by row id, so they follow the record through sort, filter and paging.
+
+```tsx
+<OGrid
+  showRowNumbers
+  rowResize
+  rowHeights={heights}                                   // optional: controlled
+  onRowResized={(rowId, height) => setHeights((h) => ({ ...h, [rowId]: height }))}
+  {...props}
+/>
+```
+
+Row resize is off with [virtual scrolling](./virtual-scrolling) and windowed data
+sources, which need one fixed row height. The handle is pointer-only; there is no
+keyboard row resize.
+
+## Merged cells
+
+`mergedCells` is a prop you own, so a structure edit doesn't change it. Carry
+merges through with `remapMergedCells` from the ids before and after the change:
+rows or columns inserted inside a merge grow it, deleting part of it shrinks it,
+deleting its anchor moves the anchor to the next row or column of the block, and
+a merge left as a single cell is dropped.
+
+```tsx
+import { remapMergedCells } from '@alaarab/ogrid-react-radix';
+
+onRowsChange={(e) => {
+  setMerges((m) => remapMergedCells(m, 'row', data.map(getRowId), e.data.map(getRowId)));
+  setData(e.data);
+}}
+onColumnsChange={(e) => {
+  setMerges((m) => remapMergedCells(m, 'col', leafIds(columns), leafIds(e.columns)));
+  setColumns(e.columns);
+}}
+```
+
+Spans count displayed rows, so this matches the grid when rows show in data
+order. Undo replays the change events, so an undone delete doesn't regrow a merge
+that shrank; restore merges yourself if you need that.
+
+## Frozen rows
+
+`frozenRows` and `rowResize` work together: resizing a frozen row moves the frozen
+rows below it, and the body scrolls under the taller block.
+
+## Server-side data
+
+With a `dataSource`, `insertRows` and `deleteRows` do nothing (the grid doesn't
+own the rows) and the row menu items are hidden. Column edits, `getCellValue`
+and `setCellValue` work on the loaded rows.

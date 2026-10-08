@@ -1,10 +1,10 @@
 import { useMemo, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
-import { getDataGridStatusBarConfig, computeAggregations, getCellValue, resolveMergedCells } from '../utils';
+import { getDataGridStatusBarConfig, computeAggregations, getCellValue, parseValue, resolveMergedCells } from '../utils';
 import type { IMergeLayout } from '../utils';
 import { isColumnEditable } from '@alaarab/ogrid-core';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
-import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef, IFormulaCellWriter } from '../types';
+import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef, IFormulaCellWriter, IGridEditBridge } from '../types';
 import type { UseUndoRedoFormulaCells } from './useUndoRedo';
 import { useRowSelection } from './useRowSelection';
 import { useCellEditing } from './useCellEditing';
@@ -189,6 +189,10 @@ export interface DataGridPinningState {
     handleClearSort: () => void;
     handleAutosizeThis: () => void;
     handleAutosizeAll: () => void;
+    handleInsertColumnLeft: () => void;
+    handleInsertColumnRight: () => void;
+    handleDeleteColumn: () => void;
+    canEditStructure: boolean;
     canPinLeft: boolean;
     canPinRight: boolean;
     canUnpin: boolean;
@@ -267,8 +271,27 @@ export function useDataGridState<T>(
 
   const { activeCell, setActiveCell: setActiveCellRaw } = useActiveCell(wrapperRef, editingCell, scrollToIndexRef, ACTIVE_CELL_OPTIONS);
 
+  // --- Column structure edits from the header menu ---
+  const { structureActions } = props;
+  const structureActionsRef = useLatestRef(structureActions);
+  const canEditColumnStructure = !!structureActions?.canEditColumns;
+  const onInsertColumn = useMemo(
+    () => canEditColumnStructure
+      ? (columnId: string, side: 'left' | 'right') => structureActionsRef.current?.insertColumnsNear(columnId, side, 1)
+      : undefined,
+    [canEditColumnStructure, structureActionsRef]
+  );
+  const onDeleteColumn = useMemo(
+    () => canEditColumnStructure
+      ? (columnId: string) => structureActionsRef.current?.deleteColumns([columnId])
+      : undefined,
+    [canEditColumnStructure, structureActionsRef]
+  );
+
   // --- 1. Layout, pinning, header menu ---
   const layoutResult = useDataGridLayout<T>({
+    onInsertColumn,
+    onDeleteColumn,
     columns,
     items,
     getRowId,
@@ -512,6 +535,56 @@ export function useDataGridState<T>(
       if (formulaCellWriterRef.current === formulaCellWriter) formulaCellWriterRef.current = null;
     };
   }, [formulaCellWriterRef, formulaCellWriter]);
+
+  // --- Edit bridge: OGrid's setCellValue and structure edits use the grid's edit path and undo history ---
+  const { gridEditBridgeRef } = props;
+  const bridgeStateRef = useLatestRef({
+    flatColumns, rowIndexByRowId: layoutResult.layout.rowIndexByRowId, getRowId, formulas: props.formulas,
+    getFormula: props.getFormula, onCellValueChanged, formulaRow,
+    writeSheetFormula: interactionResult.writeSheetFormula,
+    beginBatch: interactionResult.beginBatch, endBatch: interactionResult.endBatch,
+    recordAction: interactionResult.recordAction,
+  });
+  const gridEditBridge = useMemo<IGridEditBridge<T>>(() => ({
+    setCellValue: (item, columnId, value, sheetRowHint) => {
+      const st = bridgeStateRef.current;
+      const col = st.flatColumns.findIndex((c) => c.columnId === columnId);
+      const colDef = st.flatColumns[col];
+      if (!colDef) return false;
+      const displayRow = st.rowIndexByRowId.get(st.getRowId(item)) ?? -1;
+      const sheetRow = sheetRowHint >= 0 ? sheetRowHint : displayRow >= 0 ? st.formulaRow(displayRow) : -1;
+      if (st.formulas && typeof value === 'string' && value.length > 1 && value.startsWith('=')) {
+        if (sheetRow < 0 || !st.writeSheetFormula) return false;
+        st.writeSheetFormula(col, sheetRow, value, displayRow);
+        return true;
+      }
+      const oldValue = getCellValue<T>(item, colDef);
+      const parsed = parseValue(value, oldValue, item, colDef);
+      if (!parsed.valid) return false;
+      const hasFormulaThere = !!st.formulas && sheetRow >= 0 && st.getFormula?.(col, sheetRow) !== undefined;
+      if (!hasFormulaThere && Object.is(parsed.value, oldValue)) return true;
+      const event = { item, columnId, oldValue, newValue: parsed.value, rowIndex: displayRow };
+      if (displayRow < 0 && hasFormulaThere) {
+        // Off-screen rows have no display row for the undo wrapper to map, so
+        // clear the formula explicitly, in the same undo step as the value.
+        st.beginBatch();
+        st.writeSheetFormula?.(col, sheetRow, null, displayRow);
+        st.onCellValueChanged?.(event);
+        st.endBatch();
+      } else {
+        st.onCellValueChanged?.(event);
+      }
+      return true;
+    },
+    recordUndoable: (action) => bridgeStateRef.current.recordAction(action),
+  }), [bridgeStateRef]);
+  useEffect(() => {
+    if (!gridEditBridgeRef) return;
+    gridEditBridgeRef.current = gridEditBridge;
+    return () => {
+      if (gridEditBridgeRef.current === gridEditBridge) gridEditBridgeRef.current = null;
+    };
+  }, [gridEditBridgeRef, gridEditBridge]);
 
   // --- 6. View models ---
   const {

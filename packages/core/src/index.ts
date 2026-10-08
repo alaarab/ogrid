@@ -46,6 +46,7 @@ export type {
   IVirtualScrollConfig,
   IColumnReorderConfig,
   IOGridApi,
+  IRowsChangeEvent,
 } from './types';
 export {
   toUserLike,
@@ -69,6 +70,19 @@ export type { CsvColumn, CsvEscapeOptions, FormulaExportOptions } from './utils'
 export { getCellValue, isColumnEditable, createGridDataAccessor, createFormulaRowMap, createOffsetFormulaRowMap } from './utils';
 export type { IFormulaRowMap } from './utils';
 export { flattenColumns, buildHeaderRows } from './utils';
+
+// Utils  -  structure edits (insert/delete rows and columns)
+export {
+  insertRowsAt,
+  removeRowsById,
+  restoreRemovedRows,
+  countLeafColumns,
+  insertColumnAt,
+  removeColumnById,
+  createStructureColumn,
+  remapMergedCells,
+} from './utils';
+export type { IRemovedRow } from './utils';
 
 // Utils  -  ogridHelpers
 export {
@@ -100,6 +114,7 @@ export {
   COLUMN_HEADER_MENU_ITEMS,
   getContextMenuHandlers,
   getColumnHeaderMenuItems,
+  getStructureMenuItems,
   formatShortcut,
 } from './utils';
 export type {
@@ -108,6 +123,7 @@ export type {
   GridContextMenuHandlerProps,
   ColumnHeaderMenuInput,
   ColumnHeaderMenuHandlers,
+  StructureMenuInput,
 } from './utils';
 
 // Utils  -  valueParsers

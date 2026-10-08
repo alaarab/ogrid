@@ -10,7 +10,7 @@ import { useOGridColumnVisibility } from './useOGridColumnVisibility';
 import { useOGridColumnLayout } from './useOGridColumnLayout';
 import { useOGridRowSelection } from './useOGridRowSelection';
 import { useOGridImperativeHandle } from './useOGridImperativeHandle';
-import { useOGridCallbacks } from './useOGridCallbacks';
+import { useOGridCallbacks, useStableOptionalCallback } from './useOGridCallbacks';
 import { useColumnValidation, useRowIdValidation } from './useOGridValidation';
 import { useOGridSheetState } from './useOGridSheetState';
 import { useOGridPageClamp } from './useOGridPageClamp';
@@ -18,6 +18,8 @@ import { useOGridSideBar } from './useOGridSideBar';
 import { useOGridSheetCoordinates } from './useOGridSheetCoordinates';
 import { useOGridFormulas } from './useOGridFormulas';
 import { useOGridChrome } from './useOGridChrome';
+import { useOGridStructureEdits } from './useOGridStructureEdits';
+import { useOGridCellApi } from './useOGridCellApi';
 import { useSortFilterColumns } from './useSortFilterColumns';
 import {
   buildStatusBarConfig,
@@ -28,7 +30,7 @@ import {
   resolveSelectionKnownItems,
   resolveSpreadsheetChrome,
 } from './ogridDerivations';
-import type { IOGridProps, IOGridDataGridProps, IOGridApi } from '../types';
+import type { IOGridProps, IOGridDataGridProps, IOGridApi, IGridEditBridge } from '../types';
 import type { UseOGridColumnChooser, UseOGridFilters, UseOGridPagination, UseOGridResult } from './useOGrid.types';
 
 export type {
@@ -64,7 +66,9 @@ export function useOGrid<T>(
     stickyHeader, columnReorder, responsiveColumns, virtualScroll, rowHeight, density = 'normal',
     mergedCells, frozenRows,
     'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
+    rowResize, rowHeights,
   } = props;
+  const onRowResized = useStableOptionalCallback(props.onRowResized);
 
   // Inline consumer callbacks are stabilized so they don't cause cascading re-renders.
   const { getRowId, editVersionRef, onColumnOrderChange, onCellValueChanged, onUndo, onRedo, onClipboardError } =
@@ -99,8 +103,9 @@ export function useOGrid<T>(
     controlledFilters, onFiltersChange: props.onFiltersChange, setPage,
     columns: sortFilterColumns, displayData, dataSource, dataSourceKey,
   });
+  const structureVersionRef = useRef(0);
   const dataFetchingState = useOGridDataFetching({
-    isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, columns: sortFilterColumns,
+    isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, structureVersionRef, columns: sortFilterColumns,
     stableFilters: filtersState.stableFilters, sort: sortingState.sort, sortVersion: sortingState.sortVersion,
     page, pageSize, paginate: !fullyVirtualized,
     onError: props.onError, onFirstDataRendered: props.onFirstDataRendered, workerSort: props.workerSort,
@@ -144,18 +149,6 @@ export function useOGrid<T>(
     setPage,
   );
 
-  // --- Imperative handle (stabilized via refs to avoid invalidation on every state change) ---
-  const scrollToRowRef = useRef<IOGridApi<T>['scrollToRow'] | null>(null);
-  useOGridImperativeHandle({
-    ref, isServerSide, columnOrder, onColumnOrderChange, commitSelection: selection.commitSelection,
-    sortingState, filtersState, dataFetchingState, setVisibleColumns,
-    setInternalColumnOrder: columnLayout.setInternalColumnOrder,
-    setColumnWidthOverrides: columnLayout.setColumnWidthOverrides,
-    setPinnedOverrides: columnLayout.setPinnedOverrides,
-    setInternalData, setInternalLoading, visibleColumns, effectiveColumnOrder, columnWidthOverrides,
-    pinnedOverrides, effectiveSelectedRows, columns, getRowId, scrollToRowRef,
-  });
-
   // --- Status bar, side bar ---
   const selectedCount = effectiveSelectedRows.size;
   const statusBarConfig = useMemo(
@@ -171,7 +164,35 @@ export function useOGrid<T>(
   const { sheetItems, formulaRowMap } = useOGridSheetCoordinates(
     chrome.spreadsheetMode, isServerSide, displayData, dataFetchingState, paginationState, getRowId,
   );
-  const { dgFormulaProps, formulaBarEl, activeCellRef, onActiveCellChange } = useOGridFormulas(props, sheetItems, columns, formulaRowMap);
+  const { dgFormulaProps, formulaBarEl, activeCellRef, onActiveCellChange, formulaEngine, formulasFollowData } =
+    useOGridFormulas(props, sheetItems, columns, formulaRowMap);
+
+  // --- Cell API and structure edits (through the table's edit path and undo history) ---
+  const gridEditBridgeRef = useRef<IGridEditBridge<T> | null>(null);
+  const cellApi = useOGridCellApi({ sheetItems, columns, getRowId, formulaEngine, bridgeRef: gridEditBridgeRef });
+  const structure = useOGridStructureEdits({
+    props, isServerSide, displayData, setInternalData, getRowId, editVersionRef, structureVersionRef,
+    columnOrder, effectiveColumnOrder, setInternalColumnOrder: columnLayout.setInternalColumnOrder, onColumnOrderChange,
+    formulaEngine, formulasFollowData, bridgeRef: gridEditBridgeRef,
+  });
+  const { structureActions } = structure;
+
+  // --- Imperative handle (stabilized via refs to avoid invalidation on every state change) ---
+  const scrollToRowRef = useRef<IOGridApi<T>['scrollToRow'] | null>(null);
+  useOGridImperativeHandle({
+    ref, isServerSide, columnOrder, onColumnOrderChange, commitSelection: selection.commitSelection,
+    sortingState, filtersState, dataFetchingState, setVisibleColumns,
+    setInternalColumnOrder: columnLayout.setInternalColumnOrder,
+    setColumnWidthOverrides: columnLayout.setColumnWidthOverrides,
+    setPinnedOverrides: columnLayout.setPinnedOverrides,
+    setInternalData, setInternalLoading, visibleColumns, effectiveColumnOrder, columnWidthOverrides,
+    pinnedOverrides, effectiveSelectedRows, columns, getRowId, scrollToRowRef,
+    editApi: {
+      getCellValue: cellApi.getCellValue, setCellValue: cellApi.setCellValue,
+      insertRows: structure.insertRows, deleteRows: structure.deleteRows,
+      insertColumn: structure.insertColumn, deleteColumn: structure.deleteColumn,
+    },
+  });
 
   // --- Assembly ---
   // dataGridProps is split into focused sub-memos so that changes in one
@@ -213,6 +234,7 @@ export function useOGrid<T>(
     layoutMode, suppressHorizontalScroll, stickyHeader: stickyHeader ?? true, columnReorder, responsiveColumns,
     virtualScroll, rowHeight, density, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     mergedCells, frozenRows,
+    rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef,
     emptyState: dgEmptyState,
     ...dgFormulaProps,
   }), [
@@ -227,6 +249,7 @@ export function useOGrid<T>(
     isLoadingResolved, dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows,
+    rowResize, rowHeights, onRowResized, structureActions,
     dgEmptyState, dgFormulaProps,
   ]);
 

@@ -156,3 +156,144 @@ export function fromCellKey(key: CellKey): { col: number; row: number; sheet?: s
     row: parseInt(key.substring(i + 1), 10),
   };
 }
+
+/** Row or column axis of a structural change (insert/delete rows or columns). */
+export type StructureAxis = 'row' | 'col';
+
+const MAX_SHEET_ROWS = 1048576;
+const MAX_SHEET_COLS = 16384;
+
+interface RefParts {
+  colAbs: string;
+  col: number;
+  rowAbs: string;
+  row: number;
+}
+
+function splitRef(value: string): RefParts | null {
+  const parts = REF_PARTS_RE.exec(value);
+  if (parts === null) return null;
+  const [, colAbs = '', colLetters = '', rowAbs = '', rowDigits = ''] = parts;
+  return { colAbs, col: columnLetterToIndex(colLetters), rowAbs, row: parseInt(rowDigits, 10) - 1 };
+}
+
+function formatRef(ref: RefParts): string | null {
+  if (ref.col < 0 || ref.col >= MAX_SHEET_COLS || ref.row < 0 || ref.row >= MAX_SHEET_ROWS) return null;
+  return `${ref.colAbs}${indexToColumnLetter(ref.col)}${ref.rowAbs}${ref.row + 1}`;
+}
+
+/**
+ * New position of a coordinate after `count` rows/columns are inserted
+ * (count > 0) or deleted (count < 0) at `at`. Null for a deleted coordinate.
+ */
+function shiftCoord(coord: number, at: number, count: number): number | null {
+  if (count > 0) return coord >= at ? coord + count : coord;
+  const lastDeleted = at - count - 1;
+  if (coord < at) return coord;
+  if (coord <= lastDeleted) return null;
+  return coord + count;
+}
+
+/** New [low, high] span of a range after the change, or null when all of it is deleted. */
+function shiftSpan(low: number, high: number, at: number, count: number): [number, number] | null {
+  if (count > 0) return [low >= at ? low + count : low, high >= at ? high + count : high];
+  const lastDeleted = at - count - 1;
+  const newLow = low < at ? low : low > lastDeleted ? low + count : at;
+  const newHigh = high < at ? high : high > lastDeleted ? high + count : at - 1;
+  return newHigh < newLow ? null : [newLow, newHigh];
+}
+
+/**
+ * Rewrites the cell references in a formula for rows or columns inserted or
+ * deleted at `at` (0-based), the way a spreadsheet does: references at or past
+ * the change move with their cells, relative and absolute alike. A reference
+ * to a deleted cell becomes `#REF!`; a range loses its deleted part and becomes
+ * `#REF!` only when all of it is deleted.
+ *
+ * References qualified with a sheet name (`Sheet2!A1`) point at other sheets
+ * and are left alone, as are named ranges.
+ *
+ * @param formula The formula string (with or without the leading '=').
+ * @param axis    'row' for row inserts/deletes, 'col' for columns.
+ * @param at      First inserted/deleted row or column (0-based).
+ * @param count   Positive to insert that many, negative to delete that many.
+ */
+export function shiftFormulaReferences(formula: string, axis: StructureAxis, at: number, count: number): string {
+  if (count === 0) return formula;
+  let tokens: Token[];
+  try {
+    tokens = tokenize(formula.startsWith('=') ? formula.slice(1) : formula);
+  } catch {
+    // Malformed formula  -  leave it untouched rather than corrupt it.
+    return formula;
+  }
+  const offset = formula.startsWith('=') ? 1 : 0;
+  const key = axis === 'row' ? 'row' : 'col';
+
+  const edits: Array<{ start: number; end: number; text: string }> = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token === undefined || token.type !== 'CELL_REF') continue;
+    const qualified = tokens[i - 1]?.type === 'SHEET_REF';
+    const endToken = tokens[i + 1]?.type === 'COLON' && tokens[i + 2]?.type === 'CELL_REF' ? tokens[i + 2] : undefined;
+    const lastToken = endToken ?? token;
+    if (endToken) i += 2;
+    if (qualified) continue;
+
+    const start = splitRef(token.value);
+    const end = endToken ? splitRef(endToken.value) : null;
+    if (!start || (endToken && !end)) continue;
+
+    let text: string | null = null;
+    if (!end) {
+      const moved = shiftCoord(start[key], at, count);
+      if (moved !== null) text = formatRef({ ...start, [key]: moved });
+    } else {
+      const lowIsStart = start[key] <= end[key];
+      const low = lowIsStart ? start : end;
+      const high = lowIsStart ? end : start;
+      const span = shiftSpan(low[key], high[key], at, count);
+      if (span) {
+        const a = formatRef({ ...low, [key]: span[0] });
+        const b = formatRef({ ...high, [key]: span[1] });
+        if (a && b) text = lowIsStart ? `${a}:${b}` : `${b}:${a}`;
+      }
+    }
+    const from = token.position + offset;
+    const to = lastToken.position + offset + lastToken.value.length;
+    const replacement = text ?? '#REF!';
+    if (replacement !== formula.slice(from, to)) edits.push({ start: from, end: to, text: replacement });
+  }
+
+  // Splice back-to-front so earlier positions stay valid.
+  let result = formula;
+  for (let i = edits.length - 1; i >= 0; i--) {
+    const edit = edits[i];
+    if (edit !== undefined) result = result.slice(0, edit.start) + edit.text + result.slice(edit.end);
+  }
+  return result;
+}
+
+/**
+ * Moves formula cells for rows or columns inserted or deleted at `at`: cells
+ * past the change move with it, cells in deleted rows/columns are dropped, and
+ * every formula's references are rewritten with `shiftFormulaReferences`.
+ */
+export function shiftFormulaCells(
+  formulas: ReadonlyArray<{ col: number; row: number; formula: string }>,
+  axis: StructureAxis,
+  at: number,
+  count: number,
+): Array<{ col: number; row: number; formula: string }> {
+  const result: Array<{ col: number; row: number; formula: string }> = [];
+  for (const f of formulas) {
+    const moved = shiftCoord(axis === 'row' ? f.row : f.col, at, count);
+    if (moved === null) continue;
+    result.push({
+      col: axis === 'col' ? moved : f.col,
+      row: axis === 'row' ? moved : f.row,
+      formula: shiftFormulaReferences(f.formula, axis, at, count),
+    });
+  }
+  return result;
+}

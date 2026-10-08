@@ -21,6 +21,51 @@ export const GRID_CONTEXT_MENU_ITEMS: GridContextMenuItem[] = [
   { id: 'selectAll', label: 'Select all', shortcut: 'Ctrl+A', dividerBefore: true },
 ];
 
+/** Input for the structure-edit section of the grid context menu. */
+export interface StructureMenuInput {
+  /** Number of rows the action applies to (the selected rows); 0 hides the row items. */
+  rowCount: number;
+  /** Number of columns the action applies to (the selected columns); 0 hides the column items. */
+  columnCount: number;
+  /** Show the insert-row items (default true). */
+  canInsertRows?: boolean;
+  /** Show the delete-row item (default true). */
+  canDeleteRows?: boolean;
+}
+
+/**
+ * Context menu items for structure edits (opt-in via `allowStructureEdits`):
+ * insert/delete rows and columns. Labels count the selected rows/columns,
+ * the way spreadsheets do ("Insert 3 rows above").
+ */
+export function getStructureMenuItems(input: StructureMenuInput): GridContextMenuItem[] {
+  const { rowCount, columnCount, canInsertRows = true, canDeleteRows = true } = input;
+  const items: GridContextMenuItem[] = [];
+  if (rowCount > 0) {
+    const rows = rowCount === 1 ? 'row' : `${rowCount} rows`;
+    const rowItems: GridContextMenuItem[] = [];
+    if (canInsertRows) {
+      rowItems.push(
+        { id: 'insertRowAbove', label: `Insert ${rows} above` },
+        { id: 'insertRowBelow', label: `Insert ${rows} below` },
+      );
+    }
+    if (canDeleteRows) rowItems.push({ id: 'deleteRows', label: `Delete ${rows}` });
+    const first = rowItems[0];
+    if (first) rowItems[0] = { ...first, dividerBefore: true };
+    items.push(...rowItems);
+  }
+  if (columnCount > 0) {
+    const cols = columnCount === 1 ? 'column' : `${columnCount} columns`;
+    items.push(
+      { id: 'insertColumnLeft', label: `Insert ${cols} left`, dividerBefore: true },
+      { id: 'insertColumnRight', label: `Insert ${cols} right` },
+      { id: 'deleteColumns', label: `Delete ${cols}` },
+    );
+  }
+  return items;
+}
+
 /** Returns the shortcut string with Ctrl swapped to ⌘ on Mac. */
 export function formatShortcut(shortcut: string): string {
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -98,6 +143,8 @@ export interface ColumnHeaderMenuInput {
   currentSort?: 'asc' | 'desc' | null;
   isSortable?: boolean;
   isResizable?: boolean;
+  /** Show insert/delete column items (`allowStructureEdits`). */
+  canEditStructure?: boolean;
 }
 
 /**
@@ -105,7 +152,7 @@ export interface ColumnHeaderMenuInput {
  * Returns pinning, sorting, and sizing options.
  */
 export function getColumnHeaderMenuItems(input: ColumnHeaderMenuInput): IColumnHeaderMenuItem[] {
-  const { canPinLeft, canPinRight, canUnpin, currentSort, isSortable = true, isResizable = true } = input;
+  const { canPinLeft, canPinRight, canUnpin, currentSort, isSortable = true, isResizable = true, canEditStructure = false } = input;
 
   const items: IColumnHeaderMenuItem[] = [];
 
@@ -143,6 +190,17 @@ export function getColumnHeaderMenuItems(input: ColumnHeaderMenuInput): IColumnH
     );
   }
 
+  // Structure section
+  if (canEditStructure) {
+    const last = items[items.length - 1];
+    if (last) items[items.length - 1] = { ...last, divider: true };
+    items.push(
+      { id: 'insertColumnLeft', label: 'Insert column left' },
+      { id: 'insertColumnRight', label: 'Insert column right' },
+      { id: 'deleteColumn', label: 'Delete column' },
+    );
+  }
+
   return items;
 }
 
@@ -156,5 +214,8 @@ export interface ColumnHeaderMenuHandlers {
   onClearSort: () => void;
   onAutosizeThis: () => void;
   onAutosizeAll: () => void;
+  onInsertColumnLeft?: () => void;
+  onInsertColumnRight?: () => void;
+  onDeleteColumn?: () => void;
   onClose: () => void;
 }
