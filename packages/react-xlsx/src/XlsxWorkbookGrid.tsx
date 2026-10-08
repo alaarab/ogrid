@@ -2,15 +2,25 @@
 // or a pre-parsed WorkBook. Renders a sheet-tab strip across the top
 // and the active sheet's grid below.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type ExcelJS from 'exceljs';
 import { XlsxGrid, type XlsxGridProps } from './XlsxGrid';
 import { tabColorOf, workbookFromBlob, type SheetToGridDataOptions } from './sheetMapper';
 import { XlsxWorkbookDocument } from './xlsxDocument';
+import type { StreamedXlsxWorkbook, XlsxStreamOptions } from './streamingClient';
 
 type Source = { blob: Blob } | { workbook: ExcelJS.Workbook };
 
 export type XlsxWorkbookGridProps = Source & {
+  /** Progressive worker preview. Defaults to true for Blobs of at least 1 MiB. */
+  streaming?: boolean;
+  /** Custom worker hosting, chunk size and shared-string budget. */
+  streamOptions?: Pick<XlsxStreamOptions, 'workerFactory' | 'chunkSize' | 'maxSharedStringsBytes'>;
+  /** Receives the completed preview and its lazy document/export methods. */
+  onStreamedWorkbook?: (workbook: StreamedXlsxWorkbook) => void;
+  onLoadProgress?: (percent: number) => void;
+  /** Reuse a prepared document (for example after a streaming preview). */
+  document?: XlsxWorkbookDocument;
   /** CSS height of the whole component. Defaults to '100%'. */
   height?: number | string;
   /** Initial sheet to display. Defaults to the first sheet. */
@@ -37,9 +47,17 @@ export type XlsxWorkbookGridProps = Source & {
 };
 
 let workbookGridInstanceCounter = 0;
+const StreamingWorkbookGrid = lazy(() => import('./StreamingWorkbookGrid'));
 
 export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
-  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits, onTruncated, editable, toolbar, exportFileName, onDocument } = props;
+  if ('blob' in props && props.blob && (props.streaming ?? props.blob.size >= 1024 ** 2)) {
+    return <Suspense fallback={<div style={loadingStyle}>Loading workbook…</div>}><StreamingWorkbookGrid {...props} blob={props.blob} /></Suspense>;
+  }
+  return <LoadedWorkbookGrid {...props} />;
+}
+
+function LoadedWorkbookGrid(props: XlsxWorkbookGridProps) {
+  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits, onTruncated, editable, toolbar, exportFileName, onDocument, document: documentProp } = props;
   const sourceBlob = 'blob' in props ? props.blob : null;
   const sourceWorkbook = 'workbook' in props ? props.workbook : null;
   const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(sourceWorkbook);
@@ -74,8 +92,8 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
   );
   // One document per loaded workbook and mapping options: edits survive sheet switches.
   const doc = useMemo(
-    () => (workbook ? new XlsxWorkbookDocument(workbook, { headerRow, maxRows, maxCols, maxCells }) : null),
-    [workbook, headerRow, maxRows, maxCols, maxCells],
+    () => documentProp ?? (workbook ? new XlsxWorkbookDocument(workbook, { headerRow, maxRows, maxCols, maxCells }) : null),
+    [documentProp, workbook, headerRow, maxRows, maxCols, maxCells],
   );
   const onDocumentRef = useRef(onDocument);
   onDocumentRef.current = onDocument;

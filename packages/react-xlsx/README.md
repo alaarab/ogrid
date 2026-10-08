@@ -18,29 +18,48 @@ import { XlsxWorkbookGrid } from '@alaarab/ogrid-react-xlsx';
 <XlsxWorkbookGrid blob={file} height={600} />
 ```
 
-Cells show the workbook's styles and number formats, and column widths come from the sheet. To edit and save:
+Blobs of at least 1 MiB open in a progressive worker preview, with loading
+percentage and Cancel. Set `streaming` to stream smaller files too, or
+`streaming={false}` for the eager formatted view. CSV/TSV keep the existing
+loader. To edit and save:
 
 ```tsx
 <XlsxWorkbookGrid blob={file} editable exportFileName="book.xlsx" onDocument={(doc) => (docRef.current = doc)} />
 // later: const blob = await docRef.current.toBlob();
 ```
 
-`editable` turns on value/formula editing and a formatting toolbar (bold, italic, underline, strikethrough, colors, alignment, number format, merge/unmerge) with undo. Export keeps every sheet and writes back only what changed, so styles, validations, frozen panes, merges, hyperlinks and the rest of the file survive. The docs page lists exactly what round-trips.
+In streaming mode, **Enable editing** prepares the full ExcelJS document in a
+worker. It then shows workbook formatting and enables value/formula editing,
+the formatting toolbar and undo. `onDocument` fires after that preparation.
+Before editing, export returns the original Blob byte-for-byte; afterward it
+keeps every sheet and writes back only changes with the existing round-trip
+fidelity. Without Workers, preview parsing yields between small slices;
+preparing the full document uses the existing main-thread loader.
 
 Other entry points:
 
 - `XlsxGrid` renders one sheet of an already-parsed ExcelJS workbook.
 - `workbookFromBlob` and `sheetToGridData` parse without rendering.
+- `streamWorkbook(blob, { signal, onChunk, onProgress })` streams worksheet
+  values without rendering. Its result exposes `sheets`, `loadDocument()` and
+  `toBlob()`. Chunk callbacks are awaited for backpressure. Rows use worksheet
+  coordinates including headers; the document applies header promotion.
 - `exportToXlsx`, `workbookFromGridData` and `xlsxBlobFromWorkbook` handle export.
 - `mount(node, { blob })` renders into a DOM node for non-React hosts. Call the returned function to unmount.
 
 ### Untrusted files
 
-A few-KB file can declare a used range of billions of cells. Grid mapping is capped by `maxRows`, `maxCols` and `maxCells` (defaults: 1,048,576 worksheet rows, 1,000 columns, 5,000,000 cells). Pass `limits` to `XlsxGrid`/`XlsxWorkbookGrid`, or the same options to `sheetToGridData`. When a sheet is cut, the grid shows a notice and `sheetToGridData` returns `truncated` with the full size. A `NaN` limit uses the default, `Infinity` removes the limit, and other values are rounded down to at least one.
+A few-KB file can declare a used range of billions of cells. Grid mapping is capped by `maxRows`, `maxCols` and `maxCells` (defaults: 1,048,576 worksheet rows, 1,000 columns, 5,100,000 cells). Pass `limits` to `XlsxGrid`/`XlsxWorkbookGrid`, or the same options to `sheetToGridData`. When a sheet is cut, the grid shows a notice and `sheetToGridData` returns `truncated` with the full size. A `NaN` limit uses the default, `Infinity` removes the limit, and other values are rounded down to at least one.
 
 `workbookFromBlob(blob, options)` and blob-backed `XlsxWorkbookGrid` also enforce `maxFileBytes` (default 50 MiB) before reading, and `maxUncompressedBytes` (default 200 MiB) against the ZIP directory before ExcelJS parsing. Multi-volume archives are rejected. CSV parsing stops at the row/cell limits and drops columns beyond the column limit; `parseTruncated` indicates that the original extent is unknown. These byte limits can be configured in `limits`. Pre-parsed workbooks bypass byte checks.
 
-XLSX row/cell limits bound grid mapping, **not ExcelJS parsing**. ExcelJS still inflates and parses the complete workbook, and ZIP sizes are declared metadata rather than a bound enforced during decompression. Use a trusted or independently bounded parser when a strict parse-time memory limit is required.
+Streaming preview checks actual inflated bytes as well as declared ZIP sizes,
+and limits decoded shared strings to 32 MiB by default (`streamOptions.maxSharedStringsBytes`).
+It retains grid values within the mapping caps, with small inflate/transport
+buffers. The eager path and full editable document still inflate the complete
+workbook with ExcelJS; row/cell limits bound mapping rather than that model.
+Editing, edited export and structural undo retain the full model's memory and
+CPU costs. See the docs' Large files section for matched browser measurements.
 
 ### Formulas
 

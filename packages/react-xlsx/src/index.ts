@@ -28,6 +28,7 @@ import type ExcelJS from 'exceljs';
 import { XlsxWorkbookGrid, type XlsxWorkbookGridProps } from './XlsxWorkbookGrid';
 export { XlsxGrid, type XlsxGridProps, type XlsxTruncationNotice } from './XlsxGrid';
 export { XlsxWorkbookGrid, type XlsxWorkbookGridProps } from './XlsxWorkbookGrid';
+export { streamWorkbook, type StreamedXlsxWorkbook, type XlsxStreamOptions, type XlsxStreamChunk, type XlsxStreamSheet } from './streamingClient';
 export {
   workbookFromBlob,
   sheetToGridData,
@@ -79,6 +80,10 @@ export {
 export { readSelection, type IMergedCell, type XlsxSelection } from './gridAdapter';
 
 export interface MountOptions {
+  streaming?: XlsxWorkbookGridProps['streaming'];
+  streamOptions?: XlsxWorkbookGridProps['streamOptions'];
+  onStreamedWorkbook?: XlsxWorkbookGridProps['onStreamedWorkbook'];
+  onLoadProgress?: XlsxWorkbookGridProps['onLoadProgress'];
   /** Pre-parsed workbook (use this OR blob, not both). */
   workbook?: ExcelJS.Workbook;
   /** Raw blob — parsed lazily inside the component. */
