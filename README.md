@@ -150,6 +150,8 @@ Find/Replace panels, note popovers, XLSX formatting controls, drag behavior and 
 
 Load the XLSX editor route lazily to keep it out of an app's initial bundle. See [XLSX limits and measurements](packages/docs/docs/features/xlsx-import.mdx#large-sheets) for the memory cost of large workbooks.
 
+Streaming code and the self-contained worker are separate assets; large Blobs show rows progressively before preparing an editable document.
+
 ## Quick Start
 
 ### React

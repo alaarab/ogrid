@@ -2,15 +2,26 @@
 // or a pre-parsed WorkBook. Renders a sheet-tab strip across the top
 // and the active sheet's grid below.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type ExcelJS from 'exceljs';
+import { WorkbookSheetTabs } from './WorkbookSheetTabs';
 import { XlsxGrid, type XlsxGridProps } from './XlsxGrid';
 import { tabColorOf, workbookFromBlob, type SheetToGridDataOptions } from './sheetMapper';
 import { XlsxWorkbookDocument } from './xlsxDocument';
+import type { StreamedXlsxWorkbook, XlsxStreamOptions } from './streamingClient';
 
 type Source = { blob: Blob } | { workbook: ExcelJS.Workbook };
 
 export type XlsxWorkbookGridProps = Source & {
+  /** Progressive worker preview. Defaults to true for Blobs of at least 1 MiB without onDocument. */
+  streaming?: boolean;
+  /** Custom worker hosting, chunk size and shared-string budget. */
+  streamOptions?: Pick<XlsxStreamOptions, 'workerFactory' | 'chunkSize' | 'maxSharedStringsBytes'>;
+  /** Receives the completed preview and its lazy document/export methods. */
+  onStreamedWorkbook?: (workbook: StreamedXlsxWorkbook) => void;
+  onLoadProgress?: (percent: number) => void;
+  /** Reuse a prepared document (for example after a streaming preview). */
+  document?: XlsxWorkbookDocument;
   /** CSS height of the whole component. Defaults to '100%'. */
   height?: number | string;
   /** Initial sheet to display. Defaults to the first sheet. */
@@ -32,14 +43,23 @@ export type XlsxWorkbookGridProps = Source & {
   /**
    * Called with the editable document once the workbook is loaded (and again
    * when it is replaced). Keep it to export: `await doc.toBlob()`.
+   * Supplying this disables automatic streaming. With explicit `streaming: true`,
+   * delivery is deferred until Enable editing prepares the full document.
    */
   onDocument?: (document: XlsxWorkbookDocument) => void;
 };
 
-let workbookGridInstanceCounter = 0;
+const StreamingWorkbookGrid = lazy(() => import('./StreamingWorkbookGrid'));
 
 export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
-  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits, onTruncated, editable, toolbar, exportFileName, onDocument } = props;
+  if ('blob' in props && props.blob && (props.streaming ?? (!props.onDocument && props.blob.size >= 1024 ** 2))) {
+    return <Suspense fallback={<div style={loadingStyle}>Loading workbook…</div>}><StreamingWorkbookGrid {...props} blob={props.blob} /></Suspense>;
+  }
+  return <LoadedWorkbookGrid {...props} />;
+}
+
+function LoadedWorkbookGrid(props: XlsxWorkbookGridProps) {
+  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits, onTruncated, editable, toolbar, exportFileName, onDocument, document: documentProp } = props;
   const sourceBlob = 'blob' in props ? props.blob : null;
   const sourceWorkbook = 'workbook' in props ? props.workbook : null;
   const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(sourceWorkbook);
@@ -74,8 +94,8 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
   );
   // One document per loaded workbook and mapping options: edits survive sheet switches.
   const doc = useMemo(
-    () => (workbook ? new XlsxWorkbookDocument(workbook, { headerRow, maxRows, maxCols, maxCells }) : null),
-    [workbook, headerRow, maxRows, maxCols, maxCells],
+    () => documentProp ?? (workbook ? new XlsxWorkbookDocument(workbook, { headerRow, maxRows, maxCols, maxCells }) : null),
+    [documentProp, workbook, headerRow, maxRows, maxCols, maxCells],
   );
   const onDocumentRef = useRef(onDocument);
   onDocumentRef.current = onDocument;
@@ -87,28 +107,10 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
     [workbook],
   );
   const [active, setActive] = useState<string | null>(null);
-  const [idBase] = useState(() => `ogrid-xlsx-${++workbookGridInstanceCounter}`);
-  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
-
-  const selectSheet = (name: string, focus = false) => {
+  const idBase = useId();
+  const selectSheet = (name: string) => {
     setActive(name);
     onSheetChange?.(name);
-    if (focus) tabRefs.current.get(name)?.focus();
-  };
-
-  // WAI-ARIA tabs keyboard model: arrows move and activate, Home/End jump.
-  const onTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const last = sheetNames.length - 1;
-    const next =
-      e.key === 'ArrowRight' ? (index === last ? 0 : index + 1)
-      : e.key === 'ArrowLeft' ? (index === 0 ? last : index - 1)
-      : e.key === 'Home' ? 0
-      : e.key === 'End' ? last
-      : -1;
-    if (next < 0) return;
-    e.preventDefault();
-    const name = sheetNames[next];
-    if (name) selectSheet(name, true);
   };
 
   // Pick the initial sheet once the workbook is in.
@@ -130,33 +132,7 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
 
   return (
     <div style={{ ...rootStyle, height }}>
-      {sheetNames.length > 1 && (
-        <div role="tablist" aria-label="Workbook sheets" style={tabsStyle}>
-          {sheetNames.map((name, index) => {
-            const isActive = name === active;
-            return (
-              <button
-                key={name}
-                ref={(el) => { if (el) tabRefs.current.set(name, el); else tabRefs.current.delete(name); }}
-                id={`${idBase}-tab-${index}`}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-controls={`${idBase}-panel`}
-                tabIndex={isActive ? 0 : -1}
-                onClick={() => selectSheet(name)}
-                onKeyDown={(e) => onTabKeyDown(e, index)}
-                style={{
-                  ...(isActive ? tabActiveStyle : tabStyle),
-                  ...(tabColors.get(name) ? { boxShadow: `inset 0 -3px 0 ${tabColors.get(name)}` } : {}),
-                }}
-              >
-                {name}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <WorkbookSheetTabs sheetNames={sheetNames} active={active} onSelect={selectSheet} idBase={idBase} tabColors={tabColors} />
       <div
         style={gridWrapStyle}
         id={`${idBase}-panel`}
@@ -194,38 +170,6 @@ const rootStyle: React.CSSProperties = {
   color: 'var(--fg, inherit)',
 };
 
-const tabsStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: 2,
-  padding: '6px 8px 0',
-  background: 'var(--bg-3, #1b2330)',
-  borderBottom: '1px solid var(--border, #1f2a3a)',
-  overflowX: 'auto',
-  flex: '0 0 auto',
-};
-
-const tabBase: React.CSSProperties = {
-  borderWidth: '1px 1px 0',
-  borderStyle: 'solid',
-  borderColor: 'var(--border, #1f2a3a)',
-  borderRadius: '4px 4px 0 0',
-  padding: '4px 12px',
-  fontSize: 12,
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-  fontFamily: 'inherit',
-};
-const tabStyle: React.CSSProperties = {
-  ...tabBase,
-  background: 'var(--bg-2, #121821)',
-  color: 'var(--fg-dim, #8a96a6)',
-};
-const tabActiveStyle: React.CSSProperties = {
-  ...tabBase,
-  background: 'var(--bg, #0b1014)',
-  color: 'var(--accent, #3cb87a)',
-  borderColor: 'var(--accent, #3cb87a)',
-};
 const gridWrapStyle: React.CSSProperties = {
   flex: '1 1 auto',
   minHeight: 0,

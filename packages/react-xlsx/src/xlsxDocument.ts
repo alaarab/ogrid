@@ -76,6 +76,12 @@ export interface XlsxSheetState {
   readonly columns: IColumnDef<SheetRow>[];
 }
 
+/** Pre-mapped in a worker to keep large worksheet scans off the UI thread. */
+export interface PreparedXlsxSheet {
+  source: SheetGridData;
+  notes: ICellNote[];
+}
+
 interface MutableSheetState {
   name: string;
   source: SheetGridData;
@@ -164,7 +170,7 @@ export class XlsxWorkbookDocument {
   private batchOpen = false;
   private batchToken = 0;
 
-  constructor(workbook: ExcelJS.Workbook, options: SheetToGridDataOptions = {}) {
+  constructor(workbook: ExcelJS.Workbook, options: SheetToGridDataOptions = {}, private preparedSheets?: Map<string, PreparedXlsxSheet>) {
     this.workbook = workbook;
     this.options = options;
   }
@@ -205,7 +211,9 @@ export class XlsxWorkbookDocument {
     if (existing) return existing;
     const worksheet = this.worksheet(name);
     if (!worksheet) return undefined;
-    const source = mappedSource ?? sheetToGridData(worksheet, this.options, this.extents.get(name));
+    const prepared = this.preparedSheets?.get(name);
+    const source = mappedSource ?? prepared?.source ?? sheetToGridData(worksheet, this.options, this.extents.get(name));
+    this.preparedSheets?.delete(name);
     const sheetNames = new Set(this.sheetNames);
     const functions = createBuiltInFunctions();
     // Engine-evaluable formulas live in the rows as formula text, which the
@@ -260,7 +268,7 @@ export class XlsxWorkbookDocument {
         });
       }
     }
-    const notes = readSheetNotes(worksheet, source);
+    const notes = prepared?.notes ?? readSheetNotes(worksheet, source);
     const state: MutableSheetState = {
       name,
       source,
@@ -316,6 +324,7 @@ export class XlsxWorkbookDocument {
 
   private applyOp(state: MutableSheetState, op: Op, direction: 'after' | 'before'): void {
     if (op.t === 'structure') {
+      this.preparedSheets?.clear();
       const snapshot = op[direction];
       this.editedWorkbook = snapshot.workbook;
       this.extents = new Map(snapshot.extents);
@@ -601,6 +610,7 @@ export class XlsxWorkbookDocument {
     }
     const next = editWorkbookStructure(current, sheetName, axis, index + 1 + (axis === 'row' ? offset : 0), count);
     this.editedWorkbook = next;
+    this.preparedSheets?.clear();
     this.extents.set(sheetName, {
       rowCount: state.rows.length + offset + (axis === 'row' ? count : 0),
       columnCount: state.columns.length + (axis === 'col' ? count : 0),
