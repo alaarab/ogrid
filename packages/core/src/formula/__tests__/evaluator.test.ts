@@ -254,11 +254,11 @@ describe('evaluate  -  cell references', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Range evaluation (standalone  -  returns top-left cell)
+// Range evaluation (standalone  -  preserves the array)
 // ---------------------------------------------------------------------------
 
 describe('evaluate  -  standalone range', () => {
-  it('returns the top-left cell value for a standalone range', () => {
+  it('returns every value for a standalone range', () => {
     const ctx = createMockContext({ '0,0': 'top-left', '1,0': 'top-right' });
     const node: ASTNode = {
       kind: 'range',
@@ -266,7 +266,7 @@ describe('evaluate  -  standalone range', () => {
       end: addr(1, 1),
       raw: 'A1:B2',
     };
-    expect(evaluator.evaluate(node, ctx)).toBe('top-left');
+    expect(evaluator.evaluate(node, ctx)).toEqual([['top-left', 'top-right'], [null, null]]);
   });
 });
 

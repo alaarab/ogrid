@@ -59,7 +59,7 @@ See the [Spreadsheet Demo Storybook](https://alaarab.github.io/ogrid/storybook/?
 | Side bar | Built-in | No | $999/dev/year |
 | Cell editing | Built-in | Built-in | Built-in |
 | Sorting & filtering | Built-in | Built-in | Built-in |
-| **Bundle size (gzip)** | **44-61 KB** | ~339 KB | ~339 KB+ |
+| **Bundle size (gzip)** | **207-252 KB** | ~339 KB | ~339 KB+ |
 | **License** | **MIT (free)** | MIT | Commercial |
 | **Cost** | **$0** | $0 | **$999/dev/year** |
 
@@ -107,7 +107,7 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 
 **Advanced**
 - Grid API: `ref`-based imperative API for `setRowData`, `getColumnState`, `selectAll`, etc.
-- Formula engine: 159 built-in functions, Excel-like formula bar, cell reference highlighting, cross-cell recalculation
+- Formula engine: built-in functions, Excel-like formula bar, dynamic arrays with spill ranges and `A1#` references, cell reference highlighting, cross-cell recalculation
 - Editor integration (MCP): `@alaarab/ogrid-mcp` connects your IDE to OGrid docs and lets it read and control a running grid
 - CSS containment: automatic `contain: content` on cells, `content-visibility: auto` on off-screen rows
 - TypeScript strict: fully generic `<T>` with strict mode, zero `any` leaks
@@ -127,12 +127,14 @@ Core owns types and pure TypeScript utilities with zero dependencies. The React 
 
 | Setup | Gzip |
 |-------|------|
-| React + Radix | 54 KB |
-| React + Fluent | 55 KB |
+| React + Radix | 207 KB |
+| React + Fluent | 252 KB |
 | Self-contained XLSX browser bundle (includes React and ExcelJS) | 554 KB |
 | AG Grid Community (comparison) | ~339 KB |
 
-The optional XLSX packages measure 459.30 kB (`react-xlsx`, including dependencies) and 452.43 kB (`react-xlsx-browser`) with the size gate's Brotli compression. Load the XLSX editor route lazily to keep it out of an app's initial bundle. See [XLSX limits and measurements](packages/docs/docs/features/xlsx-import.mdx#large-sheets) for the memory cost of large workbooks.
+OGrid measurements bundle each package's full entry point with its dependencies using esbuild minification and gzip level 9. `npm run size` tracks Brotli budgets separately.
+
+Load the XLSX editor route lazily to keep it out of an app's initial bundle. See [XLSX limits and measurements](packages/docs/docs/features/xlsx-import.mdx#large-sheets) for the memory cost of large workbooks.
 
 ## Quick Start
 

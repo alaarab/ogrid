@@ -4,6 +4,7 @@
 
 // Core types
 export type {
+  ISpillRange,
   ICellAddress,
   ICellRange,
   CellKey,

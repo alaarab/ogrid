@@ -61,7 +61,7 @@ export function useRenderCellContent<T>(
     handleFillHandleMouseDown, onCellError, cellDescriptorInput,
   } = o;
   const { setSelectionRange, handleFillHandleDoubleClick } = interaction;
-  const { editable, getFormulaValue, hasFormula, getFormula } = cellDescriptorInput;
+  const { editable, getFormulaValue, hasFormula, getFormula, activeSpillRange } = cellDescriptorInput;
   const hasValueChangeHandler = !!cellDescriptorInput.onCellValueChanged;
   const { InlineCellEditor, renderPopoverEditor, renderBooleanCell } = primitives;
 
@@ -161,6 +161,11 @@ export function useRenderCellContent<T>(
         );
       }
 
+      const input = cellDescriptorInputRef.current;
+      const spill = input.activeSpillRange;
+      const sheetCol = input.formulaCol?.(col.columnId) ?? colIdx;
+      const sheetRow = input.formulaRow?.(rowIndex) ?? rowIndex;
+      const inSpill = spill && sheetCol >= spill.anchorCol && sheetCol <= spill.endCol && sheetRow >= spill.anchorRow && sheetRow <= spill.endRow;
       return (
         <CellErrorBoundary
           key={`${rowId}-${col.columnId}`}
@@ -168,9 +173,16 @@ export function useRenderCellContent<T>(
           onError={onCellError}
         >
           {content}
+          {inSpill && <span aria-hidden="true" data-spill-outline="" style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3,
+            borderTop: sheetRow === spill.anchorRow ? '1px solid #4b89dc' : undefined,
+            borderBottom: sheetRow === spill.endRow ? '1px solid #4b89dc' : undefined,
+            borderLeft: sheetCol === spill.anchorCol ? '1px solid #4b89dc' : undefined,
+            borderRight: sheetCol === spill.endCol ? '1px solid #4b89dc' : undefined,
+          }} />}
         </CellErrorBoundary>
       );
     },
-    [editCallbacks, interactionHandlers, delegatedCellHandlers, handleFillHandleMouseDown, handleFillHandleDoubleClick, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, colOffset, setSelectionRange, setActiveCell, styles, primitives, InlineCellEditor, renderPopoverEditor, renderBooleanCell, editable, hasValueChangeHandler, getFormulaValue, hasFormula, getFormula]
+    [editCallbacks, interactionHandlers, delegatedCellHandlers, handleFillHandleMouseDown, handleFillHandleDoubleClick, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, colOffset, setSelectionRange, setActiveCell, styles, primitives, InlineCellEditor, renderPopoverEditor, renderBooleanCell, activeSpillRange, editable, hasValueChangeHandler, getFormulaValue, hasFormula, getFormula]
   );
 }

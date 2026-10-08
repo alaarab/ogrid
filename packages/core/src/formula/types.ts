@@ -33,7 +33,9 @@ export type FormulaErrorType =
   | '#CIRC!'
   | '#ERROR!'
   | '#N/A'
-  | '#NUM!';
+  | '#NUM!'
+  | '#SPILL!'
+  | '#CALC!';
 
 export class FormulaError {
   constructor(
@@ -73,6 +75,8 @@ export type TokenType =
   | 'LTE'
   | 'EQ'
   | 'NEQ'
+  | 'AT'
+  | 'HASH'
   | 'EOF';
 
 export interface Token {
@@ -93,7 +97,27 @@ export type ASTNode =
   | BinaryOpNode
   | UnaryOpNode
   | ErrorNode
-  | NameNode;
+  | NameNode
+  | SpillRefNode
+  | ValueNode;
+
+export interface ValueNode {
+  kind: 'value';
+  value: unknown;
+}
+
+export interface SpillRefNode {
+  kind: 'spillRef';
+  address: ICellAddress;
+}
+
+/** Successful spill, including its formula anchor (0-based sheet coordinates). */
+export interface ISpillRange {
+  anchorCol: number;
+  anchorRow: number;
+  endCol: number;
+  endRow: number;
+}
 
 export interface NumberLiteral {
   kind: 'number';
@@ -142,7 +166,7 @@ export interface BinaryOpNode {
 
 export interface UnaryOpNode {
   kind: 'unaryOp';
-  op: '+' | '-';
+  op: '+' | '-' | '@';
   operand: ASTNode;
 }
 
@@ -163,11 +187,19 @@ export interface NameNode {
 export interface IFormulaContext {
   getCellValue(address: ICellAddress): unknown;
   getRangeValues(range: ICellRange): unknown[][];
+  /** Preserve blank rows/columns for an array expression; aggregations may clip reads. */
+  getArrayRangeValues?(range: ICellRange): unknown[][];
   now(): Date;
+  /** Resolve the array owned by a spill anchor, or #REF! when it has no spill. */
+  getSpillValues?(address: ICellAddress): unknown;
+  /** Resolve a spill anchor to a sheet-qualified range, preserving reference geometry. */
+  getSpillRange?(address: ICellAddress): ICellRange | FormulaError;
   /** Address of the formula being evaluated, when supplied by the engine. */
   currentCell?: ICellAddress;
   /** Optional shared work budget for built-in functions. */
   consumeWork?(steps: number): void;
+  /** Maximum size of a generated array; supplied by the evaluator. */
+  maxArrayCells?: number;
   /** Optional: return the formula string for a cell, or undefined if not a formula cell. */
   getCellFormula?(address: ICellAddress): string | undefined;
   /** Optional: whether a row is hidden (SUBTOTAL 101-111 skip hidden rows). `sheet` names another sheet. */
@@ -205,6 +237,8 @@ export interface IRecalcResult {
     oldValue: unknown;
     newValue: unknown;
   }>;
+  /** Current successful spills after recalculation, for serialization. */
+  spillRanges?: ISpillRange[];
 }
 
 /**
@@ -247,6 +281,10 @@ export interface IGridDataAccessor {
   getCellValue(col: number, row: number): unknown;
   getRowCount(): number;
   getColumnCount(): number;
+  /** True for every cell in a merged block, including its master. */
+  isCellMerged?(col: number, row: number): boolean;
+  /** Successful spill at this anchor, in this accessor's sheet coordinates. */
+  getSpillRange?(col: number, row: number): ISpillRange | undefined;
   /** Optional: whether a sheet row is hidden. SUBTOTAL 101-111 leave hidden rows out. */
   isRowHidden?(row: number): boolean;
 }

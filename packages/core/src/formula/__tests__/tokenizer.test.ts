@@ -324,12 +324,12 @@ describe('tokenizer', () => {
       }
     });
 
-    it('throws for @ character', () => {
-      expect(() => tokenize('@')).toThrow(FormulaError);
+    it('recognizes the implicit intersection operator', () => {
+      expect(tokenPairs('@A1')).toEqual([['AT', '@'], ['CELL_REF', 'A1']]);
     });
 
-    it('throws for # character', () => {
-      expect(() => tokenize('#')).toThrow(FormulaError);
+    it('recognizes the spill operator', () => {
+      expect(tokenPairs('A1#')).toEqual([['CELL_REF', 'A1'], ['HASH', '#']]);
     });
   });
 

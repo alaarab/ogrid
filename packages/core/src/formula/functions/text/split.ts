@@ -1,5 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
+import { checkArraySize } from '../../arrays';
 import { toNumber, toText, evalArg, logicalValue } from '../../evaluator';
 
 interface Match { start: number; end: number }
@@ -103,9 +104,6 @@ export function registerTextSplitFunctions(registry: Map<string, IFormulaFunctio
   registry.set('TEXTAFTER', textAround(true));
 
   // TEXTSPLIT(text, col_delimiter, [row_delimiter], [ignore_empty=FALSE], [match_mode=0], [pad_with])
-  // A formula cell holds one value (no spill engine, same as SEQUENCE), so the
-  // result is the first element of the split array: the first column of the
-  // first row. An all-empty result with ignore_empty is #VALUE! (Excel: #CALC!).
   registry.set('TEXTSPLIT', {
     minArgs: 2,
     maxArgs: 6,
@@ -113,15 +111,15 @@ export function registerTextSplitFunctions(registry: Map<string, IFormulaFunctio
       const values: unknown[] = [];
       for (let i = 0; i < args.length; i++) {
         const value = evalArg(evaluator, args[i], context);
-        if (value instanceof FormulaError) return value;
+        if (i !== 5 && value instanceof FormulaError) return value;
         values.push(value);
       }
       const text = toText(values[0]);
       const colDelimiter = toText(values[1]);
       const rowDelimiter = values.length > 2 ? toText(values[2]) : '';
-      const ignoreEmpty = values.length > 3 ? logicalValue(values[3]) : false;
+      const ignoreEmpty = values[3] !== undefined ? logicalValue(values[3]) : false;
       if (ignoreEmpty instanceof FormulaError) return ignoreEmpty;
-      const rawMode = values.length > 4 ? toNumber(values[4]) : 0;
+      const rawMode = values[4] !== undefined ? toNumber(values[4]) : 0;
       if (rawMode instanceof FormulaError) return rawMode;
       const matchMode = Math.trunc(rawMode);
       if (matchMode !== 0 && matchMode !== 1) return new FormulaError('#VALUE!', 'match_mode must be 0 or 1');
@@ -130,10 +128,12 @@ export function registerTextSplitFunctions(registry: Map<string, IFormulaFunctio
 
       const keep = (part: string) => !ignoreEmpty || part !== '';
       const rows = rowDelimiter === '' ? [text] : split(text, rowDelimiter, ignoreCase).filter(keep);
-      const firstRow = rows[0];
-      if (firstRow === undefined) return new FormulaError('#VALUE!', 'TEXTSPLIT result is empty');
-      const cells = colDelimiter === '' ? [firstRow] : split(firstRow, colDelimiter, ignoreCase).filter(keep);
-      return cells[0] ?? new FormulaError('#VALUE!', 'TEXTSPLIT result is empty');
+      const cells = rows.map(row => colDelimiter === '' ? [row] : split(row, colDelimiter, ignoreCase).filter(keep));
+      const width = Math.max(0, ...cells.map(row => row.length));
+      if (!cells.length || width === 0) return new FormulaError('#CALC!', 'Empty array');
+      checkArraySize(cells.length, width, context);
+      const padding = values.length > 5 ? values[5] : new FormulaError('#N/A');
+      return cells.map(row => Array.from({ length: width }, (_, c) => c < row.length ? row[c] : padding));
     },
   });
 }

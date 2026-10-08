@@ -1,3 +1,4 @@
+import { resolveReference } from '../references';
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
 import { FormulaError } from '../types';
 import { toNumber, evalArg } from '../evaluator';
@@ -17,7 +18,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext): unknown {
-      const arg = args[0];
+      const arg = resolveReference(args[0], context);
       if (!arg || (arg.kind !== 'range' && arg.kind !== 'cellRef')) return new FormulaError('#VALUE!', 'COUNTBLANK requires a reference');
       if (arg.kind === 'cellRef') { const value = context.getCellValue(arg.address); return value === null || value === undefined || value === '' ? 1 : 0; }
       const data = context.getRangeValues({ start: arg.start, end: arg.end });
@@ -121,7 +122,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
-      const arg = args[0];
+      const arg = resolveReference(args[0], context);
       if (arg === undefined || arg.kind !== 'cellRef') return false;
       if (!context.getCellFormula) return false;
       const formula = context.getCellFormula(arg.address);
@@ -155,9 +156,9 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
   registry.set('ISREF', {
     minArgs: 1,
     maxArgs: 1,
-    evaluate(args: ASTNode[], _context: IFormulaContext, _evaluator: IEvaluator): unknown {
+    evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
       // In formula engine context: TRUE if the argument is a cell or range reference node
-      const arg = args[0];
+      const arg = resolveReference(args[0], context);
       return arg !== undefined && (arg.kind === 'cellRef' || arg.kind === 'range');
     },
   });

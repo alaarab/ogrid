@@ -1,3 +1,4 @@
+import { resolveReference } from '../references';
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
 import { FormulaError } from '../types';
 import { wildcard } from '../wildcard';
@@ -69,14 +70,14 @@ function extremeIfs(name: string, pick: (a: number, b: number) => number): IForm
       if ((args.length - 1) % 2 !== 0) {
         return new FormulaError('#VALUE!', `${name} requires a target range + pairs of criteria_range, criteria`);
       }
-      const targetArg = args[0];
+      const targetArg = resolveReference(args[0], context);
       if (targetArg === undefined || targetArg.kind !== 'range') {
         return new FormulaError('#VALUE!', `${name} first argument must be a cell range`);
       }
       const target = context.getRangeValues({ start: targetArg.start, end: targetArg.end });
       const pairs: { range: unknown[][]; criteria: ParsedCriteria }[] = [];
       for (let i = 1; i < args.length; i += 2) {
-        const rangeArg = args[i];
+        const rangeArg = resolveReference(args[i], context);
         const criteriaArg = args[i + 1];
         if (rangeArg === undefined || rangeArg.kind !== 'range' || criteriaArg === undefined) {
           return new FormulaError('#VALUE!', `${name} criteria_range must be a cell range`);
@@ -111,7 +112,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       // Arg 0: criteria range (must be a RangeNode)
-      const rangeArg = args[0];
+      const rangeArg = resolveReference(args[0], context);
       if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'SUMIF range must be a cell range');
       }
@@ -128,7 +129,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
 
       // Arg 2: sum range (optional, defaults to criteria range)
       let sumRange: unknown[][];
-      const sumRangeArg = args[2];
+      const sumRangeArg = resolveReference(args[2], context);
       if (sumRangeArg !== undefined) {
         if (sumRangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'SUMIF sum_range must be a cell range');
@@ -164,7 +165,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       // Arg 0: range (must be a RangeNode)
-      const rangeArg = args[0];
+      const rangeArg = resolveReference(args[0], context);
       if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'COUNTIF range must be a cell range');
       }
@@ -202,7 +203,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       // Arg 0: criteria range (must be a RangeNode)
-      const rangeArg = args[0];
+      const rangeArg = resolveReference(args[0], context);
       if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'AVERAGEIF range must be a cell range');
       }
@@ -219,7 +220,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
 
       // Arg 2: average range (optional, defaults to criteria range)
       let avgRange: unknown[][];
-      const avgRangeArg = args[2];
+      const avgRangeArg = resolveReference(args[2], context);
       if (avgRangeArg !== undefined) {
         if (avgRangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'AVERAGEIF avg_range must be a cell range');
@@ -261,7 +262,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
       if ((args.length - 1) % 2 !== 0) {
         return new FormulaError('#VALUE!', 'SUMIFS requires sum_range + pairs of criteria_range, criteria');
       }
-      const sumRangeArg = args[0];
+      const sumRangeArg = resolveReference(args[0], context);
       if (sumRangeArg === undefined || sumRangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'SUMIFS sum_range must be a cell range');
       }
@@ -269,7 +270,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
 
       const pairs: { range: unknown[][]; criteria: ParsedCriteria }[] = [];
       for (let i = 1; i < args.length; i += 2) {
-        const rangeArg = args[i];
+        const rangeArg = resolveReference(args[i], context);
         if (rangeArg === undefined || rangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'SUMIFS criteria_range must be a cell range');
         }
@@ -318,11 +319,11 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
 
       const pairs: { range: unknown[][]; criteria: ParsedCriteria }[] = [];
       for (let i = 0; i < args.length; i += 2) {
-        const rangeArg = args[i];
+        const rangeArg = resolveReference(args[i], context);
         if (rangeArg === undefined || rangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'COUNTIFS criteria_range must be a cell range');
         }
-        if (!args[0] || !sameShape(args[0], rangeArg)) return new FormulaError('#VALUE!', 'COUNTIFS range dimensions must match');
+        if (!args[0] || !sameShape(resolveReference(args[0], context), rangeArg)) return new FormulaError('#VALUE!', 'COUNTIFS range dimensions must match');
         const criteriaArg = args[i + 1];
         if (criteriaArg === undefined) {
           return new FormulaError('#VALUE!', 'COUNTIFS requires pairs of criteria_range, criteria');
@@ -354,7 +355,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
           if (allMatch) count++;
         }
       }
-      const firstArg = args[0];
+      const firstArg = resolveReference(args[0], context);
       if (firstArg?.kind === 'range' && pairs.every(pair => matchesCriteria(undefined, pair.criteria, context))) {
         const total = (Math.abs(firstArg.end.row - firstArg.start.row) + 1) * (Math.abs(firstArg.end.col - firstArg.start.col) + 1);
         count += total - rows * cols;
@@ -371,7 +372,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
       if ((args.length - 1) % 2 !== 0) {
         return new FormulaError('#VALUE!', 'AVERAGEIFS requires avg_range + pairs of criteria_range, criteria');
       }
-      const avgRangeArg = args[0];
+      const avgRangeArg = resolveReference(args[0], context);
       if (avgRangeArg === undefined || avgRangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'AVERAGEIFS avg_range must be a cell range');
       }
@@ -379,7 +380,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
 
       const pairs: { range: unknown[][]; criteria: ParsedCriteria }[] = [];
       for (let i = 1; i < args.length; i += 2) {
-        const rangeArg = args[i];
+        const rangeArg = resolveReference(args[i], context);
         if (rangeArg === undefined || rangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'AVERAGEIFS criteria_range must be a cell range');
         }
