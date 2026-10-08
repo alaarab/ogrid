@@ -138,9 +138,7 @@ The `rowHeight` property sets the fixed pixel height for every row. Choose a val
 />
 ```
 
-:::caution
-Virtual scrolling requires a **fixed row height**. Variable-height rows are not supported -- every row must be exactly `rowHeight` pixels tall.
-:::
+`rowHeight` is the default height. Rows can differ from it: manual heights (`rowHeights`, `rowResize`) are part of the scroll geometry, and when a column has `wrapText` the rendered rows are measured (rows not rendered yet count as `rowHeight`). Past the browser height cap (the scaled model) and with windowed data sources, every row is exactly `rowHeight` tall. See [Wrap Text](./wrap-text#virtual-scrolling).
 
 ### Overscan
 

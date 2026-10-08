@@ -159,7 +159,8 @@ export function styleToCss(
     css.textAlign = h === 'right' ? 'right' : h === 'center' || h === 'centerContinuous' ? 'center' : h === 'justify' || h === 'distributed' ? 'justify' : 'left';
     if (align?.indent) css.paddingLeft = `calc(var(--ogrid-cell-indent, 10px) + ${align.indent * 9}px)`;
     if (wrap) {
-      css.whiteSpace = 'normal';
+      // Line breaks in the text (Alt+Enter) show, as in Excel.
+      css.whiteSpace = 'pre-wrap';
       css.overflowWrap = 'anywhere';
     } else {
       css.whiteSpace = 'nowrap';

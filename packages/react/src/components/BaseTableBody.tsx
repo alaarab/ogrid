@@ -59,6 +59,10 @@ export interface BaseTableBodyProps<T> {
   frozenRows?: number;
   /** Height override for a row (resized rows); omit for fixed heights. */
   getRowHeight?: (rowId: string | number) => number | undefined;
+  /** Virtual scroll: a row's height in the scroll geometry (sizes the spacers); defaults to `rowHeight`. */
+  getRowSize?: (rowIndex: number) => number;
+  /** Virtual scroll: ref callback measuring each rendered row (variable heights). */
+  measureRowRef?: (el: HTMLElement | null) => void;
   /** Row-number resize handle pointer-down; omit to hide the handles. */
   onRowResizeStart?: (e: React.PointerEvent, rowId: string | number) => void;
   /** Pointer down on a row number cell: select the whole row. */
@@ -139,7 +143,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumberOf, ariaRowIndexBase,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
     editingCell, tabStopCell, registerTabStop, popoverAnchorEl, pendingEditorValue, formulaVersion, conditionalFormat,
-    pinnedColumns, rowNumWidth, mergeLayout, getRowHeight, onRowResizeStart, getCellNote, noteIdPrefix, styles, primitives, onRowHeaderPointerDown,
+    pinnedColumns, rowNumWidth, mergeLayout, getRowHeight, getRowSize, measureRowRef, onRowResizeStart, getCellNote, noteIdPrefix, styles, primitives, onRowHeaderPointerDown,
   } = props;
   // Hidden-row markers need a row-number gutter to sit in.
   const rowGaps = hasRowNumbersCol && props.onUnhideRows ? props.hiddenRowGaps : null;
@@ -247,6 +251,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         globalColIndexMap={globalColIndexMap}
         rowNumWidth={rowNumWidth}
         customRowHeight={getRowHeight?.(rowIdStr)}
+        measureRowRef={virtualScrollEnabled ? measureRowRef : undefined}
         onRowResizeStart={onRowResizeStart}
         onRowHeaderPointerDown={onRowHeaderPointerDown}
         hiddenRowsBefore={rowGaps?.before.get(rowIdStr)}
@@ -296,12 +301,19 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
 
   // Frozen rows render ahead of the window and take its place in the scroll
   // geometry: the spacers shrink by the frozen rows' height so the total holds.
-  const frozenHeight = frozenCount * rowHeight;
+  // Rows can differ in height (manual heights, wrapped text), so sum them.
+  const sizeOfRows = (from: number, to: number): number => {
+    if (to < from) return 0;
+    if (!getRowSize) return (to - from + 1) * rowHeight;
+    let total = 0;
+    for (let i = from; i <= to; i++) total += getRowSize(i);
+    return total;
+  };
   const topSpacer = virtualScrollEnabled
-    ? Math.max(0, visibleRange.offsetTop + (bodyStart - visibleRange.startIndex) * rowHeight - frozenHeight)
+    ? Math.max(0, visibleRange.offsetTop + sizeOfRows(visibleRange.startIndex, bodyStart - 1) - sizeOfRows(0, frozenCount - 1))
     : 0;
   const bottomSpacer = virtualScrollEnabled
-    ? Math.max(0, visibleRange.offsetBottom - Math.max(0, frozenCount - 1 - visibleRange.endIndex) * rowHeight)
+    ? Math.max(0, visibleRange.offsetBottom - sizeOfRows(visibleRange.endIndex + 1, frozenCount - 1))
     : 0;
 
   return (

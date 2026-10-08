@@ -60,8 +60,10 @@ export interface SheetFormatting {
   columnWidths: Record<string, number>;
   /** The sheet's default column width in Excel character units. */
   defaultColumnWidth: number;
-  /** Explicit data-row heights in points, by row id. Round-trip only (grid rows are uniform). */
+  /** Explicit data-row heights in points, by row id. */
   rowHeights: Map<number, number>;
+  /** The sheet's default row height in points (15 unless the sheet sets one). */
+  defaultRowHeight: number;
   /** Merged blocks whose top-left cell is a loaded data cell. */
   merges: IMergedCell[];
   /** Merges the grid cannot show (they touch the promoted header row), as A1 ranges. Kept for export. */
@@ -626,12 +628,21 @@ function emptyFormatting(sheet?: ExcelJS.Worksheet): SheetFormatting {
     columnWidths: {},
     defaultColumnWidth: sheet ? defaultColumnWidthOf(sheet) : DEFAULT_COLUMN_WIDTH_CHARS,
     rowHeights: new Map(),
+    defaultRowHeight: sheet ? defaultRowHeightOf(sheet) : DEFAULT_ROW_HEIGHT_PT,
     merges: [],
     unmappedMerges: [],
     frozen: { rows: 0, columns: 0 },
     listValidations: {},
     ...(tabColor ? { tabColor } : {}),
   };
+}
+
+/** Excel's default row height in points (Calibri 11). */
+export const DEFAULT_ROW_HEIGHT_PT = 15;
+
+function defaultRowHeightOf(sheet: ExcelJS.Worksheet): number {
+  const h = sheet.properties?.defaultRowHeight;
+  return typeof h === 'number' && h > 0 ? h : DEFAULT_ROW_HEIGHT_PT;
 }
 
 function defaultColumnWidthOf(sheet: ExcelJS.Worksheet): number {

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo } from 'react';
 import { useVirtualScroll } from './useVirtualScroll';
 import { collectUnpinnedColumnWidths, resolveVirtualScrollSettings } from './dataGridDerivations';
 import type { MutableRefObject, RefObject } from 'react';
-import type { UseVirtualScrollResult } from './useVirtualScroll';
+import type { UseVirtualScrollParams, UseVirtualScrollResult } from './useVirtualScroll';
 import type { IColumnDef, IOGridDataGridProps } from '../types';
 
 /**
@@ -17,6 +17,8 @@ export function useDataGridVirtualization<T>(
   wrapperRef: RefObject<HTMLDivElement | null>,
   /** Filled with the current scrollToIndex every render (keyboard navigation reads it). */
   scrollToIndexRef: MutableRefObject<UseVirtualScrollResult['scrollToIndex'] | null>,
+  /** Variable row heights (manual heights, measured wrapped rows); see useVirtualScroll. */
+  rowSizing?: Pick<UseVirtualScrollParams, 'getRowHeightAt' | 'getRowKeyAt' | 'measureRows'>,
 ) {
   const { virtualScroll, windowed, pinnedColumns, scrollToRowRef } = props;
   const settings = resolveVirtualScrollSettings(virtualScroll, windowed ? windowed.rowCount : null, props.rowHeight, props.items.length);
@@ -28,7 +30,7 @@ export function useDataGridVirtualization<T>(
     [columnVirtualization, visibleCols, pinnedColumns, getColumnWidth]
   );
 
-  const { visibleRange, columnRange, onHorizontalScroll, scrollToIndex } = useVirtualScroll({
+  const { visibleRange, columnRange, onHorizontalScroll, scrollToIndex, scaled, getRowSize, measureRowRef } = useVirtualScroll({
     totalRows: settings.totalRows,
     rowHeight: settings.rowHeight,
     enabled: settings.enabled,
@@ -39,6 +41,7 @@ export function useDataGridVirtualization<T>(
     columnVirtualization,
     columnWidths: unpinnedColumnWidths,
     columnOverscan: virtualScroll?.columnOverscan,
+    ...rowSizing,
   });
   scrollToIndexRef.current = scrollToIndex;
 
@@ -64,5 +67,9 @@ export function useDataGridVirtualization<T>(
     visibleRange,
     columnRange,
     onHorizontalScroll,
+    /** True past the browser height cap: every row is drawn at the fixed row height. */
+    virtualScrollScaled: scaled,
+    getRowSize,
+    measureRowRef,
   };
 }

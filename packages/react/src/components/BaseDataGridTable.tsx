@@ -9,7 +9,6 @@ import { useGridCellFocus } from '../hooks/useGridCellFocus';
 import { useFrozenRowOffsets } from '../hooks/useFrozenRowOffsets';
 import { useStructureContextMenu } from '../hooks/useStructureContextMenu';
 import { useHidingContextMenu } from '../hooks/useHidingContextMenu';
-import { useRowResize } from '../hooks/useRowResize';
 import { useCellNotes } from '../hooks/useCellNotes';
 import { CellNotePopover } from './CellNotePopover';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
@@ -141,14 +140,6 @@ export function BaseDataGridTableInner<T>(
         ? items.length
         : -1;
   const ariaRowCount = knownTotalRows >= 0 ? headerRowCount + knownTotalRows : -1;
-  // Per-row resize from the row-number gutter. Virtual scrolling and windowed
-  // sources assume one fixed row height, so resizing is off there.
-  const rowResizeEnabled = !!gridProps.rowResize && hasRowNumbersCol && !virtualScrollEnabled && !windowed;
-  const rowResize = useRowResize({
-    enabled: rowResizeEnabled,
-    rowHeights: gridProps.rowHeights,
-    onRowResized: gridProps.onRowResized,
-  });
 
   // Insert/delete rows and columns (allowStructureEdits), acting on the selected cells.
   const structureMenu = useStructureContextMenu({
@@ -215,7 +206,7 @@ export function BaseDataGridTableInner<T>(
   });
   const { mergeLayout, frozenRows } = o.viewModels;
   // Resized rows move the frozen rows below them, so their heights are part of the key.
-  const frozenRowsKey = React.useMemo(() => ({ rows: windowed ?? items, heights: rowResize.getRowHeight }), [windowed, items, rowResize.getRowHeight]);
+  const frozenRowsKey = React.useMemo(() => ({ rows: windowed ?? items, heights: o.getRowHeight }), [windowed, items, o.getRowHeight]);
   useFrozenRowOffsets(tableContainerRef, frozenRows, o.stickyHeader, frozenRowsKey);
   // Windowed placeholders are aria-hidden; announce loading once for the grid instead.
   let windowedLoading = false;
@@ -336,8 +327,10 @@ export function BaseDataGridTableInner<T>(
                     rowNumWidth={hasRowNumbersCol ? (columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH) : undefined}
                     mergeLayout={mergeLayout}
                     frozenRows={frozenRows}
-                    getRowHeight={rowResizeEnabled ? rowResize.getRowHeight : undefined}
-                    onRowResizeStart={rowResize.onRowResizeStart}
+                    getRowHeight={o.getRowHeight}
+                    getRowSize={o.getRowSize}
+                    measureRowRef={o.measureRowRef}
+                    onRowResizeStart={o.onRowResizeStart}
                     hiddenRowGaps={gridProps.hidingActions?.hiddenRowGaps}
                     onUnhideRows={gridProps.hidingActions?.unhideRows}
                     getCellNote={cellNotes.getCellNote}

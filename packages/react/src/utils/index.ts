@@ -7,6 +7,7 @@ export {
   triggerCsvDownload,
   triggerBlobDownload,
   getCellValue,
+  isCellWrapped,
   flattenColumns,
   buildHeaderRows,
   getFilterField,

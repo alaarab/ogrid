@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { booleanParser, conditionalFormatTextStyle, getConditionalFormatIcon } from '@alaarab/ogrid-core';
+import { booleanParser, conditionalFormatTextStyle, getConditionalFormatIcon, isCellWrapped } from '@alaarab/ogrid-core';
 import type { ICellConditionalFormat, ICellIcon } from '@alaarab/ogrid-core';
 import { useCallback } from 'react';
 import {
@@ -122,7 +122,9 @@ export function useRenderCellContent<T>(
           if (cf?.icon) displayNode = <>{renderConditionalIcon(cf.icon)}{displayNode}</>;
         }
 
-        const cellClassNames = `${styles.cellContent}${descriptor.isActive ? ` ${styles.activeCellContent}` : ''}${descriptor.isActive && descriptor.isInRange ? ` ${styles.inRange}` : ''}${descriptor.isInRange && !descriptor.isActive ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;
+        // Wrap Text: wraps at the column width, keeps line breaks, top-aligned.
+        const wrapped = descriptor.columnType !== 'boolean' && isCellWrapped(col, item);
+        const cellClassNames = `${styles.cellContent}${wrapped && styles.wrapText ? ` ${styles.wrapText}` : ''}${descriptor.isActive ? ` ${styles.activeCellContent}` : ''}${descriptor.isActive && descriptor.isInRange ? ` ${styles.inRange}` : ''}${descriptor.isInRange && !descriptor.isActive ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;
 
         const interactionProps = getCellInteractionProps(
           descriptor,
@@ -139,6 +141,7 @@ export function useRenderCellContent<T>(
             <div
               className={cellClassNames}
               {...interactionProps}
+              data-wrap-text={wrapped ? '' : undefined}
               style={descriptor.canEditAny ? CURSOR_CELL_STYLE : undefined}
             >
               {displayNode}

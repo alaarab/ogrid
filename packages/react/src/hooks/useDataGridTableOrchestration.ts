@@ -1,4 +1,5 @@
 import { useMemo, useRef } from 'react';
+import { useRowResize } from './useRowResize';
 import type { IColumnDef } from '../types';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
 import { useDataGridState } from './useDataGridState';
@@ -87,8 +88,39 @@ export function useDataGridTableOrchestration<T>(
     cellNavigatorRef: props.cellNavigatorRef,
   });
   const { resize, reorder } = useDataGridColumnControls(props, layout, wrapperRef);
-  const { virtualScrollEnabled, virtualRowHeight, visibleRange, columnRange, onHorizontalScroll } = useDataGridVirtualization(
-    props, stickyHeader, visibleCols, resize.getColumnWidth, wrapperRef, scrollToIndexRef,
+  // Per-row heights: dragged from the row-number gutter (rowResize) or given
+  // (rowHeights). Windowed sources read rows lazily, so they keep fixed heights.
+  const rowResizeAllowed = !!props.rowResize && hasRowNumbersCol && !windowed;
+  const rowResize = useRowResize({
+    enabled: rowResizeAllowed,
+    rowHeights: props.rowHeights,
+    onRowResized: props.onRowResized,
+  });
+  const rowHeightsActive = !windowed && (rowResizeAllowed || props.rowHeights != null);
+  const getRowHeight = rowHeightsActive ? rowResize.getRowHeight : undefined;
+  // Wrapped text sizes rows to content, so a virtual grid measures its rows.
+  const measureRows = !windowed && visibleCols.some((c) => c.wrapText);
+  const rowSizing = useMemo(() => {
+    if (!getRowHeight && !measureRows) return undefined;
+    return {
+      getRowHeightAt: getRowHeight
+        ? (i: number) => {
+            const item = items[i];
+            return item === undefined ? undefined : getRowHeight(getRowId(item));
+          }
+        : undefined,
+      getRowKeyAt: (i: number) => {
+        const item = items[i];
+        return item === undefined ? i : getRowId(item);
+      },
+      measureRows,
+    };
+  }, [getRowHeight, measureRows, items, getRowId]);
+  const {
+    virtualScrollEnabled, virtualRowHeight, visibleRange, columnRange, onHorizontalScroll,
+    virtualScrollScaled, getRowSize, measureRowRef,
+  } = useDataGridVirtualization(
+    props, stickyHeader, visibleCols, resize.getColumnWidth, wrapperRef, scrollToIndexRef, rowSizing,
   );
   useMiddleClickScroll({ wrapperRef });
   const handlers = useDataGridCellHandlers(props, state, visibleCols, colOffset);
@@ -114,6 +146,10 @@ export function useDataGridTableOrchestration<T>(
     handleResizeStart, handleResizeDoubleClick, handleResizeFocus, handleResizeKeyDown, getColumnWidth, getColumnMinWidth,
     isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
     virtualScrollEnabled, virtualRowHeight, visibleRange, columnRange, onHorizontalScroll,
+    getRowSize, measureRowRef,
+    // The scaled model (past the browser height cap) draws every row at one height.
+    onRowResizeStart: virtualScrollScaled ? undefined : rowResize.onRowResizeStart,
+    getRowHeight: virtualScrollScaled ? undefined : getRowHeight,
     items, windowed, columns, getRowId, emptyState, layoutMode, rowSelection, suppressHorizontalScroll,
     stickyHeader, isLoading, loadingMessage, ariaLabel, ariaLabelledBy, visibleColumns, columnOrder,
     columnReorder, density, rowHeight, pinnedColumns, currentPage, propPageSize,

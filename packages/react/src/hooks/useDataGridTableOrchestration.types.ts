@@ -15,6 +15,7 @@ import type { DataGridFindReplaceState } from './useDataGridFindReplace';
 import type { UseColumnResizeResult } from './useColumnResize';
 import type { UseColumnReorderResult } from './useColumnReorder';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
+import type { UseRowResizeResult } from './useRowResize';
 import type { IVisibleColumnRange, FormulaReference, CellDescriptorCache } from '@alaarab/ogrid-core';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { IStatusBarProps, RowId, HeaderRow } from '../types';
@@ -63,6 +64,16 @@ export interface UseDataGridTableOrchestrationResult<T> {
   columnRange: IVisibleColumnRange | null;
   /** Callback for horizontal scroll events (column virtualization). */
   onHorizontalScroll?: (scrollLeft: number) => void;
+  /** Row height (px) at a display index as the virtual scroll geometry sees it. */
+  getRowSize: UseVirtualScrollResult['getRowSize'];
+  /** Ref callback measuring a rendered row (virtual scroll with wrapped text). */
+  measureRowRef?: UseVirtualScrollResult['measureRowRef'];
+
+  // Row heights (row resize, controlled `rowHeights`)
+  /** Row-number resize handle pointer-down; undefined when rows can't be resized. */
+  onRowResizeStart?: UseRowResizeResult['onRowResizeStart'];
+  /** Manual height of a row by id; undefined when no row can have one. */
+  getRowHeight?: UseRowResizeResult['getRowHeight'];
 
   // Derived from props
   items: T[];

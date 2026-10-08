@@ -153,6 +153,12 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
   cellEditorPopup?: boolean;
   /** Params passed to the cell editor (e.g. { values: string[] } for select). */
   cellEditorParams?: CellEditorParams;
+  /**
+   * Excel's Wrap Text: the cell's text wraps at the column width, keeps its
+   * line breaks, and sits at the top of the cell; the row grows to fit unless
+   * it has a manual height. Per-row when a function. Default: false.
+   */
+  wrapText?: boolean | ((item: T) => boolean);
 }
 
 /** Event payload when a cell value is committed after edit. */

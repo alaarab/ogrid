@@ -1,0 +1,62 @@
+---
+sidebar_position: 11.7
+title: Wrap Text
+description: Excel-style wrap text - wrapped cells, rows that grow to fit, multi-line editing with Alt+Enter
+---
+
+import WrapTextDemo from '@site/src/components/demos/WrapTextDemo';
+
+# Wrap Text
+
+Turn on `wrapText` for a column and its text wraps at the column width, keeps its line breaks and sits at the top of the cell, like Excel's **Wrap Text**. Rows grow to fit the tallest wrapped cell.
+
+## Live Demo
+
+<WrapTextDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+<OGrid
+  columns={[
+    { columnId: 'title', name: 'Title' },
+    { columnId: 'notes', name: 'Notes', defaultWidth: 320, wrapText: true },
+    // Per row: wrap only long summaries
+    { columnId: 'summary', name: 'Summary', wrapText: (row) => row.summary.length > 40 },
+  ]}
+  data={rows}
+  getRowId={(r) => r.id}
+  editable
+/>;
+```
+
+Give wrapped columns a width (`defaultWidth`, `idealWidth` or `width`). Without one, the table may widen the column to fit the longest line instead of wrapping it.
+
+## Row heights
+
+- A row grows to fit its wrapped cells. Cells that don't wrap stay on one line, with an ellipsis when they overflow.
+- A row with a manual height keeps it, as in Excel: a height dragged from a row number (`rowResize`) or given in `rowHeights` wins over the content, and taller wrapped text is clipped.
+- `rowHeights` applies without `rowResize` too, for heights you set yourself.
+- [Frozen rows](./frozen-rows) stick at their real heights, and a [merged cell](./merged-cells) can hold wrapped text across its rows.
+- Conditional formatting text styles and icons, and the note marker, show in wrapped cells as in any other cell.
+
+## Multi-line editing
+
+- **Alt+Enter** (Option+Enter on macOS) inserts a line break at the caret. **Enter** still commits and moves down, and **Escape** cancels.
+- Wrapped cells, and text that already has line breaks, edit in a textarea that grows with its text. Other cells edit in a single-line input until you press Alt+Enter.
+- Copy quotes a cell that has line breaks (Excel's convention), and pasting a quoted cell fills one cell and keeps its line breaks. Unquoted multi-line text still pastes one line per row.
+
+## Virtual scrolling
+
+With [virtual scrolling](./virtual-scrolling), rows can differ in height too:
+
+- Manual heights (`rowHeights`, `rowResize`) are part of the scroll geometry, so the scrollbar and `scrollToRow` stay exact.
+- When a column wraps, rows are measured as they render. Rows not rendered yet count as `rowHeight` until they are, and the rows you are looking at stay in place when a row above them changes height.
+- Past the browser's element-height cap (about 931k rows at 36px) the grid uses its scaled model, where every row is `rowHeight` tall: manual heights are ignored, row resize is off, and wrapped text is clipped to the row.
+- [Windowed data sources](./server-side-data) keep one fixed row height.
+
+## XLSX
+
+[`@alaarab/ogrid-react-xlsx`](./xlsx-import) shows Excel's Wrap Text from the file, line breaks included, and renders each row's saved height in proportion to the sheet's default row height. Rows can be resized, and their heights are saved on export. Typing a line break with Alt+Enter turns on Wrap Text for that cell, as Excel does. Rows without a saved height don't grow to fit wrapped text.

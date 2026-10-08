@@ -39,6 +39,22 @@ export interface UseVirtualScrollParams {
   columnWidths?: number[];
   /** Column overscan count. Default: 2. */
   columnOverscan?: number;
+  /**
+   * Variable row heights: a row's fixed height in pixels (manual row height),
+   * or undefined for the default `rowHeight`. Standard model only; the scaled
+   * model keeps every row at `rowHeight`.
+   */
+  getRowHeightAt?: (index: number) => number | undefined;
+  /**
+   * Stable key of the row at an index (its row id), so measured and explicit
+   * heights follow the row through sorting and filtering.
+   */
+  getRowKeyAt?: (index: number) => string | number;
+  /**
+   * Measure rendered rows' real heights (content-sized rows such as wrapped
+   * text). Rows not measured yet use their estimate. Standard model only.
+   */
+  measureRows?: boolean;
 }
 
 export interface UseVirtualScrollResult {
@@ -61,6 +77,14 @@ export interface UseVirtualScrollResult {
   columnRange: IVisibleColumnRange | null;
   /** Callback to attach to scroll container's onScroll for horizontal tracking. */
   onHorizontalScroll?: (scrollLeft: number) => void;
+  /** Height of the row at an index as the scroll geometry sees it (measured, explicit or `rowHeight`). */
+  getRowSize: (index: number) => number;
+  /**
+   * Ref callback that measures a rendered row (stable identity). Set only while
+   * `measureRows` is on and the standard model is active; the row element
+   * must carry `data-index`.
+   */
+  measureRowRef?: (el: HTMLElement | null) => void;
 }
 
 /**
@@ -98,6 +122,9 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     columnVirtualization = false,
     columnWidths,
     columnOverscan = 2,
+    getRowHeightAt,
+    getRowKeyAt,
+    measureRows = false,
   } = params;
 
   // Dev-only validation: warn if enabled but rowHeight is missing or invalid
@@ -137,25 +164,53 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
   // dataset needs a spacer past the DOM height cap, which TanStack cannot
   // express — the scaled branch below takes over.
   const tanStackActive = isActive && !isScaled;
+  // Explicit heights are read through a ref: their identity changes on every
+  // row-resize drag frame, and estimateSize is read lazily by TanStack anyway.
+  const getRowHeightAtRef = useRef(getRowHeightAt);
+  getRowHeightAtRef.current = getRowHeightAt;
+  const estimateSize = useCallback(
+    (index: number) => getRowHeightAtRef.current?.(index) ?? rowHeight,
+    [rowHeight],
+  );
+  const getItemKey = useCallback(
+    (index: number) => (getRowKeyAt ? getRowKeyAt(index) : index),
+    [getRowKeyAt],
+  );
   const virtualizer = useVirtualizer({
     count: tanStackActive ? totalRows : 0,
     getScrollElement,
-    estimateSize: () => rowHeight,
+    estimateSize,
+    getItemKey,
     overscan,
     enabled: tanStackActive,
     scrollMargin: headerHeight,
     scrollPaddingStart: headerHeight,
+    // Rows without layout (zero height, e.g. detached or under jsdom) keep their estimate.
+    measureElement: (el, entry, instance) => {
+      const box = entry?.borderBoxSize?.[0];
+      const height = box ? box.blockSize : el.getBoundingClientRect().height;
+      return height > 0 ? Math.round(height) : instance.options.estimateSize(instance.indexFromElement(el));
+    },
   });
 
   // TanStack memoizes row measurements and does not watch estimateSize, so a
   // rowHeight/density change would keep the old heights (wrong total size and
   // offsets) until something else invalidated them. Re-measure explicitly.
+  // Explicit row heights changing (a row resize) re-measure too, unless rows
+  // are measured live: then the resized row's observer reports its new height,
+  // and clearing the cache would drop every off-screen row's measured height.
   const measuredRowHeightRef = useRef(rowHeight);
   useEffect(() => {
     if (measuredRowHeightRef.current === rowHeight) return;
     measuredRowHeightRef.current = rowHeight;
     virtualizer.measure?.();
   }, [rowHeight, virtualizer]);
+  const explicitHeightsRef = useRef(getRowHeightAt);
+  useEffect(() => {
+    if (explicitHeightsRef.current === getRowHeightAt) return;
+    explicitHeightsRef.current = getRowHeightAt;
+    if (!measureRows) virtualizer.measure?.();
+  }, [getRowHeightAt, measureRows, virtualizer]);
 
   // Track container size whenever row or column virtualization is live. The
   // observer fires only on real resizes, so this is cheap to keep mounted.
@@ -304,7 +359,11 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
         setScrollTop(top);
       } else if (tanStackActive) {
         if (align === 'center' && stickyHeight > 0) {
-          scrollToIndexRef.current?.scrollToOffset(Math.max(0, index * rowHeight - (height - rowHeight) / 2));
+          // measurementsCache starts include the header (scrollMargin).
+          const item = scrollToIndexRef.current?.measurementsCache?.[index];
+          const top = item ? item.start - stickyHeight : index * rowHeight;
+          const size = item ? item.size : rowHeight;
+          scrollToIndexRef.current?.scrollToOffset(Math.max(0, top - (height - size) / 2));
         } else {
           scrollToIndexRef.current?.scrollToIndex(index, { align });
         }
@@ -353,6 +412,11 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     return computeVisibleColumnRange(scrollLeft, columnWidths, containerWidth, columnOverscan);
   }, [columnVirtualization, columnWidths, containerWidth, scrollLeft, columnOverscan]);
 
+  const getRowSize = useCallback(
+    (index: number) => (tanStackActive ? virtualizer.measurementsCache?.[index]?.size ?? rowHeight : rowHeight),
+    [tanStackActive, virtualizer, rowHeight],
+  );
+
   return {
     virtualizer: tanStackActive ? virtualizer : null,
     totalHeight,
@@ -361,5 +425,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     scrollToIndex,
     columnRange,
     onHorizontalScroll: columnVirtualization ? onHorizontalScroll : undefined,
+    getRowSize,
+    measureRowRef: tanStackActive && measureRows ? virtualizer.measureElement : undefined,
   };
 }

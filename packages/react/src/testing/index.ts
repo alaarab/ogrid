@@ -21,3 +21,4 @@ export { createConditionalFormattingTests } from './conditionalFormattingTestFac
 export { createSortFilterTests } from './sortFilterTestFactory';
 export type { SortFilterRow } from './sortFilterTestFactory';
 export { createFormulaAssistTests } from './formulaAssistTestFactory';
+export { createWrapTextTests } from './wrapTextTestFactory';

@@ -48,6 +48,8 @@ export interface XlsxSheetState {
   readonly notes: ICellNote[];
   /** Current column widths in Excel character units (explicit ones only). */
   readonly columnWidths: Readonly<Record<string, number>>;
+  /** Current row heights in points by row id (explicit ones only). */
+  readonly rowHeights: ReadonlyMap<number, number>;
   /** Latest formula results reported by the grid's engine, by cellKey. */
   readonly formulaResults: ReadonlyMap<string, unknown>;
   /** The grid's columns, built once per sheet. */
@@ -67,6 +69,8 @@ interface MutableSheetState {
   notes: ICellNote[];
   initialWidths: Record<string, number>;
   columnWidths: Record<string, number>;
+  initialRowHeights: Map<number, number>;
+  rowHeights: Map<number, number>;
   formulaResults: Map<string, unknown>;
   columns: IColumnDef<SheetRow>[];
   columnIndex: Map<string, number>;
@@ -199,6 +203,8 @@ export class XlsxWorkbookDocument {
       notes,
       initialWidths: source.formatting.columnWidths,
       columnWidths: { ...source.formatting.columnWidths },
+      initialRowHeights: source.formatting.rowHeights,
+      rowHeights: new Map(source.formatting.rowHeights),
       formulaResults,
       columns: source.columns,
       columnIndex: new Map(source.columns.map((c, i) => [c.columnId, i])),
@@ -378,6 +384,15 @@ export class XlsxWorkbookDocument {
     const state = this.state(sheetName);
     if (!state?.columnIndex.has(columnId)) return;
     state.columnWidths = { ...state.columnWidths, [columnId]: pxToColumnWidth(px) };
+    this.emit();
+  }
+
+  /** Record a row resize from the grid (points). Not part of undo history, like column resizes. */
+  setRowHeight(sheetName: string, rowId: RowId, points: number): void {
+    const state = this.state(sheetName);
+    const id = Number(rowId);
+    if (!state || this.rowIndexOf(state, id) < 0) return;
+    state.rowHeights = new Map(state.rowHeights).set(id, Math.round(points * 100) / 100);
     this.emit();
   }
 
@@ -583,6 +598,12 @@ export class XlsxWorkbookDocument {
       if (state.initialWidths[columnId] === width) continue;
       const c = state.columnIndex.get(columnId);
       if (c !== undefined) ws.getColumn(c + 1).width = width;
+    }
+
+    for (const [rowId, height] of state.rowHeights) {
+      if (state.initialRowHeights.get(rowId) === height) continue;
+      const index = this.rowIndexOf(state, rowId);
+      if (index >= 0) ws.getRow(sheetRowOf(index)).height = height;
     }
     return valuesChanged;
   }

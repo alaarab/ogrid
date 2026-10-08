@@ -58,6 +58,7 @@ interface IColumnDef<T> extends IColumnMeta {
   cellEditor?: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date' | ComponentType<ICellEditorProps<T>>;
   cellEditorPopup?: boolean;
   cellEditorParams?: CellEditorParams;
+  wrapText?: boolean | ((item: T) => boolean);
 }
 ```
 
@@ -85,6 +86,7 @@ interface IColumnDef<T> extends IColumnMeta {
 | `editable` | `boolean \| ((item: T) => boolean)` | `false` | Whether cells in this column are editable. A function allows per-row control. The grid-level `editable` prop must also be `true` for editing to work. |
 | `cellEditor` | `'text' \| 'select' \| 'checkbox' \| 'richSelect' \| 'date' \| ComponentType<ICellEditorProps<T>>` | `'text'` | The editor to use when a cell enters edit mode. Built-in editors: `'text'` (text input), `'select'` (dropdown), `'checkbox'` (toggle), `'richSelect'` (searchable dropdown), `'date'` (date picker). You can also pass a custom React component. |
 | `cellEditorPopup` | `boolean` | - | Custom (component) editors always render in a popup overlay; built-in editors render inline. The flag currently has no effect, so `false` does not make a custom editor inline. |
+| `wrapText` | `boolean \| ((item: T) => boolean)` | `false` | Excel's Wrap Text: the text wraps at the column width, keeps line breaks and sits at the top; the row grows to fit unless it has a manual height. See [Wrap Text](../features/wrap-text). |
 | `cellEditorParams` | `CellEditorParams` | `undefined` | Additional parameters passed to the cell editor. The shape depends on the editor type. See [CellEditorParams](#celleditorparams) below. |
 
 ## IColumnFilterDef

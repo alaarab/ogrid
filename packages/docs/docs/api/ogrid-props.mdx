@@ -102,8 +102,8 @@ See [Structure Editing](../features/structure-editing).
 | `onRowsChange` | `(event: IRowsChangeEvent<T>) => void` | `undefined` | Fired when rows are inserted or deleted (menu, API, undo/redo). `event.data` is the complete new array: `onRowsChange={(e) => setData(e.data)}`. Required to change rows when you pass `data`. |
 | `onColumnsChange` | `(event: IColumnsChangeEvent<T>) => void` | `undefined` | Fired when a column is inserted or deleted. `event.columns` is the complete new `columns` value. Required for column structure edits. |
 | `createRow` | `(index: number) => T` | `undefined` | Builds a blank row (with a new unique id) for "Insert row" and `insertRows(index)` without rows. The insert-row menu items need it. |
-| `rowResize` | `boolean` | `false` | Drag the bottom edge of a row number to resize that row. Needs `showRowNumbers` or `cellReferences`; off with virtual scrolling and windowed data sources. |
-| `rowHeights` | `Record<RowId, number>` | `undefined` | Controlled row heights in pixels by row id. Without it the grid keeps resized heights itself. |
+| `rowResize` | `boolean` | `false` | Drag the bottom edge of a row number to resize that row. Needs `showRowNumbers` or `cellReferences`; off with windowed data sources and past the virtual-scroll height cap. |
+| `rowHeights` | `Record<RowId, number>` | `undefined` | Row heights in pixels by row id (applied with or without `rowResize`). A manual height wins over wrapped text. Without it the grid keeps resized heights itself. |
 | `onRowResized` | `(rowId: RowId, height: number) => void` | `undefined` | Fired when the user finishes resizing a row. |
 
 ## Cell Selection
