@@ -2,12 +2,18 @@
 // Worksheet typings. Keep source workbook rules intact until the user changes
 // validation, then replace only rules on loaded data cells.
 import type ExcelJS from 'exceljs';
-import { indexToColumnLetter, replaceDataValidationRange } from '@alaarab/ogrid-core';
+import { indexToColumnLetter, replaceDataValidationRange, validationDateSerial } from '@alaarab/ogrid-core';
 import type { IDataValidationRule, DataValidationOperator, IGridDataAccessor } from '@alaarab/ogrid-core';
 import { adjustFormulaReferences, columnLetterToIndex, tokenize, FormulaEngine } from '@alaarab/ogrid-core/formula';
 import { normalizeFormula, rebaseFormulaRows, toFileFormula } from './formulaReferences';
 import { normalizeCellValue } from './sheetMapper';
 import type { SheetRow } from './sheetMapper';
+
+/** Enumerable so workbook model clones and structural undo retain the original sqref anchor. */
+export type AnchoredValidation = ExcelJS.DataValidation & { _ogridOrigin?: { col: number; row: number } };
+export function validationOrigin(rule: ExcelJS.DataValidation): { col: number; row: number } | undefined {
+  return (rule as AnchoredValidation)._ogridOrigin;
+}
 
 interface ValidationMap { model: Record<string, ExcelJS.DataValidation | undefined> }
 function validations(sheet: ExcelJS.Worksheet): ValidationMap {
@@ -53,7 +59,7 @@ function fromFileFormula(value: string, offset: number, sheetName: string): stri
   }
   return rebaseFormulaRows(formula, -offset);
 }
-function ruleOf(dv: ExcelJS.DataValidation, columnIds: string[], rows: { start: number; end: number }, offset: number, sheetName: string): IDataValidationRule<SheetRow> | undefined {
+function ruleOf(dv: ExcelJS.DataValidation, columnIds: string[], rows: { start: number; end: number }, offset: number, sheetName: string, date1904: boolean): IDataValidationRule<SheetRow> | undefined {
   if (!supported(dv.type)) return undefined;
   const style = dv.errorStyle === 'warning' ? 'warning' : dv.errorStyle === 'information' ? 'information' : 'stop';
   const base = {
@@ -70,28 +76,36 @@ function ruleOf(dv: ExcelJS.DataValidation, columnIds: string[], rows: { start: 
   const bound = (v: unknown): number | string => {
     // Invert ExcelJS's date-bound decoder to preserve the actual XML serial,
     // including serials before March 1900.
-    if (v instanceof Date) return v.getTime() / 86400000 + 25569;
-    if (typeof v === 'number') return v;
+    if (v instanceof Date) return v.getTime() / 86400000 + 25569 + (date1904 && dv.type === 'date' ? 1462 : 0);
+    if (typeof v === 'number') return v + (date1904 && dv.type === 'date' ? 1462 : 0);
     const s = String(v ?? '');
-    if (s.trim() !== '' && Number.isFinite(Number(s))) return Number(s);
+    if (s.trim() !== '' && Number.isFinite(Number(s))) return Number(s) + (date1904 && dv.type === 'date' ? 1462 : 0);
     return fromFileFormula(s, offset, sheetName);
   };
   return { ...base, type: dv.type as 'whole' | 'decimal' | 'date' | 'time' | 'textLength', operator: dv.operator ?? 'between', value: bound(first), ...(dv.formulae?.[1] !== undefined ? { value2: bound(dv.formulae[1]) } : {}) };
 }
 
-/** All supported rule types, restricted to loaded cells; adjacent identical rules become row ranges. */
+/** Restrict rules to loaded cells; ExcelJS shares one object per original sqref, preserving its anchor. */
 export function readDataValidations(sheet: ExcelJS.Worksheet, layout: ValidationLayout): IDataValidationRule<SheetRow>[] {
   const offset = layout.headerPromoted ? 1 : 0;
-  const groups = new Map<string, { dv: ExcelJS.DataValidation; byCol: Map<number, { start: number; end: number }[]>; origin: { col: number; row: number } }>();
+  const groups = new Map<ExcelJS.DataValidation, { dv: ExcelJS.DataValidation; byCol: Map<number, { start: number; end: number }[]>; origin: { col: number; row: number } }>();
+  const origins = new Map<ExcelJS.DataValidation, { col: number; row: number }>();
+  for (const [refs, dv] of Object.entries(validations(sheet).model)) {
+    if (!dv) continue;
+    for (const ref of refs.split(/\s+/)) {
+      const box = boxOf(ref), origin = origins.get(dv);
+      if (box && (!origin || box.top - offset - 1 < origin.row || (box.top - offset - 1 === origin.row && box.left < origin.col))) origins.set(dv, { col: box.left, row: box.top - offset - 1 });
+    }
+  }
   for (const [refs, dv] of Object.entries(validations(sheet).model)) {
     if (!dv || !supported(dv.type)) continue;
-    const key = JSON.stringify(dv);
+    const key = dv;
+    const storedOrigin = validationOrigin(dv);
     let group = groups.get(key);
     for (const ref of refs.split(/\s+/)) {
       const b = boxOf(ref);
       if (!b || b.bottom <= offset || b.top > layout.rowCount + offset || b.left >= layout.columnCount) continue;
-      if (!group) { group = { dv, byCol: new Map(), origin: { col: b.left, row: b.top - offset - 1 } }; groups.set(key, group); }
-      if (b.top - offset - 1 < group.origin.row || (b.top - offset - 1 === group.origin.row && b.left < group.origin.col)) group.origin = { col: b.left, row: b.top - offset - 1 };
+      if (!group) { group = { dv, byCol: new Map(), origin: storedOrigin ? { col: storedOrigin.col, row: storedOrigin.row - offset } : origins.get(dv) ?? { col: b.left, row: b.top - offset - 1 } }; groups.set(key, group); }
       for (let c = b.left; c <= Math.min(b.right, layout.columnCount - 1); c++) {
         const ranges = group.byCol.get(c) ?? [];
         ranges.push({ start: Math.max(0, b.top - offset - 1), end: Math.min(layout.rowCount - 1, b.bottom - offset - 1) });
@@ -116,7 +130,7 @@ export function readDataValidations(sheet: ExcelJS.Worksheet, layout: Validation
       }
     }
     for (const box of rectangles.values()) {
-      const rule = ruleOf(group.dv, box.columns.sort((a, b) => columnLetterToIndex(a) - columnLetterToIndex(b)), box.rows, offset, sheet.name);
+      const rule = ruleOf(group.dv, box.columns.sort((a, b) => columnLetterToIndex(a) - columnLetterToIndex(b)), box.rows, offset, sheet.name, sheet.workbook.properties.date1904 === true);
       if (rule) out.push({ ...rule, id: `xlsx-validation-${out.length}`, anchor: { columnId: indexToColumnLetter(group.origin.col), row: group.origin.row } });
     }
   }
@@ -179,13 +193,25 @@ export function writeDataValidations(sheet: ExcelJS.Worksheet, rules: IDataValid
   const offset = layout.headerPromoted ? 1 : 0;
   const model = validations(sheet).model;
   const loaded = { top: offset + 1, bottom: offset + layout.rowCount, left: 0, right: layout.columnCount - 1 };
+  const origins = new Map<ExcelJS.DataValidation, Box>();
+  for (const [refs, dv] of Object.entries(model)) {
+    if (!dv) continue;
+    for (const ref of refs.split(/\s+/)) {
+      const box = boxOf(ref), prev = origins.get(dv);
+      if (box && (!prev || box.top < prev.top || (box.top === prev.top && box.left < prev.left))) origins.set(dv, box);
+    }
+  }
   for (const [refs, dv] of Object.entries(model)) {
     if (!dv || !supported(dv.type)) continue;
     delete model[refs];
     for (const ref of refs.split(/\s+/)) {
       const b = boxOf(ref);
       if (!b) { model[ref] = dv; continue; }
-      for (const rest of subtractBox(b, loaded)) model[refOf(rest)] = dv;
+      for (const rest of subtractBox(b, loaded)) {
+        const stored = validationOrigin(dv);
+        const origin = stored ? { left: stored.col, top: stored.row + 1 } : origins.get(dv) ?? b;
+        model[refOf(rest)] = { ...dv, _ogridOrigin: { col: rest.left, row: rest.top - 1 }, formulae: dv.formulae?.map((v: unknown) => typeof v === 'string' && !v.startsWith('"') ? adjustFormulaReferences(v, rest.left - origin.left, rest.top - origin.top) : v) } as AnchoredValidation;
+      }
     }
   }
   let effective: IDataValidationRule<SheetRow>[] = [];
@@ -201,6 +227,7 @@ export function writeDataValidations(sheet: ExcelJS.Worksheet, rules: IDataValid
     }
   }
   for (const rule of effective) {
+    const listSource = rule.type === 'list' && rule.values ? inlineListSource(sheet, rule.values) : undefined;
     const start = Math.max(0, rule.rows?.start ?? 0), end = Math.min(layout.rowCount - 1, rule.rows?.end ?? layout.rowCount - 1);
     if (start > end) continue;
     const anchor = rule.anchor ?? { columnId: rule.columnIds[0] ?? 'A', row: rule.rows?.start ?? 0 };
@@ -211,18 +238,24 @@ export function writeDataValidations(sheet: ExcelJS.Worksheet, rules: IDataValid
         if (typeof v !== 'string' || !v.startsWith('=')) return v;
         return toFileFormula(rebaseFormulaRows(adjustFormulaReferences(v, col - columnLetterToIndex(anchor.columnId), start - anchor.row), offset));
       };
-      let formulae: unknown[] = rule.type === 'list' ? [rule.values ? `"${rule.values.map(String).join(',').replace(/"/g, '""')}"` : adjustFormulaReferences(rule.source?.replace(/^=/, '') ?? '', col - columnLetterToIndex(anchor.columnId), start - anchor.row)]
+      let formulae: unknown[] = rule.type === 'list' ? [rule.values ? listSource : adjustFormulaReferences(rule.source?.replace(/^=/, '') ?? '', col - columnLetterToIndex(anchor.columnId), start - anchor.row)]
         : rule.type === 'custom' ? [formula(rule.formula)] : [formula(rule.value), ...(rule.value2 !== undefined ? [formula(rule.value2)] : [])];
+      if (rule.type === 'time') formulae = formulae.map((v) => {
+        if (typeof v !== 'string') return v;
+        const clock = /^(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?$/.exec(v);
+        return clock ? (Number(clock[1]) * 3600 + Number(clock[2]) * 60 + Number(clock[3] ?? 0)) / 86400 : v;
+      });
       if (rule.type === 'date') {
-        // ExcelJS date validation formulae must be Dates; passing a serial is
-        // interpreted as milliseconds since 1970 by its XML writer.
-        formulae = formulae.map((value) => {
-          const serial = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : undefined;
-          return serial !== undefined ? new Date((serial - 25569) * 86400000) : value;
+        formulae = formulae.map((value, i) => {
+          // Formula bodies must remain strings; literals use the core's 1900 system.
+          const bound = i ? rule.value2 : rule.value;
+          if (typeof bound === 'string' && bound.startsWith('=')) return value;
+          const serial = validationDateSerial(bound);
+          return Number.isFinite(serial) ? new Date((serial - (sheet.workbook.properties.date1904 ? 1462 : 0) - 25569) * 86400000) : value;
         });
       }
       const dv = {
-        type: rule.type, formulae,
+        type: rule.type, formulae, _ogridOrigin: { col, row: start + offset },
         allowBlank: rule.allowBlank === true,
         ...('operator' in rule ? { operator: rule.operator as DataValidationOperator } : {}),
         showInputMessage: rule.inputMessage?.show !== false && !!rule.inputMessage?.text,
@@ -234,4 +267,33 @@ export function writeDataValidations(sheet: ExcelJS.Worksheet, rules: IDataValid
       model[refOf({ left: col, right: col, top: start + offset + 1, bottom: end + offset + 1 })] = dv;
     }
   }
+  preserveDataValidationSerialization(sheet.workbook);
+}
+
+/** Excel inline lists cannot escape delimiters and are limited to 255 characters. */
+function inlineListSource(sheet: ExcelJS.Worksheet, values: readonly unknown[]): string {
+  const strings = values.map(String), inline = `"${strings.join(',')}"`;
+  if (inline.length <= 257 && strings.every(v => !/[,;"\r\n]/.test(v))) return inline;
+  const workbook = sheet.workbook;
+  let name = '_OGridValidation', suffix = 0;
+  while (workbook.getWorksheet(name)) name = `_OGridValidation${++suffix}`;
+  const source = workbook.addWorksheet(name, { state: 'veryHidden' });
+  strings.forEach((value, row) => { source.getCell(row + 1, 1).value = value; });
+  const definedName = `${name}_List`;
+  workbook.definedNames.add(`'${name}'!$A$1:$A$${strings.length}`, definedName);
+  return definedName;
+}
+
+const serializationInstalled = new WeakSet<ExcelJS.Workbook>();
+/** Keep ExcelJS's workbook API, bypassing its lossy bound conversion in the saved XML. */
+export function preserveDataValidationSerialization(workbook: ExcelJS.Workbook): void {
+  if (serializationInstalled.has(workbook)) return;
+  serializationInstalled.add(workbook);
+  const writeBuffer = workbook.xlsx.writeBuffer.bind(workbook.xlsx);
+  workbook.xlsx.writeBuffer = async (options) => {
+    const bytes = await writeBuffer(options);
+    if (!workbook.worksheets.some(sheet => Object.keys(validations(sheet).model).length)) return bytes;
+    const { writeValidationXml } = await import('./ooxmlDataValidations');
+    return await writeValidationXml(workbook, bytes as unknown as Uint8Array) as unknown as ExcelJS.Buffer;
+  };
 }

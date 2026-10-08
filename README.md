@@ -138,13 +138,13 @@ OGrid measurements bundle each package's full entry point with its dependencies 
 
 | Package | Brotli | Budget |
 |---------|--------|--------|
-| core | 28.65 kB | 29 kB |
+| core | 29.95 kB | 29 kB |
 | formula assist (lazy) | 5.34 kB | 5.4 kB |
-| react | 140.43 kB | 146.1 kB |
-| react-radix | 177.66 kB | 184.8 kB |
-| react-fluent | 217.40 kB | 226.1 kB |
-| react-xlsx | 490.06 kB | 509.7 kB |
-| react-xlsx-browser | 486.30 kB | 505.8 kB |
+| react | 146.12 kB | 146.1 kB |
+| react-radix | 185.72 kB | 184.8 kB |
+| react-fluent | 237.82 kB | 226.1 kB |
+| react-xlsx | 503.59 kB | 509.7 kB |
+| react-xlsx-browser | 499.06 kB | 505.8 kB |
 
 Find/Replace panels, note popovers, XLSX formatting controls, drag behavior and XLSX media are loaded on demand. The browser package ships an entry plus sibling chunks; copy its complete `dist/` directory.
 

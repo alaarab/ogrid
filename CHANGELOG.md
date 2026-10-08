@@ -357,6 +357,9 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Data validation preserves independent relative anchors, unloaded fragments, formula date bounds, clock bounds, comma-containing lists and 1904 workbook dates in XLSX round-trips. Restored legacy mapper dropdowns and exposed per-cell rules on `SheetGridData`.
+- Warning cut/paste and fill decisions retain one undo transaction; validated drag moves preserve rejected sources. Structural edits and undo shift validation references, anchors and targets. Candidate formulas reject direct, indirect, range and inactive-branch cycles without changing the live engine.
+
 - Range moves reject protected source cells before writing destinations,
   including dynamic-array spill children. Spill anchors can move across frozen
   panes and restore their spill with one undo step.

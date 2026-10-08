@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { validationOrigin, type AnchoredValidation } from './dataValidation';
 import { copyDynamicArrays } from './sourceArchive';
 import { indexToColumnLetter } from '@alaarab/ogrid-core';
 import { adjustFormulaReferences, parseCellRef, shiftFormulaReferences, type StructureAxis } from '@alaarab/ogrid-core/formula';
@@ -100,11 +101,21 @@ function forEachAddress(ref: string, visit: (address: string) => void): void {
   }
 }
 
-/** Recover the rectangles ExcelJS serializes, whose anchor is lost when it reads sqref. */
-function validationRanges(model: SheetModel['dataValidations']): Array<[string, ExcelJS.DataValidation]> {
+/** Recover rectangles from the objects ExcelJS shares when expanding an original sqref. */
+export function validationRanges(model: SheetModel['dataValidations']): Array<[string, ExcelJS.DataValidation]> {
   const marked = new Set<string>();
-  const signatures = new Map(Object.entries(model).map(([address, rule]) => [address, JSON.stringify(rule)]));
+  const signatures = new Map(Object.entries(model));
   const ranges: Array<[string, ExcelJS.DataValidation]> = [];
+  const origins = new Map<ExcelJS.DataValidation, { col: number; row: number }>();
+  for (const [address, rule] of Object.entries(model)) {
+    const at = parseCellRef(address.split(/[ :]/)[0] ?? ''), origin = origins.get(rule);
+    if (at && (!origin || at.row < origin.row || (at.row === origin.row && at.col < origin.col))) origins.set(rule, at);
+  }
+  const fragmentRule = (rule: ExcelJS.DataValidation, col: number, row: number) => {
+    const origin = validationOrigin(rule) ?? origins.get(rule);
+    if (!origin || (origin.col === col && origin.row === row)) return rule;
+    return { ...rule, _ogridOrigin: { col, row }, formulae: rule.formulae?.map((f: unknown) => typeof f === 'string' && !f.startsWith('"') ? adjustFormulaReferences(f, col - origin.col, row - origin.row, true) : f) } as AnchoredValidation;
+  };
   for (const address of Object.keys(model).sort()) {
     if (marked.has(address)) continue;
     const rule = model[address] as ExcelJS.DataValidation;
@@ -122,7 +133,7 @@ function validationRanges(model: SheetModel['dataValidations']): Array<[string, 
     const end = `${indexToColumnLetter(right)}${bottom + 1}`;
     const ref = end === address ? address : `${address}:${end}`;
     forEachAddress(ref, (cell) => marked.add(cell));
-    ranges.push([ref, rule]);
+    ranges.push([ref, fragmentRule(rule, start.col, start.row)]);
   }
   return ranges;
 }
@@ -193,7 +204,8 @@ export function editWorkbookStructure(workbook: ExcelJS.Workbook, target: string
     for (const [ref, rule] of validationRanges(sheet.dataValidations ?? {})) {
       const next = edited ? area(ref) : ref;
       if (!next) continue;
-      const rebased = { ...rule, formulae: rule.formulae?.map((f: unknown) => typeof f === 'string' ? ruleFormula(f, ref, next) : f) };
+      const nextOrigin = parseCellRef(next.split(/[ :]/)[0] ?? '');
+      const rebased = { ...rule, _ogridOrigin: nextOrigin ? { col: nextOrigin.col, row: nextOrigin.row } : undefined, formulae: rule.formulae?.map((f: unknown) => typeof f === 'string' ? ruleFormula(f, ref, next) : f) };
       forEachAddress(next, (address) => { validations[address] = rebased; });
     }
     sheet.dataValidations = validations;

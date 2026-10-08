@@ -8,7 +8,7 @@ import DataValidationDemo from '@site/src/components/demos/DataValidationDemo';
 
 # Data Validation
 
-Use `dataValidations` to restrict values in selected columns and rows. Rules run before edits enter the undo history, on edit commits, every pasted or filled cell, Find & Replace, and `api.setCellValue`. The same props and behavior work in Radix and Fluent.
+Use `dataValidations` to restrict values in selected columns and rows. Rules run before edits enter the undo history, on edit commits, every pasted, filled or dropped cell, range moves, Find & Replace, and `api.setCellValue`. The same props and behavior work in Radix and Fluent.
 
 <DataValidationDemo />
 
@@ -86,3 +86,11 @@ With `allowValidationEditing`, select cells and choose **Data validation…** fr
 `circleInvalidData` also works on `XlsxGrid`, `XlsxWorkbookGrid`, and the browser `mount()` options.
 
 ExcelJS does not preserve formula-valued whole-number, decimal, text-length, or date bounds when reading XLSX files. Use literal bounds for those imported rules. List-source formulas and custom validation formulas retain their expressions.
+
+Warning decisions for one paste or fill finish together before the accepted changes are applied. A cut clears only the source cells whose destinations were accepted, and one undo restores the operation. Range moves cancel the whole move when a destination fails validation. Spill children remain read-only; `circleInvalidData` also checks their computed values.
+
+Row and column insertion or deletion shifts validation targets, anchors and formula references, with undo restoring the previous rules. Candidate formulas are evaluated against a temporary overlay of the formula graph, so circular references are rejected before the write.
+
+XLSX import and export preserve formula bounds and each original relative anchor, including unloaded rule fragments. Date bounds use the core's 1900 date system internally and convert back to a workbook's 1904 system on export. Literal clock bounds export as fractions of a day. Lists containing commas, semicolons, quotes, newlines or more than 255 characters use a very hidden helper sheet and a defined name.
+
+Low-level `sheetToGridData()` consumers can pass `dataValidations={mapped.dataValidations}` for per-cell rules. Existing column dropdowns and `formatting.listValidations` remain available when one list covers every loaded data row in a column.

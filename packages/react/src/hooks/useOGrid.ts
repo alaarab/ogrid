@@ -271,7 +271,7 @@ export function useOGrid<T>(
   const structure = useOGridStructureEdits({
     props, isServerSide, displayData, setInternalData, getRowId, editVersionRef, structureVersionRef,
     columnOrder, effectiveColumnOrder, setInternalColumnOrder: columnLayout.setInternalColumnOrder, onColumnOrderChange,
-    formulaEngine, formulasFollowData, bridgeRef: gridEditBridgeRef,
+    formulaEngine, formulasFollowData, validationRules, bridgeRef: gridEditBridgeRef,
   });
   const { structureActions } = structure;
   const dgNoteProps = useOGridCellNotes(props);
