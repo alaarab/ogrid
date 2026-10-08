@@ -8,6 +8,7 @@ import type { IColumnDef, IColumnDefinition } from '../types';
 import type { IColumnChooserProps } from './ColumnChooserProps';
 import type { IPaginationControlsProps } from './PaginationControlsProps';
 import { FormulaAssistContext } from './FormulaAssist';
+import { loadFormulaAssistModule } from '../hooks/formulaAssistModule';
 import type { FormulaAssistPopupProps, IFormulaAssistConfig } from './FormulaAssist';
 
 export interface InlineCellEditorProps<T> {
@@ -79,6 +80,12 @@ export function createOGrid(components: CreateOGridComponents) {
       () => (formulas && FormulaAssistPopup ? { functions: formulaFunctions, namedRanges, Popup: FormulaAssistPopup } : null),
       [formulas, formulaFunctions, namedRanges],
     );
+    // Formula help (function metadata) is a lazy chunk: start loading it as
+    // soon as a formula grid mounts so it is ready before the first edit.
+    const assistEnabled = formulaAssist != null;
+    React.useEffect(() => {
+      if (assistEnabled) loadFormulaAssistModule().catch(() => {});
+    }, [assistEnabled]);
 
     return (
       <FormulaAssistContext.Provider value={formulaAssist}>

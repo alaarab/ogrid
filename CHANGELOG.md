@@ -16,7 +16,10 @@ All notable changes to OGrid will be documented in this file.
   `formulaFunctions` are listed and can carry `description` and `signature`.
   Core (`@alaarab/ogrid-core/formula`): `getFunctionMetadata`, `listFunctions`
   (metadata for all built-ins), `getFormulaCaretContext`,
-  `getFormulaCompletions`, `applyFormulaCompletion`, `getSignatureParts`.
+  `getFormulaCompletions`, `applyFormulaCompletion`, `getSignatureParts`,
+  also on their own at `@alaarab/ogrid-core/formula/assist`. The React layer
+  loads that module lazily (when a formula grid mounts), so grids without
+  formulas don't ship the function descriptions.
   React: `useFormulaAssist`, `FormulaAssistContext`; kits export
   `FormulaAssistPopup`.
 - Fill series like Excel: dragging the fill handle continues numbers (two or

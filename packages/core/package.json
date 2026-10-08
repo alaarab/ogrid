@@ -10,6 +10,9 @@
     "*": {
       "formula": [
         "dist/types/formula/index.d.ts"
+      ],
+      "formula/assist": [
+        "dist/types/formula/assist.d.ts"
       ]
     }
   },
@@ -23,6 +26,11 @@
       "types": "./dist/types/formula/index.d.ts",
       "import": "./dist/esm/formula/index.js",
       "default": "./dist/esm/formula/index.js"
+    },
+    "./formula/assist": {
+      "types": "./dist/types/formula/assist.d.ts",
+      "import": "./dist/esm/formula/assist.js",
+      "default": "./dist/esm/formula/assist.js"
     }
   },
   "scripts": {

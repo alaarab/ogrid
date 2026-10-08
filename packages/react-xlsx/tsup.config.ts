@@ -19,7 +19,7 @@ export default defineConfig({
   external: [
     '@alaarab/ogrid-react',
     '@alaarab/ogrid-core',
-    '@alaarab/ogrid-core/formula',
+    '@alaarab/ogrid-core/formula', '@alaarab/ogrid-core/formula/assist',
     '@alaarab/ogrid-react-radix',
     'react',
     'react-dom',
