@@ -13,6 +13,7 @@ import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useFillHandleInternal } from './useFillHandleInternal';
 import { useUndoRedo } from './useUndoRedo';
 import type { UseUndoRedoFormulaCells, UndoableAction } from './useUndoRedo';
+import type { DataValidationState } from './useDataValidation';
 import { useLatestRef } from './useLatestRef';
 import { cellFocusOptions } from './useGridCellFocus';
 import { resolveUndoAvailability, usesHostFormulaHistory } from './undoRouting';
@@ -33,6 +34,8 @@ export interface UseDataGridInteractionParams<T> {
   visibleColumnCount: number;
   getRowId: (item: T) => RowId;
   editable?: boolean;
+  validationBatch?: Pick<DataValidationState<T>, 'beginBatch' | 'endBatch' | 'afterBatch' | 'stage'>;
+  validationGuard?: (event: ICellValueChangedEvent<T>, apply: () => void, api?: boolean, sheetRow?: number) => boolean;
   onCellValueChangedProp?: (event: {
     item: T;
     columnId: string;
@@ -136,14 +139,18 @@ export interface UseDataGridInteractionResult<T> {
     oldValue: unknown;
     newValue: unknown;
     rowIndex: number;
-  }) => void) | undefined;
+  // biome-ignore lint/suspicious/noConfusingVoidType: Existing void handlers remain compatible; false signals a rejected mutation.
+  }) => boolean | void) | undefined;
+  rawOnCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
+  rawWriteSheetFormula?: (col: number, sheetRow: number, formula: string | null, displayRow: number) => void;
   canUndo: boolean;
   canRedo: boolean;
   /**
    * Set or clear a formula by (flat column, display row): mapped to the sheet
    * row and recorded for undo. Undefined when formulas are off.
    */
-  setFormula?: (col: number, row: number, formula: string | null) => void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: Existing void handlers remain compatible; false signals a rejected mutation.
+  setFormula?: (col: number, row: number, formula: string | null) => boolean | void;
   hasFormula?: (col: number, row: number) => boolean;
   /**
    * Set or clear a formula by (flat column, sheet row), recorded for undo like
@@ -275,7 +282,32 @@ export function useDataGridInteraction<T>(
       if (cell) fc?.onCellChanged?.(cell.col, cell.row);
     };
   }, [hostFormulaHistory, hasCellValueChangedProp, formulaCellsRef, onCellValueChangedPropRef]);
-  const onCellValueChanged = hostValueChanged ?? undoRedo.onCellValueChanged;
+  const validationBatchRef = useLatestRef(params.validationBatch);
+  const beginBatch = useCallback((atomic = false) => {
+    const validation = validationBatchRef.current;
+    if (validation) validation.beginBatch(undoRedo.beginBatch, undoRedo.endBatch, atomic);
+    else undoRedo.beginBatch();
+  }, [validationBatchRef, undoRedo.beginBatch, undoRedo.endBatch]);
+  const endBatch = useCallback(() => {
+    if (validationBatchRef.current) validationBatchRef.current.endBatch();
+    else undoRedo.endBatch();
+  }, [validationBatchRef, undoRedo.endBatch]);
+  const afterBatch = useCallback((action: () => void) => {
+    if (validationBatchRef.current) validationBatchRef.current.afterBatch(action);
+    else action();
+  }, [validationBatchRef]);
+  const stage = useCallback((action: () => void) => {
+    if (validationBatchRef.current) validationBatchRef.current.stage(action);
+    else action();
+  }, [validationBatchRef]);
+  const rawOnCellValueChanged = hostValueChanged ?? undoRedo.onCellValueChanged;
+  const validationGuardRef = useLatestRef(params.validationGuard);
+  const rawValueRef = useLatestRef(rawOnCellValueChanged);
+  const onCellValueChanged = useMemo(() => rawOnCellValueChanged ? (event: ICellValueChangedEvent<T>, onAccepted?: () => void) => {
+    const apply = () => { rawValueRef.current?.(event); onAccepted?.(); };
+    if (validationGuardRef.current) return validationGuardRef.current(event, apply);
+    apply(); return true;
+  } : undefined, [rawOnCellValueChanged, rawValueRef, validationGuardRef]);
   const internalUndo = undoRedo.undo;
   const internalRedo = undoRedo.redo;
   const undo = useCallback(
@@ -320,7 +352,7 @@ export function useDataGridInteraction<T>(
     // formula's result; document edits and their cache snapshots stay atomic.
     fc.setFormula(col, row, newFormula);
   }, [formulaCellsRef, itemsRef, flatColumnsRef, onCellValueChangedPropRef]);
-  const writeSheetFormula = useMemo(() => {
+  const rawWriteSheetFormula = useMemo(() => {
     if (!formulas) return undefined;
     return hostFormulaHistory
       ? hostSetFormula
@@ -328,6 +360,14 @@ export function useDataGridInteraction<T>(
       : setFormula ? (col: number, r: number, formula: string | null) => setFormula(col, r, formula)
       : undefined;
   }, [formulas, hostFormulaHistory, hostSetFormula, hasFormulaCells, undoSetFormula, setFormula]);
+  const rawFormulaRef = useLatestRef(rawWriteSheetFormula);
+  const writeSheetFormula = useMemo(() => rawWriteSheetFormula ? (col: number, row: number, formula: string | null, displayRow: number, onAccepted?: () => void) => {
+    const apply = () => { rawFormulaRef.current?.(col, row, formula, displayRow); onAccepted?.(); };
+    const item = itemsRef.current[displayRow], column = flatColumnsRef.current?.[col];
+    if (formula !== null && item !== undefined && column && validationGuardRef.current) {
+      return validationGuardRef.current({ item, columnId: column.columnId, rowIndex: displayRow, oldValue: getCellValue<T>(item, column), newValue: formula }, apply, false, row);
+    } else { stage(apply); return true; }
+  } : undefined, [rawWriteSheetFormula, rawFormulaRef, itemsRef, flatColumnsRef, validationGuardRef, stage]);
   const internalRecordAction = undoRedo.recordAction;
   const recordAction = useCallback(
     (action: UndoableAction) => {
@@ -338,9 +378,7 @@ export function useDataGridInteraction<T>(
   const viewFormulas = useMemo(() => {
     if (!formulas) return undefined;
     const toRow = (row: number) => formulaRowRef.current?.(row) ?? row;
-    const write = hostFormulaHistory
-      ? (col: number, r: number, formula: string | null, displayRow: number) => hostSetFormula(col, r, formula, displayRow)
-      : hasFormulaCells ? undoSetFormula : setFormula;
+    const write = writeSheetFormula;
     return {
       getFormula: getFormula && ((col: number, row: number) => {
         const r = toRow(row);
@@ -354,12 +392,12 @@ export function useDataGridInteraction<T>(
         const r = toRow(row);
         return r >= 0 ? getFormulaValue(col, r) : undefined;
       }),
-      setFormula: write && ((col: number, row: number, formula: string | null) => {
+      setFormula: write && ((col: number, row: number, formula: string | null, onAccepted?: () => void) => {
         const r = toRow(row);
-        if (r >= 0) write(col, r, formula, row);
+        return r >= 0 ? write(col, r, formula, row, onAccepted) : false;
       }),
     };
-  }, [formulas, getFormula, hasFormula, getFormulaValue, setFormula, hasFormulaCells, undoSetFormula, formulaRowRef, hostFormulaHistory, hostSetFormula]);
+  }, [formulas, getFormula, hasFormula, getFormulaValue, formulaRowRef, writeSheetFormula]);
 
   const {
     selectionRange,
@@ -385,14 +423,16 @@ export function useDataGridInteraction<T>(
     items,
     getRowId,
     onClipboardError,
+    afterBatch,
+    onCutClear: event => rawValueRef.current?.(event),
     visibleCols,
     colOffset,
     selectionRange,
     activeCell,
     editable,
     onCellValueChanged,
-    beginBatch: undoRedo.beginBatch,
-    endBatch: undoRedo.endBatch,
+    beginBatch,
+    endBatch,
     formulas,
     flatColumns,
     getFormula: viewFormulas?.getFormula,
@@ -436,28 +476,37 @@ export function useDataGridInteraction<T>(
   }, [moveFormulaOptions, selectionRange, visibleCols, flatColIndexById]);
 
   const applyDragEdits = useCallback(
-    (generate: () => ICellValueChangedEvent<T>[]) => {
+    (generate: () => ICellValueChangedEvent<T>[], atomic = false, isClear?: (event: ICellValueChangedEvent<T>) => boolean) => {
       if (!editable) return;
-      undoRedo.beginBatch();
+      beginBatch(atomic);
       try {
         // Generation may write formulas; those and all value changes share
         // one history entry even if a parser or consumer callback throws.
-        for (const event of generate()) onCellValueChanged?.(event);
+        for (const event of generate()) {
+          if (isClear?.(event)) stage(() => rawValueRef.current?.(event));
+          else onCellValueChanged?.(event);
+        }
       } finally {
-        undoRedo.endBatch();
+        endBatch();
       }
     },
-    [editable, onCellValueChanged, undoRedo.beginBatch, undoRedo.endBatch],
+    [editable, onCellValueChanged, beginBatch, endBatch, stage, rawValueRef],
   );
 
   const moveRangeTo = useCallback(
     (targetRow: number, targetCol: number, copy: boolean) => {
       if (!selectionRange) return;
+      const source = normalizeSelectionRange(selectionRange);
+      const destination = { startRow: targetRow, endRow: targetRow + source.endRow - source.startRow, startCol: targetCol, endCol: targetCol + source.endCol - source.startCol };
       applyDragEdits(() => moveCellRange({
         items, visibleCols, source: selectionRange, targetRow, targetCol, copy,
         formulaOptions: moveFormulaOptions, formulaSource: moveFormulaSource,
         isCoveredCell: isCoveredMergeCell,
-      }));
+      }), true, event => {
+        const col = visibleCols.findIndex(c => c.columnId === event.columnId);
+        return !copy && event.rowIndex >= source.startRow && event.rowIndex <= source.endRow && col >= source.startCol && col <= source.endCol
+          && !(event.rowIndex >= destination.startRow && event.rowIndex <= destination.endRow && col >= destination.startCol && col <= destination.endCol);
+      });
     },
     [selectionRange, items, visibleCols, moveFormulaOptions, moveFormulaSource, isCoveredMergeCell, applyDragEdits],
   );
@@ -524,8 +573,8 @@ export function useDataGridInteraction<T>(
     setActiveCell,
     colOffset,
     wrapperRef,
-    beginBatch: undoRedo.beginBatch,
-    endBatch: undoRedo.endBatch,
+    beginBatch,
+    endBatch,
     formulaOptions: fillFormulaOptions,
     isCoveredCell: isCoveredMergeCell,
   });
@@ -533,7 +582,7 @@ export function useDataGridInteraction<T>(
   const { handleGridKeyDown, handleGridPaste, handleGridCopy, handleGridCut } = useKeyboardNavigation({
     data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId, mergeLayout },
     state: { activeCell, selectionRange, editingCell, selectedRowIds },
-    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopyEvent, handleCutEvent, handlePasteEvent, armPasteValues, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch, setPendingEditorValue: params.setPendingEditorValue },
+    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopyEvent, handleCutEvent, handlePasteEvent, armPasteValues, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch, endBatch, setPendingEditorValue: params.setPendingEditorValue },
     features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, scrollToIndexRef, onKeyDown, onRowReorderKeyDown: params.onRowReorderKeyDown, fillDown, fillRight },
   });
 
@@ -589,8 +638,9 @@ export function useDataGridInteraction<T>(
     setFormula: viewFormulas?.setFormula,
     hasFormula: viewFormulas?.hasFormula,
     writeSheetFormula,
-    beginBatch: undoRedo.beginBatch,
-    endBatch: undoRedo.endBatch,
+    rawWriteSheetFormula, rawOnCellValueChanged,
+    beginBatch,
+    endBatch,
     recordAction,
     getFormula: viewFormulas?.getFormula,
   };

@@ -162,6 +162,7 @@ export interface DataGridPrimitives {
     hiding?: import('./GridContextMenu').GridContextMenuHiding;
     freeze?: import('./GridContextMenu').GridContextMenuFreeze;
     notes?: import('./GridContextMenu').GridContextMenuNotes;
+    onDataValidation?: () => void;
   }>;
   /** Empty-state component. */
   EmptyState: React.ComponentType<{ emptyState: NonNullable<ReturnType<typeof useDataGridTableOrchestration>['emptyState']> }>;
@@ -171,6 +172,8 @@ export interface DataGridPrimitives {
   DropIndicator: React.ComponentType<{ dropIndicatorX: number; wrapperLeft: number }>;
   /** Find & Replace panel (rendered at the grid's top-right when `findReplace` is on). */
   FindReplacePanel?: React.ComponentType<FindReplacePanelProps>;
+  /** Lazy-loaded adapter dialog: settings editor and validation alerts. */
+  ValidationDialog?: React.ComponentType<DataValidationDialogProps>;
   /** Status bar component. */
   StatusBar: React.ComponentType<{
     totalCount: number; filteredCount?: number; selectedCount?: number;
@@ -179,4 +182,13 @@ export interface DataGridPrimitives {
     suppressRowCount?: boolean;
     panels?: import('./StatusBar').StatusBarProps['panels'];
   }>;
+}
+
+export interface DataValidationDialogProps {
+  formulaOffset?: { col: number; row: number };
+  rule?: import('@alaarab/ogrid-core').IDataValidationRule;
+  alert?: import('@alaarab/ogrid-core').IDataValidationFailure | null;
+  onApply: (rule: import('@alaarab/ogrid-core').IDataValidationRule | undefined) => void;
+  onClose: () => void;
+  onRespond: (accept: boolean) => void;
 }

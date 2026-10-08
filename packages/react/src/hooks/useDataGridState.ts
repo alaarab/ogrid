@@ -1,3 +1,6 @@
+import { useDataValidation, validationContextFor } from './useDataValidation';
+import type { DataValidationState } from './useDataValidation';
+import { useValidationRules } from './useValidationRules';
 import { useMemo, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
 import { getDataGridStatusBarConfig, computeAggregations, getCellValue, parseValue, resolveMergedCells } from '../utils';
@@ -233,6 +236,7 @@ export interface UseDataGridStateResult<T> {
   pinning: DataGridPinningState;
   /** Find & Replace panel state and the Ctrl+F / Ctrl+H handler. */
   findReplace: DataGridFindReplaceState;
+  validation: DataValidationState<T> & { rules: import('@alaarab/ogrid-core').IDataValidationRule<T>[]; change: (rules: import('@alaarab/ogrid-core').IDataValidationRule<T>[]) => void; sheetRow: (item: T, displayRow: number) => number };
   /** Record an already-applied change in the grid's undo history (no-op when the host owns undo). */
   recordAction: (action: import('./useUndoRedo').UndoableAction) => void;
 }
@@ -457,6 +461,17 @@ export function useDataGridState<T>(
     };
   }, [formulasOn, getFormula, setFormula, onFormulaCellChanged, formulaCol, formulaRow]);
 
+  const validationRules = useValidationRules(props.dataValidations, props.onDataValidationsChange);
+  const validationContext = useMemo(() => validationContextFor(props.validationContext, rowItems, flatColumns), [props.validationContext, rowItems, flatColumns]);
+  const validationOn = validationRules.rules.length > 0 || props.allowValidationEditing;
+  const sheetIndex = useMemo(() => {
+    const map = new Map<RowId, number>();
+    if (validationOn) validationContext.items.forEach((item, row) => { if (item !== undefined) map.set(getRowId(item), row); });
+    return map;
+  }, [validationOn, validationContext.items, getRowId]);
+  const validationSheetRow = useCallback((item: T, displayRow: number) => sheetIndex.get(getRowId(item)) ?? formulaRow(displayRow), [sheetIndex, getRowId, formulaRow]);
+  const validation = useDataValidation({ rules: validationRules.rules, context: validationContext, sheetRow: validationSheetRow, onValidationFail: props.onValidationFail });
+
   // --- 2. Row selection ---
   const rowSelectionResult = useRowSelection({
     items: rowItems,
@@ -498,6 +513,7 @@ export function useDataGridState<T>(
     getRowId,
     editable,
     onCellValueChangedProp,
+    validationGuard: validation.guard, validationBatch: validation,
     onUndo: props.onUndo,
     onRedo: props.onRedo,
     canUndo: props.canUndo,
@@ -664,6 +680,9 @@ export function useDataGridState<T>(
     writeSheetFormula: interactionResult.writeSheetFormula,
     beginBatch: interactionResult.beginBatch, endBatch: interactionResult.endBatch,
     recordAction: interactionResult.recordAction,
+    guard: validation.guard,
+    rawOnCellValueChanged: interactionResult.rawOnCellValueChanged,
+    rawWriteSheetFormula: interactionResult.rawWriteSheetFormula,
   });
   const gridEditBridge = useMemo<IGridEditBridge<T>>(() => ({
     setCellValue: (item, columnId, value, sheetRowHint) => {
@@ -677,8 +696,7 @@ export function useDataGridState<T>(
       if (spill && (spill.anchorCol !== col || spill.anchorRow !== sheetRow)) return false;
       if (st.formulas && typeof value === 'string' && value.length > 1 && value.startsWith('=')) {
         if (sheetRow < 0 || !st.writeSheetFormula) return false;
-        st.writeSheetFormula(col, sheetRow, value, displayRow);
-        return true;
+        return st.guard({ item, columnId, oldValue: getCellValue<T>(item, colDef), newValue: value, rowIndex: displayRow }, () => st.rawWriteSheetFormula?.(col, sheetRow, value, displayRow), true, sheetRow);
       }
       const oldValue = getCellValue<T>(item, colDef);
       const parsed = parseValue(value, oldValue, item, colDef);
@@ -686,17 +704,15 @@ export function useDataGridState<T>(
       const hasFormulaThere = !!st.formulas && sheetRow >= 0 && st.getFormula?.(col, sheetRow) !== undefined;
       if (!hasFormulaThere && Object.is(parsed.value, oldValue)) return true;
       const event = { item, columnId, oldValue, newValue: parsed.value, rowIndex: displayRow };
-      if (displayRow < 0 && hasFormulaThere) {
-        // Off-screen rows have no display row for the undo wrapper to map, so
-        // clear the formula explicitly, in the same undo step as the value.
-        st.beginBatch();
-        st.writeSheetFormula?.(col, sheetRow, null, displayRow);
-        st.onCellValueChanged?.(event);
-        st.endBatch();
-      } else {
-        st.onCellValueChanged?.(event);
-      }
-      return true;
+      return st.guard(event, () => {
+        if (displayRow < 0 && hasFormulaThere) {
+          st.beginBatch();
+          try {
+            st.rawWriteSheetFormula?.(col, sheetRow, null, displayRow);
+            st.rawOnCellValueChanged?.(event);
+          } finally { st.endBatch(); }
+        } else st.rawOnCellValueChanged?.(event);
+      }, true, sheetRow);
     },
     recordUndoable: (action) => bridgeStateRef.current.recordAction(action),
   }), [bridgeStateRef]);
@@ -853,6 +869,7 @@ export function useDataGridState<T>(
     viewModels: viewModelsState,
     pinning: layoutResult.pinning,
     findReplace,
+    validation: { ...validation, ...validationRules, sheetRow: validationSheetRow },
     recordAction: interactionResult.recordAction,
   };
 }

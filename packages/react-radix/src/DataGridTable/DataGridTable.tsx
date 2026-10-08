@@ -41,6 +41,7 @@ const primitives: DataGridPrimitives = {
   DropIndicator,
   StatusBar,
   FindReplacePanel,
+  ValidationDialog: React.lazy(() => import('../DataValidationDialog/DataValidationDialog')),
   renderRowCheckbox: ({ checked, onCheckedChange, ariaLabel }) => (
     <Checkbox.Root
       className={styles.rowCheckbox}

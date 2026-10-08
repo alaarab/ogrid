@@ -14,8 +14,13 @@ export interface UseClipboardParams<T> {
   selectionRange: ISelectionRange | null;
   activeCell: IActiveCell | null;
   editable?: boolean;
-  onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
+  // biome-ignore lint/suspicious/noConfusingVoidType: Existing void handlers remain compatible; false signals a rejected mutation.
+  onCellValueChanged: ((event: ICellValueChangedEvent<T>, onAccepted?: () => void) => boolean | void) | undefined;
   beginBatch?: () => void;
+  /** Run after deferred validation decisions and destination writes. */
+  afterBatch?: (action: () => void) => void;
+  /** Internal source erasure is part of the move, not new user input. */
+  onCutClear?: (event: ICellValueChangedEvent<T>) => void;
   endBatch?: () => void;
   /** When true, enables formula-aware copy/paste. */
   formulas?: boolean;
@@ -30,7 +35,8 @@ export interface UseClipboardParams<T> {
   /** Returns true if a flat column + row has a formula. */
   hasFormula?: (col: number, row: number) => boolean;
   /** Sets or clears a formula for a flat column + row. */
-  setFormula?: (col: number, row: number, formula: string | null) => void;
+  // biome-ignore lint/suspicious/noConfusingVoidType: Existing void handlers remain compatible; false signals a rejected mutation.
+  setFormula?: (col: number, row: number, formula: string | null, onAccepted?: () => void) => boolean | void;
   /** Cells covered by a merged cell (not its anchor): copied as empty, skipped on paste. */
   isCoveredCell?: (row: number, col: number) => boolean;
   /** Computed value of a formula cell (flat column + row), for "paste values only" and the HTML copy. */
@@ -155,7 +161,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const {
     colOffset,
     beginBatch,
-    endBatch,
+    endBatch, afterBatch, onCutClear,
   } = params;
 
   // Volatile values accessed via refs  -  keeps callbacks stable
@@ -313,8 +319,9 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
           colOffset,
           flatColumns,
           setFormula: setFormula && ((col: number, row: number, formula: string | null) => {
-            pastedFormulaKeys.push(`${row}|${flatColumns[col]?.columnId}`);
-            setFormula(col, row, formula);
+            const accepted = () => { pastedFormulaKeys.push(`${row}|${flatColumns[col]?.columnId}`); };
+            if (afterBatch) setFormula(col, row, formula, accepted);
+            else if (setFormula(col, row, formula) !== false) accepted();
           }),
           // A cut moves formulas unchanged (Excel); a copy shifts them.
           source: fromGrid && !cut ? internal.source : undefined,
@@ -324,15 +331,21 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     beginBatch?.();
     try {
       const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols, formulaOptions, isCoveredCellRef.current);
-      for (const evt of pasteEvents) onCellValueChanged(evt);
-      if (cut) {
-        const cutEvents = resolveCutClear({ cut, text, pasteEvents, pastedFormulaCells: pastedFormulaKeys, anchorRow, anchorCol, items, visibleCols, rowKeyOf });
-        for (const evt of cutEvents) onCellValueChanged(evt);
+      const acceptedPasteEvents: ICellValueChangedEvent<T>[] = [];
+      for (const evt of pasteEvents) {
+        if (afterBatch) onCellValueChanged(evt, () => { acceptedPasteEvents.push(evt); });
+        else if (onCellValueChanged(evt) !== false) acceptedPasteEvents.push(evt);
       }
+      const clearSource = () => { if (cut) {
+        const cutEvents = resolveCutClear({ cut, text, pasteEvents: acceptedPasteEvents, pastedFormulaCells: pastedFormulaKeys, anchorRow, anchorCol, items, visibleCols, rowKeyOf });
+        for (const evt of cutEvents) (onCutClear ?? onCellValueChanged)(evt);
+      } };
+      if (afterBatch) afterBatch(clearSource);
+      else clearSource();
     } finally {
       endBatch?.();
     }
-  }, [getEffectiveRange, activeCellRef, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, formulaRowRef, colOffset, rowKeyOf, takePendingCut, isCoveredCellRef]);
+  }, [getEffectiveRange, activeCellRef, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, formulaRowRef, colOffset, rowKeyOf, takePendingCut, isCoveredCellRef, afterBatch, onCutClear]);
 
   /** Read the clipboard for a programmatic paste (context menu), or null when the read failed. */
   const readClipboardText = useCallback(async (): Promise<string | null> => {
@@ -401,4 +414,3 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     clearClipboardRanges,
   };
 }
-

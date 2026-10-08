@@ -15,7 +15,8 @@
 // for those.
 
 import ExcelJS from 'exceljs';
-import type { ISpillRange, IColumnDef } from '@alaarab/ogrid-core';
+import { readDataValidations, preserveDataValidationSerialization } from './dataValidation';
+import type { ISpillRange, IColumnDef, IDataValidationRule } from '@alaarab/ogrid-core';
 import { adjustFormulaReferences, parseCellRef, parseRange, tokenize } from '@alaarab/ogrid-core/formula';
 import { normalizeFormula, rebaseFormulaRows } from './formulaReferences';
 import type { XlsxCellStyle } from './cellStyles';
@@ -29,6 +30,8 @@ import { attachSourceArchive } from './sourceArchive';
 export interface SheetGridData {
   columns: IColumnDef<SheetRow>[];
   rows: SheetRow[];
+  /** Per-cell rules; pass to OGrid alongside rows and columns. */
+  dataValidations: IDataValidationRule<SheetRow>[];
   initialFormulas: Array<{ col: number; row: number; formula: string }>;
   /** Array formula refs as exposed by ExcelJS; cached children remain in rows. */
   arrayRanges?: ISpillRange[];
@@ -73,7 +76,7 @@ export interface SheetFormatting {
   unmappedMerges: string[];
   /** Frozen panes in grid terms: data rows below the header, and leading columns. */
   frozen: { rows: number; columns: number };
-  /** Allowed values of list validations that cover a column's every loaded data row. */
+  /** @deprecated Prefer dataValidations for per-cell enforcement. Legacy column dropdown values. */
   listValidations: Record<string, string[]>;
   /** Sheet tab color as CSS hex, when set. */
   tabColor?: string;
@@ -165,6 +168,9 @@ export async function workbookFromBlob(blob: Blob, options: WorkbookLoadOptions 
     checkZipSizes(buf, sanitizeLimit(options.maxUncompressedBytes, DEFAULT_MAX_UNCOMPRESSED_BYTES));
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buf);
+    const { readValidationXml } = await import('./ooxmlDataValidations');
+    await readValidationXml(wb, buf);
+    preserveDataValidationSerialization(wb);
     const { readSourceArchive } = await import('./ooxmlMedia');
     const source = await readSourceArchive(buf, wb);
     if (source) attachSourceArchive(wb, source);
@@ -359,7 +365,7 @@ export function sheetToGridData(
   /** Minimum extent used by the document to retain newly inserted blank rows/columns. */
   extent?: { rowCount: number; columnCount: number },
 ): SheetGridData {
-  if (!sheet) return { columns: [], rows: [], initialFormulas: [], formatting: emptyFormatting() };
+  if (!sheet) return { columns: [], rows: [], initialFormulas: [], dataValidations: [], formatting: emptyFormatting() };
 
   // Find the populated extent by visiting only cells that exist. The
   // declared dimensions (rowCount/columnCount) come from the file and can be
@@ -378,7 +384,7 @@ export function sheetToGridData(
   });
   usedRows = Math.max(usedRows, extent?.rowCount ?? 0);
   usedCols = Math.max(usedCols, extent?.columnCount ?? 0);
-  if (!usedCols) return { columns: [], rows: [], initialFormulas: [], formatting: emptyFormatting(sheet) };
+  if (!usedCols) return { columns: [], rows: [], initialFormulas: [], dataValidations: [], formatting: emptyFormatting(sheet) };
 
   const maxCols = sanitizeLimit(options.maxCols, DEFAULT_MAX_COLS);
   const maxRows = sanitizeLimit(options.maxRows, DEFAULT_MAX_ROWS);
@@ -468,7 +474,6 @@ export function sheetToGridData(
   for (let c = 0; c < colCount; c++) {
     const letter = indexToColumnLetter(c);
     const width = columnWidthToPx(formatting.columnWidths[letter] ?? formatting.defaultColumnWidth);
-    const listValues = formatting.listValidations[letter];
     const hidden = sheet.columns?.[c]?.hidden === true;
     columns.push({
       columnId: letter,
@@ -478,7 +483,7 @@ export function sheetToGridData(
       defaultWidth: Math.max(width, 24),
       minWidth: 24,
       ...(hidden ? { defaultVisible: false } : {}),
-      ...(listValues ? { cellEditor: 'select', cellEditorParams: { values: listValues } } : {}),
+      ...(formatting.listValidations[letter] ? { cellEditor: 'select' as const, cellEditorParams: { values: formatting.listValidations[letter] } } : {}),
       // valueGetter omitted — ogrid reads row[columnId] by default.
     });
   }
@@ -502,6 +507,7 @@ export function sheetToGridData(
 
   return {
     columns, rows, initialFormulas: adjustedFormulas, formatting,
+    dataValidations: readDataValidations(sheet, { headerPromoted: promote, rowCount: rows.length, columnCount: columns.length }),
     ...(arrayRanges.length ? { arrayRanges: arrayRanges.filter(r => !promote || r.anchorRow > 0).map(r => ({ ...r, anchorRow: r.anchorRow - (promote ? 1 : 0), endRow: r.endRow - (promote ? 1 : 0) })) } : {}),
     ...(truncated ? { truncated } : {}),
     ...(truncatedCsvSheets.has(sheet) ? { parseTruncated: true } : {}),
@@ -627,7 +633,7 @@ function indexToColumnLetter(n: number): string {
 
 /** List sheet names in display order. */
 export function listSheets(workbook: ExcelJS.Workbook): string[] {
-  return workbook.worksheets.map((w) => w.name);
+  return workbook.worksheets.filter(w => !(w.state === 'veryHidden' && /^_OGridValidation\d*$/.test(w.name))).map((w) => w.name);
 }
 
 // ---- Formatting -------------------------------------------------------------
@@ -781,10 +787,9 @@ function readFormatting(sheet: ExcelJS.Worksheet, promoted: boolean, dataRows: n
   return formatting;
 }
 
-/** ExcelJS reads validations into a per-address map (missing from its typings). */
+/** ExcelJS keeps validation metadata even when a cell has no stored value. */
 function validationAt(sheet: ExcelJS.Worksheet, address: string): ExcelJS.DataValidation | undefined {
-  return (sheet as unknown as { dataValidations?: { find(a: string): ExcelJS.DataValidation | undefined } })
-    .dataValidations?.find(address);
+  return (sheet as unknown as { dataValidations: { find(address: string): ExcelJS.DataValidation | undefined } }).dataValidations.find(address);
 }
 
 /** Values of a list validation: an inline "a,b,c" list, a range (optionally on another sheet), or a defined name. */

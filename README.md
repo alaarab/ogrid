@@ -138,13 +138,29 @@ OGrid measurements bundle each package's full entry point with its dependencies 
 
 | Package | Brotli | Budget |
 |---------|--------|--------|
-| core | 28.65 kB | 29 kB |
+| core | 29.95 kB | 31.2 kB |
 | formula assist (lazy) | 5.34 kB | 5.4 kB |
-| react | 140.43 kB | 146.1 kB |
-| react-radix | 177.66 kB | 184.8 kB |
-| react-fluent | 217.40 kB | 226.1 kB |
-| react-xlsx | 490.06 kB | 509.7 kB |
-| react-xlsx-browser | 486.30 kB | 505.8 kB |
+| react | 146.12 kB | 152 kB |
+| react-radix | 183.25 kB | 184.8 kB |
+| react-fluent | 222.92 kB | 226.1 kB |
+| react-xlsx | 505.21 kB | 509.7 kB |
+| XLSX streaming reader (lazy) | 12.11 kB | 14 kB |
+| react-xlsx-browser | 504.69 kB | 505.8 kB |
+| React validation form (lazy) | 6.36 kB | 6.7 kB |
+| Radix validation dialog (lazy) | 28.55 kB | 29.7 kB |
+| Fluent validation dialog (lazy) | 54.23 kB | 56.4 kB |
+| Browser validation dialog (lazy) | 28.08 kB | 29.3 kB |
+
+Size-limit bundles each entry with code splitting disabled, so it normally
+counts dynamic imports too. The main entries exclude the validation dialog
+chunks; each deferred form/dialog is budgeted with its own dependency graph.
+The existing formula-assist and XLSX streaming-reader exclusions remain.
+Only core (validation rules and enforcement utilities) and React (edit-path
+validation, batch decisions, rule state and invalid-cell rendering) need larger
+main budgets: each is measured size plus about 4%. Kit and XLSX main budgets
+are unchanged. Fluent Dialog and Tab dependencies load with its dialog; the
+OOXML validation adapter loads on XLSX read/write. Custom validation formulas
+reuse the grid's existing formula engine, with no additional evaluator package.
 
 Find/Replace panels, note popovers, XLSX formatting controls, drag behavior and XLSX media are loaded on demand. The browser package ships an entry plus sibling chunks; copy its complete `dist/` directory.
 

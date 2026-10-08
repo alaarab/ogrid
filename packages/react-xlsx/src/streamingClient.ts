@@ -112,6 +112,10 @@ async function loadDocument(blob: Blob, options: XlsxStreamOptions, signal?: Abo
     workbook = new Excel.Workbook();
     const model = await workerRequest(worker, blob, loadOptions, 'document', workbook, preparedSheets, headerReferencingFormulas);
     if (!model) throw new Error('XLSX worker returned no document');
+    // Structured cloning carries the rules, but not the worker's writeBuffer
+    // hook. Restore it so date/formula bounds survive native workbook export.
+    const { preserveDataValidationSerialization } = await import('./dataValidation');
+    preserveDataValidationSerialization(workbook);
   } else {
     const { workbookFromBlob } = await import('./sheetMapper');
     workbook = await workbookFromBlob(blob, options);

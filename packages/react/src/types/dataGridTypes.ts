@@ -1,3 +1,4 @@
+import type { IDataValidationRule, IDataValidationContext, OnValidationFail } from '@alaarab/ogrid-core';
 import type { FilterOption, ICellConditionalFormat, IConditionalFormatRule } from '@alaarab/ogrid-core';
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
@@ -166,7 +167,20 @@ export interface ICellDropEvent<T> {
 }
 
 /** Base props shared by both client-side and server-side OGrid modes. */
-interface IOGridBaseProps<T> {
+export interface IDataValidationProps<T> {
+  dataValidations?: IDataValidationRule<T>[];
+  onDataValidationsChange?: (rules: IDataValidationRule<T>[]) => void;
+  allowValidationEditing?: boolean;
+  /** Outline existing invalid cells with red ellipses. */
+  circleInvalidData?: boolean;
+  onValidationFail?: OnValidationFail<T>;
+  /** Optional external source resolver, primarily for workbook integration. */
+  validationSourceResolver?: IDataValidationContext<T>['resolveSource'];
+  /** Workbook coordinates for references qualified with the current sheet name. */
+  validationSheet?: { name: string; rowOffset: number };
+}
+
+interface IOGridBaseProps<T> extends IDataValidationProps<T> {
   columns: (IColumnDef<T> | IColumnGroupDef<T>)[];
   getRowId: (item: T) => RowId;
 
@@ -544,7 +558,9 @@ export interface WindowedDataState<T> {
   loadedRows?: T[];
 }
 
-export interface IOGridDataGridProps<T> {
+export interface IOGridDataGridProps<T> extends IDataValidationProps<T> {
+  /** Full sheet data and evaluator supplied by OGrid. */
+  validationContext?: IDataValidationContext<T>;
   /** @internal Connects the table's scroll implementation to the grid API. */
   scrollToRowRef?: React.RefObject<((index: number, options?: { align?: 'start' | 'center' | 'end' }) => void) | null>;
   items: T[];

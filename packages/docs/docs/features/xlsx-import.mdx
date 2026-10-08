@@ -80,11 +80,12 @@ function SingleSheet({ file }: { file: Blob }) {
 | `limits` | `{ maxRows?, maxCols?, maxCells?, maxFileBytes?, maxUncompressedBytes? }` | 1,048,576 rows / 1,000 cols / 5,100,000 cells; 50 MiB file / 200 MiB inflated ZIP | Per-sheet mapping caps and file parsing checks. A notice shows when mapping or CSV parsing is limited. |
 | `onTruncated` | `(notice: XlsxTruncationNotice) => void` | — | Reports the displayed sheet name, loaded row/column counts, full extent when known, and `parseTruncated` for CSV. |
 | `editable` | `boolean` | `false` | Allow editing values, formulas, rows and columns through the grid menus. Off, the grid is a read-only preview. |
+| `circleInvalidData` | `boolean` | `false` | Outline cells that fail their Excel validation rules. |
 | `toolbar` | `boolean` | `editable` | Show the formatting toolbar above the grid. |
 | `exportFileName` | `string` | — | Adds an **Export .xlsx** button to the toolbar that downloads the edited workbook under this name. |
 | `onDocument` | `(doc: XlsxWorkbookDocument) => void` | — | Receives the document after loading. Supplying it disables automatic streaming to preserve host-managed export; explicit `streaming={true}` defers delivery until **Enable editing**. |
 
-`XlsxGrid` takes the same `editable`, `toolbar` and `exportFileName` props, plus an optional `document` to share one `XlsxWorkbookDocument` between grids.
+`XlsxGrid` takes the same `editable`, `circleInvalidData`, `toolbar` and `exportFileName` props, plus an optional `document` to share one `XlsxWorkbookDocument` between grids.
 
 ## Editing, formatting and saving
 
@@ -258,6 +259,7 @@ The worker is a separate self-contained asset with no external imports.
 ```
 vendor/
   ogrid-xlsx.js
+  *.js  # Keep the generated relative chunks alongside the entry
   ogrid-xlsx.css
   xlsxWorker.js
   ...other .js and .css chunks from dist/
@@ -342,3 +344,9 @@ For full control (multi-sheet assembly, styling), build the workbook yourself wi
 - [Formulas](./formulas) — the engine that evaluates `=SUM(A1:A5)` cells lifted out of the workbook
 - [Cell References](./cell-references) — A/B/C column headers and the name box, on by default for xlsx grids
 - [CSV Export](./csv-export) — round-trip data back out of the grid
+
+## Data validation
+
+Imported validations apply to their original cells and ranges: list, whole, decimal, date, time, text length, and custom formulas. Lists use per-cell dropdowns, including live range and defined-name sources. Input messages and stop, warning, and information alerts follow the workbook's settings.
+
+With `editable`, select cells and use **Data validation…** in the context menu to edit rules through Settings, Input message, and Error alert tabs. Validation changes join the document's undo history and export as Excel validations; untouched and unloaded rules are preserved. See [Data Validation](./data-validation) for the model and enforcement behavior.
