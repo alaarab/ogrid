@@ -6,6 +6,19 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- Formula autocomplete and argument hints, in the cell editor and the formula
+  bar, in both kits: typing a name after `=`, `(`, a comma or an operator lists
+  matching functions (prefix matches first, then contains) and named ranges,
+  with the highlighted function's signature and description; Up/Down move,
+  Tab or Enter insert `NAME(`, click inserts, Escape closes. Inside a call a
+  tooltip shows the signature with the current argument bold (nesting, strings
+  and array constants tracked). Accessible combobox/listbox. Custom
+  `formulaFunctions` are listed and can carry `description` and `signature`.
+  Core (`@alaarab/ogrid-core/formula`): `getFunctionMetadata`, `listFunctions`
+  (metadata for all built-ins), `getFormulaCaretContext`,
+  `getFormulaCompletions`, `applyFormulaCompletion`, `getSignatureParts`.
+  React: `useFormulaAssist`, `FormulaAssistContext`; kits export
+  `FormulaAssistPopup`.
 - Fill series like Excel: dragging the fill handle continues numbers (two or
   more follow their linear trend), dates (by day; two same-day dates step by
   month or year), weekday and month names and abbreviations, quarters (Q1..Q4)

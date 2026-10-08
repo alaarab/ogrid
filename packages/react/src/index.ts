@@ -270,6 +270,15 @@ export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export type { MarchingAntsOverlayProps } from './components/MarchingAntsOverlay';
 export { FormulaBar } from './components/FormulaBar';
 export type { FormulaBarProps } from './components/FormulaBar';
+export { FormulaAssistContext, FormulaAssistHost } from './components/FormulaAssist';
+export type {
+  FormulaAssistPopupProps,
+  FormulaAssistHostProps,
+  IFormulaAssistConfig,
+  IFormulaArgumentHint,
+} from './components/FormulaAssist';
+export { useFormulaAssist } from './hooks/useFormulaAssist';
+export type { UseFormulaAssistParams, UseFormulaAssistResult } from './hooks/useFormulaAssist';
 export { FormulaRefOverlay } from './components/FormulaRefOverlay';
 export type { FormulaRefOverlayProps } from './components/FormulaRefOverlay';
 export { SheetTabs, SHEET_TAB_COLORS, moveSheetId } from './components/SheetTabs';

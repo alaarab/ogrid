@@ -20,3 +20,4 @@ export { createCellNotesTests } from './cellNotesTestFactory';
 export { createConditionalFormattingTests } from './conditionalFormattingTestFactory';
 export { createSortFilterTests } from './sortFilterTestFactory';
 export type { SortFilterRow } from './sortFilterTestFactory';
+export { createFormulaAssistTests } from './formulaAssistTestFactory';

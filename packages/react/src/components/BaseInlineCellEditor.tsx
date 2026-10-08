@@ -6,6 +6,7 @@ import { useInlineCellEditorState, useRichSelectState, useSelectState } from '..
 import type { InlineCellEditorCommitOptions } from '../hooks/useInlineCellEditorState';
 import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
 import { usePortalTheme } from '../hooks/usePortalTheme';
+import { useFormulaAssist } from '../hooks/useFormulaAssist';
 
 /** Marks dropdowns portaled out of the cell as editor DOM for the grid keydown handler. */
 const EDITOR_MARKER_PROPS = { [CELL_EDITOR_ATTR]: '' };
@@ -200,6 +201,13 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
 
   const { localValue, setLocalValue, handleKeyDown, handleBlur, commit, cancel } =
     useInlineCellEditorState({ value, editorType, onCommit, onCancel, dateFormat, dateEditorType, initialText });
+  // Function autocomplete + argument hints for "=" formulas (active under a FormulaAssistContext).
+  const assist = useFormulaAssist({
+    value: localValue,
+    onChange: setLocalValue,
+    getInput: () => wrapperRef.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea') ?? null,
+    enabled: editorType === 'text',
+  });
   // Read once at mount: the focus effect below must not re-run (and re-select) as it changes.
   const seededRef = React.useRef(initialText !== undefined);
 
@@ -476,11 +484,13 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => { if (!assist.handleKeyDown(e)) handleKeyDown(e); }}
         style={editorInputStyle}
+        {...assist.inputProps}
         // biome-ignore lint/a11y/noAutofocus: popup editor must receive focus on open
         autoFocus
       />
+      {assist.popup}
     </div>
   );
 }

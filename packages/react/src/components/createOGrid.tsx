@@ -7,6 +7,8 @@ import type { IOGridProps, IOGridApi, IOGridDataGridProps } from '../types';
 import type { IColumnDef, IColumnDefinition } from '../types';
 import type { IColumnChooserProps } from './ColumnChooserProps';
 import type { IPaginationControlsProps } from './PaginationControlsProps';
+import { FormulaAssistContext } from './FormulaAssist';
+import type { FormulaAssistPopupProps, IFormulaAssistConfig } from './FormulaAssist';
 
 export interface InlineCellEditorProps<T> {
   value: unknown;
@@ -56,6 +58,8 @@ export interface CreateOGridComponents {
   DataGridTable: <T>(props: IOGridDataGridProps<T>) => React.ReactElement;
   ColumnChooser: React.ComponentType<IColumnChooserProps>;
   PaginationControls: React.ComponentType<IPaginationControlsProps>;
+  /** Formula autocomplete + argument hint popup; formula editing help is off without it. */
+  FormulaAssistPopup?: React.ComponentType<FormulaAssistPopupProps>;
 }
 
 /**
@@ -63,15 +67,21 @@ export interface CreateOGridComponents {
  * Used by Radix and Fluent to avoid duplicating the same wiring code.
  */
 export function createOGrid(components: CreateOGridComponents) {
-  const { DataGridTable, ColumnChooser, PaginationControls } = components;
+  const { DataGridTable, ColumnChooser, PaginationControls, FormulaAssistPopup } = components;
 
   const OGridInner = forwardRef(function OGridInner<T>(
     props: IOGridProps<T>,
     ref: React.Ref<IOGridApi<T>>
   ): React.ReactElement {
     const { dataGridProps, pagination, columnChooser, layout } = useOGrid(props, ref);
+    const { formulas, formulaFunctions, namedRanges } = props;
+    const formulaAssist = React.useMemo<IFormulaAssistConfig | null>(
+      () => (formulas && FormulaAssistPopup ? { functions: formulaFunctions, namedRanges, Popup: FormulaAssistPopup } : null),
+      [formulas, formulaFunctions, namedRanges],
+    );
 
     return (
+      <FormulaAssistContext.Provider value={formulaAssist}>
       <OGridLayout
         className={layout.className}
         sideBar={layout.sideBarProps}
@@ -113,6 +123,7 @@ export function createOGrid(components: CreateOGridComponents) {
       >
         <DataGridTable {...(dataGridProps as IOGridDataGridProps<unknown>)} />
       </OGridLayout>
+      </FormulaAssistContext.Provider>
     );
   });
 

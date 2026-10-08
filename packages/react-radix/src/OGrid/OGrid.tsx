@@ -2,6 +2,7 @@ import { createOGrid } from '@alaarab/ogrid-react';
 import { DataGridTable } from '../DataGridTable/DataGridTable';
 import { ColumnChooser } from '../ColumnChooser/ColumnChooser';
 import { PaginationControls } from '../PaginationControls/PaginationControls';
+import { FormulaAssistPopup } from '../FormulaAssistPopup/FormulaAssistPopup';
 
 export type { IOGridProps } from '@alaarab/ogrid-react';
 
@@ -9,4 +10,5 @@ export const OGrid = createOGrid({
   DataGridTable,
   ColumnChooser,
   PaginationControls,
+  FormulaAssistPopup,
 });
