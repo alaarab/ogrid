@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
+import { createDataValidator } from '@alaarab/ogrid-core';
 import { XlsxWorkbookDocument } from '../xlsxDocument';
 import { readDataValidations, validationSourceResolver } from '../dataValidation';
 import type { IDataValidationRule } from '@alaarab/ogrid-core';
-import type { SheetRow } from '../sheetMapper';
+import { sheetToGridData, workbookFromBlob, type SheetRow } from '../sheetMapper';
 async function reload(wb: ExcelJS.Workbook): Promise<ExcelJS.Workbook> {
   const out = new ExcelJS.Workbook(); await out.xlsx.load(await wb.xlsx.writeBuffer()); return out;
 }
@@ -52,7 +54,9 @@ describe('XLSX data validation', () => {
     expect(ws.getCell('G2').dataValidation).toMatchObject({ type: 'custom', formulae: ['G2<=A2'], errorTitle: 'Edited' });
     expect(ws.getCell('D2').dataValidation).toMatchObject({ type: 'time', formulae: ['0.75'] });
     const imported = readDataValidations(ws, { headerPromoted: true, rowCount: 3, columnCount: 8 });
-    expect(imported.map((r) => r.type).sort()).toEqual(initial.map((r) => r.type).sort());
+    for (const [address, formulae] of Object.entries({ A2: [1, 10], B2: [0.1], C2: [new Date('2026-01-01'), new Date('2026-12-31')], D2: ['0.75'], E2: [5, 10], F2: ['"Open,Closed"'], F3: ['$H$2:$H$3'], F4: ['Statuses'], G2: ['G2<=A2'] })) {
+      expect(ws.getCell(address).dataValidation.formulae).toEqual(formulae);
+    }
     expect(imported.every((r) => r.errorAlert?.title === 'Edited')).toBe(true);
     expect(imported.find((r) => r.type === 'date')).toMatchObject({ value: 46023, value2: 46387 });
   });
@@ -108,5 +112,126 @@ describe('XLSX data validation', () => {
     const out = (await reload(await doc.toWorkbook())).getWorksheet('Data') as ExcelJS.Worksheet;
     expect(out.getCell('F3').dataValidation).toMatchObject({ type: 'list', formulae: ['H3:H4'] });
     expect(out.getCell('G3').dataValidation).toMatchObject({ type: 'list', formulae: ['I3:I4'] });
+  });
+});
+
+async function saved(doc: XlsxWorkbookDocument) {
+  const blob = await doc.toBlob();
+  const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+  const xml = await zip.file('xl/worksheets/sheet1.xml')!.async('string');
+  return { xml, workbook: await workbookFromBlob(blob) };
+}
+describe('validation review regressions', () => {
+  it('keeps independent relative lists anchored through edits and real XLSX export', async () => {
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Data');
+    ws.addRows([['Target', 'Source'], ['first', 'first'], ['', 'middle'], ['first', 'last']]);
+    ws.getCell('A2').dataValidation = { type: 'list', formulae: ['B2'] };
+    ws.getCell('A4').dataValidation = { type: 'list', formulae: ['B2'] };
+    const input = await reload(wb), doc = new XlsxWorkbookDocument(input);
+    const state = doc.sheet('Data')!;
+    const validator = createDataValidator(state.dataValidations, { items: state.rows, columns: state.columns, resolveSource: validationSourceResolver(input.getWorksheet('Data')!, doc.sheetAccessors(), 1) });
+    expect(validator.isValid(state.rows[2]!, 'A', 2, 'first')).toBe(true);
+    expect(validator.isValid(state.rows[2]!, 'A', 2, 'last')).toBe(false);
+    doc.setDataValidations('Data', state.dataValidations.map(r => ({ ...r, allowBlank: true })));
+    const out = await saved(doc);
+    expect(out.workbook.getWorksheet('Data')!.getCell('A4').dataValidation.formulae).toEqual(['B2']);
+    expect(out.xml).toContain('<formula1>B2</formula1>');
+  });
+  it('rebases surviving unloaded fragments to their new top-left cell', async () => {
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Data');
+    ws.addRows([[1], [2], [3], [4], [5], [6]]);
+    for (let row = 2; row <= 6; row++) ws.getCell(`A${row}`).dataValidation = { type: 'custom', formulae: ['A2>0'] };
+    const doc = new XlsxWorkbookDocument(await reload(wb), { headerRow: 'none', maxRows: 3 });
+    doc.setDataValidations('Data', []);
+    const out = await saved(doc);
+    expect(out.xml).toContain('<formula1>A4&gt;0</formula1>');
+    expect(out.workbook.getWorksheet('Data')!.getCell('A4').dataValidation.formulae).toEqual(['A4>0']);
+    expect(out.workbook.getWorksheet('Data')!.getCell('A3').dataValidation?.type).toBeUndefined();
+  });
+  it.each([['A2 A4', 'B2'], ['A4 A2', 'B4']])('preserves the original %s origin when serializing disjoint validation fragments', async (sqref, formula) => {
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Data');
+    ws.addRows([['Target', 'Source'], ['first', 'first'], ['', 'middle'], ['last', 'last']]);
+    ws.getCell('A2').dataValidation = { type: 'list', formulae: ['B2'] };
+    const zip = await JSZip.loadAsync(await wb.xlsx.writeBuffer());
+    const part = zip.file('xl/worksheets/sheet1.xml')!;
+    zip.file('xl/worksheets/sheet1.xml', (await part.async('string')).replace('sqref="A2"', `sqref="${sqref}"`).replace('<formula1>B2</formula1>', `<formula1>${formula}</formula1>`));
+    const input = await workbookFromBlob(new Blob([new Uint8Array(await zip.generateAsync({ type: 'uint8array' }))]));
+    const doc = new XlsxWorkbookDocument(input), state = doc.sheet('Data')!;
+    const validator = createDataValidator(state.dataValidations, { items: state.rows, columns: state.columns, resolveSource: validationSourceResolver(input.getWorksheet('Data')!, doc.sheetAccessors(), 1) });
+    expect(validator.isValid(state.rows[0]!, 'A', 0, 'first')).toBe(true);
+    expect(validator.isValid(state.rows[2]!, 'A', 2, 'last')).toBe(true);
+    const out = await saved(doc), sheet = out.workbook.getWorksheet('Data')!;
+    expect(sheet.getCell('A2').dataValidation.formulae).toEqual(['B2']);
+    expect(sheet.getCell('A4').dataValidation.formulae).toEqual(['B4']);
+    expect(validationSourceResolver(sheet, {})('B4')).toEqual(['last']);
+  });
+  it('serializes formula date bounds verbatim and imports their meaning', async () => {
+    const doc = new XlsxWorkbookDocument(await reload(source()));
+    doc.setDataValidations('Data', [{ type: 'date', columnIds: ['C'], rows: { start: 0, end: 0 }, operator: 'between', value: '=B1', value2: '2026-12-31' }]);
+    const out = await saved(doc);
+    expect(out.xml).toContain('<formula1>B2</formula1><formula2>46387</formula2>');
+    const rule = new XlsxWorkbookDocument(out.workbook).sheet('Data')!.dataValidations[0];
+    expect(rule).toMatchObject({ type: 'date', value: '=B1', value2: 46387 });
+  });
+  it('exports clock strings as fractions and preserves formula time bounds', async () => {
+    const doc = new XlsxWorkbookDocument(await reload(source()));
+    doc.setDataValidations('Data', [
+      { type: 'time', columnIds: ['D'], rows: { start: 0, end: 0 }, operator: 'between', value: '09:00', value2: '17:00' },
+      { type: 'time', columnIds: ['D'], rows: { start: 1, end: 1 }, operator: 'greaterThan', value: '=B2' },
+    ]);
+    const out = await saved(doc), ws = out.workbook.getWorksheet('Data')!;
+    expect(ws.getCell('D2').dataValidation.formulae).toEqual([0.375, 17 / 24]);
+    expect(ws.getCell('D3').dataValidation.formulae).toEqual(['B3']);
+    expect(out.xml).toContain('<formula1>0.375</formula1>');
+  });
+  it('round-trips list items containing commas, quotes and long inline lists through a hidden source', async () => {
+    const doc = new XlsxWorkbookDocument(await reload(source()));
+    const values = ['ACME, Inc.', 'He said "yes"', 'Other', 'x'.repeat(256)];
+    doc.setDataValidations('Data', [{ type: 'list', columnIds: ['F'], values }]);
+    const out = await saved(doc), ws = out.workbook.getWorksheet('Data')!;
+    const sourceRef = String(ws.getCell('F2').dataValidation.formulae[0]);
+    expect(sourceRef.startsWith('"')).toBe(false);
+    expect(validationSourceResolver(ws, {})(sourceRef)).toEqual(values);
+    expect(out.workbook.worksheets.some(sheet => sheet.state === 'veryHidden')).toBe(true);
+    const again = await saved(new XlsxWorkbookDocument(out.workbook));
+    expect(validationSourceResolver(again.workbook.getWorksheet('Data')!, {})(sourceRef)).toEqual(values);
+  });
+  it('normalizes 1904 date bounds and exports the original workbook serial', async () => {
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Data'); wb.properties.date1904 = true;
+    ws.addRows([['Date'], [new Date('2026-01-01T00:00:00Z')]]);
+    ws.getCell('A2').dataValidation = { type: 'date', operator: 'equal', formulae: [new Date((44561 - 25569) * 86400000)] };
+    const doc = new XlsxWorkbookDocument(await reload(wb)), state = doc.sheet('Data')!;
+    const validator = createDataValidator(state.dataValidations, { items: state.rows, columns: state.columns });
+    expect(validator.isValid(state.rows[0]!, 'A', 0, state.rows[0]!.A)).toBe(true);
+    expect(state.dataValidations[0]).toMatchObject({ value: 46023 });
+    doc.setDataValidations('Data', state.dataValidations.map(r => ({ ...r, allowBlank: true })));
+    const out = await saved(doc);
+    expect(out.xml).toContain('<formula1>44561</formula1>');
+    expect(out.workbook.properties.date1904).toBe(true);
+    const next = new XlsxWorkbookDocument(out.workbook).sheet('Data')!;
+    expect(createDataValidator(next.dataValidations, { items: next.rows, columns: next.columns }).isValid(next.rows[0]!, 'A', 0, next.rows[0]!.A)).toBe(true);
+  });
+  it('shifts edited validation ranges and formulas with XLSX structure edits and undo', async () => {
+    const doc = new XlsxWorkbookDocument(await reload(source()));
+    doc.setDataValidations('Data', [{ type: 'custom', columnIds: ['A'], rows: { start: 0, end: 2 }, formula: '=A1>0' }]);
+    await Promise.resolve();
+    doc.insertColumns('Data', 0); doc.insertRows('Data', 0);
+    expect(doc.sheet('Data')!.dataValidations).toEqual([expect.objectContaining({ columnIds: ['B'], rows: { start: 1, end: 3 }, formula: '=B2>0' })]);
+    let out = await saved(doc);
+    expect(out.workbook.getWorksheet('Data')!.getCell('B3').dataValidation.formulae).toEqual(['B3>0']);
+    doc.undo('Data'); doc.undo('Data');
+    out = await saved(doc);
+    expect(out.workbook.getWorksheet('Data')!.getCell('A2').dataValidation.formulae).toEqual(['A2>0']);
+  });
+  it('keeps legacy mapper dropdowns and exposes per-cell validation rules', async () => {
+    const original = source(), sheet = original.getWorksheet('Data')!;
+    for (let row = 2; row <= 4; row++) {
+      sheet.getCell(`F${row}`).value = null;
+      sheet.getCell(`F${row}`).dataValidation = { type: 'list', formulae: ['"Open,Closed"'] };
+    }
+    const ws = (await reload(original)).getWorksheet('Data')!, data = sheetToGridData(ws);
+    expect(data.columns[5]).toMatchObject({ cellEditor: 'select', cellEditorParams: { values: ['Open', 'Closed'] } });
+    expect(data.formatting.listValidations.F).toEqual(['Open', 'Closed']);
+    expect(data.dataValidations).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'list', columnIds: ['F'], rows: { start: 0, end: 2 }, values: ['Open', 'Closed'] })]));
   });
 });

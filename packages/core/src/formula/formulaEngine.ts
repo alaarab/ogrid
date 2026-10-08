@@ -366,21 +366,34 @@ export class FormulaEngine {
   createDetachedEvaluator(accessor: IGridDataAccessor, options?: { proposed?: { col: number; row: number; value: unknown; alias?: { sheet: string; col: number; row: number } }; preserveArrays?: boolean }): (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown {
     const baseContext = this.createContext(accessor);
     const proposed = options?.proposed;
+    const candidate = proposed && typeof proposed.value === 'string' && proposed.value.startsWith('=') ? this.parseFormula(proposed.value) : undefined;
+    const candidateKey = proposed ? toCellKey(proposed.col, proposed.row) : undefined;
+    const dependencies = candidate ? extractDependencies(candidate) : undefined;
+    if (dependencies && proposed?.alias && candidateKey) {
+      // Qualified references to the grid's worksheet address target the same candidate.
+      const aliasKey = toCellKey(proposed.alias.col, proposed.alias.row, proposed.alias.sheet);
+      if (dependencies.cells.delete(aliasKey)) dependencies.cells.add(candidateKey);
+      for (const range of dependencies.ranges) {
+        if (range.sheet === proposed.alias.sheet && proposed.alias.col >= range.minCol && proposed.alias.col <= range.maxCol && proposed.alias.row >= range.minRow && proposed.alias.row <= range.maxRow) dependencies.cells.add(candidateKey);
+      }
+    }
+    const circular = candidateKey && dependencies && this.depGraph.wouldCreateCycle(candidateKey, dependencies.cells, dependencies.ranges);
     const localValues = new Map<string, unknown>();
     const active = new Set<string>();
     const context: IFormulaContext = proposed ? {
       ...baseContext,
       getCellValue: (addr) => {
-        if ((!addr.sheet && addr.col === proposed.col && addr.row === proposed.row) || (addr.sheet === proposed.alias?.sheet && addr.col === proposed.alias?.col && addr.row === proposed.alias?.row)) return proposed.value;
-        if (addr.sheet) return baseContext.getCellValue(addr);
-        const key = toCellKey(addr.col, addr.row);
-        const ast = this.parsedFormulas.get(key);
-        if (!ast) return accessor.getCellValue(addr.col, addr.row);
+        const target = (!addr.sheet && addr.col === proposed.col && addr.row === proposed.row) || (addr.sheet === proposed.alias?.sheet && addr.col === proposed.alias?.col && addr.row === proposed.alias?.row);
+        if (target && !candidate) return proposed.value;
+        if (addr.sheet && !target) return baseContext.getCellValue(addr);
+        const key = target ? candidateKey as string : toCellKey(addr.col, addr.row);
+        const ast = target ? candidate : this.parsedFormulas.get(key);
+        if (!ast) return baseContext.getCellValue(addr);
         if (localValues.has(key)) return localValues.get(key);
         if (active.has(key)) return new FormulaError('#CIRC!');
         active.add(key);
         try {
-          const result = this.evaluator.evaluate(ast, { ...context, currentCell: addr });
+          const result = this.evaluator.evaluate(ast, { ...context, currentCell: target ? { col: proposed.col, row: proposed.row, absCol: false, absRow: false } : addr });
           const value = Array.isArray(result) ? result[0]?.[0] ?? null : result;
           localValues.set(key, value);
           return value;
@@ -404,6 +417,7 @@ export class FormulaEngine {
     } : baseContext;
     const parsed = new Map<string, ASTNode>();
     return (formula, anchor, cell) => {
+      if (circular) return new FormulaError('#CIRC!', 'Circular reference detected');
       let ast = parsed.get(formula);
       if (!ast) {
         ast = this.parseFormula(formula);
@@ -411,12 +425,13 @@ export class FormulaEngine {
       }
       const shifted = shiftReferences(ast, cell.col - anchor.col, cell.row - anchor.row);
       try {
+        if (candidateKey && candidate && formula === proposed?.value) active.add(candidateKey);
         const result = this.evaluator.evaluate(shifted, { ...context, currentCell: { col: cell.col, row: cell.row, absCol: false, absRow: false } });
         return Array.isArray(result) && !options?.preserveArrays ? result[0]?.[0] ?? null : result;
       } catch (err) {
         if (err instanceof FormulaError) return err;
         return new FormulaError('#VALUE!', err instanceof Error ? err.message : String(err));
-      }
+      } finally { if (candidateKey) active.delete(candidateKey); }
     };
   }
 

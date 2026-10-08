@@ -14,7 +14,7 @@ import { createBuiltInFunctions, tokenize, parseRange, type IGridDataAccessor, t
 import { applyBorderSides, applyStyleEdit, borderSidesForCell, styleHas, type BorderOptions, type StyleEdit, type XlsxCellStyle } from './cellStyles';
 import { xlsxBlobFromWorkbook } from './exportToXlsx';
 import { attachSourceArchive, copyDynamicArrays, markDynamicArray, sourceArchiveOf } from './sourceArchive';
-import { readDataValidations, writeDataValidations } from './dataValidation';
+import { readDataValidations, writeDataValidations, preserveDataValidationSerialization } from './dataValidation';
 import type { IDataValidationRule } from '@alaarab/ogrid-core';
 import { readSheetNotes, writeSheetNotes } from './cellNotes';
 import { rebaseFormulaRows, toFileFormula } from './formulaReferences';
@@ -289,7 +289,7 @@ export class XlsxWorkbookDocument {
       formulaResults,
       outputResults,
       spillRanges: source.arrayRanges ?? [],
-      columns: source.columns,
+      columns: source.columns.map(column => ({ ...column, cellEditor: undefined, cellEditorParams: undefined })),
       columnIndex: new Map(source.columns.map((c, i) => [c.columnId, i])),
     };
     this.sheets.set(name, state);
@@ -827,8 +827,7 @@ export class XlsxWorkbookDocument {
    * round-trips. Formulas are written as formulas with the latest known result.
    */
   async toWorkbook(): Promise<ExcelJS.Workbook> {
-    const out = new ExcelJS.Workbook();
-    await out.xlsx.load(await (this.editedWorkbook ?? this.workbook).xlsx.writeBuffer());
+    const out = cloneWorkbook(this.editedWorkbook ?? this.workbook);
     copyDynamicArrays(this.editedWorkbook ?? this.workbook, out);
     let valuesChanged = false;
     for (const state of this.sheets.values()) {
@@ -839,6 +838,7 @@ export class XlsxWorkbookDocument {
     if (valuesChanged) out.calcProperties = { ...out.calcProperties, fullCalcOnLoad: true };
     const source = sourceArchiveOf(this.workbook);
     if (source) attachSourceArchive(out, source);
+    preserveDataValidationSerialization(out);
     return out;
   }
 

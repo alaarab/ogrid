@@ -62,7 +62,7 @@ export function useRenderCellContent<T>(
     handleFillHandleMouseDown, onCellError, cellDescriptorInput,
   } = o;
   const { setSelectionRange, handleFillHandleDoubleClick } = interaction;
-  const { validator, sheetRow } = o.validation;
+  const { validator, sheetRow: validationRow } = o.validation;
   const { editable, getFormulaValue, hasFormula, getFormula, activeSpillRange } = cellDescriptorInput;
   const hasValueChangeHandler = !!cellDescriptorInput.onCellValueChanged;
   const { InlineCellEditor, renderPopoverEditor, renderBooleanCell } = primitives;
@@ -70,7 +70,7 @@ export function useRenderCellContent<T>(
   // biome-ignore lint/correctness/useExhaustiveDependencies: editable, hasValueChangeHandler and the formula accessors are read through cellDescriptorInputRef; they are deps so the function identity (and so every row) changes with them
   return useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number, cf?: ICellConditionalFormat): React.ReactNode => {
-      const row = sheetRow(item, rowIndex);
+      const row = validationRow(item, rowIndex);
       const rule = validator.ruleFor(item, col.columnId, row);
       const list = rule?.type === 'list' && rule.inCellDropdown !== false ? validator.listValues(rule, col.columnId, row).map(String) : undefined;
       if (list) col = { ...col, cellEditor: 'select', cellEditorParams: { values: list } };
@@ -203,6 +203,6 @@ export function useRenderCellContent<T>(
         </CellErrorBoundary>
       );
     },
-    [editCallbacks, interactionHandlers, delegatedCellHandlers, handleFillHandleMouseDown, handleFillHandleDoubleClick, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, colOffset, setSelectionRange, setActiveCell, styles, primitives, InlineCellEditor, renderPopoverEditor, renderBooleanCell, activeSpillRange, editable, hasValueChangeHandler, getFormulaValue, hasFormula, getFormula, validator, sheetRow, circleInvalidData, o.editing.setEditingCell]
+    [editCallbacks, interactionHandlers, delegatedCellHandlers, handleFillHandleMouseDown, handleFillHandleDoubleClick, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, colOffset, setSelectionRange, setActiveCell, styles, primitives, InlineCellEditor, renderPopoverEditor, renderBooleanCell, activeSpillRange, editable, hasValueChangeHandler, getFormulaValue, hasFormula, getFormula, validator, validationRow, circleInvalidData, o.editing.setEditingCell]
   );
 }

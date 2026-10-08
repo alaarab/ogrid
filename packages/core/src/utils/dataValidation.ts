@@ -105,7 +105,11 @@ export function createDataValidator<T>(rules: readonly IDataValidationRule<T>[],
     if (value === '' || value === null || value === undefined) return rule.allowBlank === true;
     const { anchor, cell } = coords(rule, columnId, row);
     // Formula text is checked by its computed result before anything is stored.
-    if (typeof value === 'string' && value.startsWith('=') && context.evaluateFormula) value = context.evaluateFormula(value, cell, cell);
+    if (typeof value === 'string' && value.startsWith('=') && context.evaluateFormula) {
+      const result = context.evaluateFormula(value, cell, cell, { value });
+      // Validation belongs to the user-editable anchor; spill children are checked by their displayed values.
+      value = Array.isArray(result) ? Array.isArray(result[0]) ? result[0][0] : result[0] : result;
+    }
     if (isError(value)) return false;
     if (rule.type === 'list') return listValues(rule, columnId, row).some((v) => String(v).toLowerCase() === String(value).toLowerCase());
     if (rule.type === 'custom') {

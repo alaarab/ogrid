@@ -11,6 +11,13 @@ function paste(target: HTMLElement, text: string) {
   Object.defineProperty(event, 'clipboardData', { value: { getData: () => text } });
   fireEvent(target, event);
 }
+function cut(target: HTMLElement): string {
+  const event = new Event('cut', { bubbles: true, cancelable: true });
+  const clipboard: Record<string, string> = {};
+  Object.defineProperty(event, 'clipboardData', { value: { setData: (type: string, value: string) => { clipboard[type] = value; } } });
+  fireEvent(target, event);
+  return clipboard['text/plain'] ?? '';
+}
 export function createDataValidationTests(OGrid: React.ComponentType<IOGridProps<Row> & { ref?: React.Ref<IOGridApi<Row>> }>) {
   function setup(overrides: Partial<IOGridProps<Row>> = {}) {
     const changes = jest.fn();
@@ -22,13 +29,13 @@ export function createDataValidationTests(OGrid: React.ComponentType<IOGridProps
     const view = render(<Host />);
     const grid = view.container.querySelector('[role="region"]') as HTMLElement;
     const cell = (id: string, col = 'qty') => view.container.querySelector(`tr[data-row-id="${id}"] td[data-column-id="${col}"]`) as HTMLElement;
-    const select = (id: string, col = 'qty') => { fireEvent.pointerDown(cell(id, col).querySelector('[data-row-index]') as HTMLElement); grid.focus(); };
+    const select = (id: string, col = 'qty') => { fireEvent.pointerDown(cell(id, col).querySelector('[data-row-index]') as HTMLElement); (view.container.querySelector('[role="region"]') as HTMLElement).focus(); };
     const edit = async (id: string, value: string) => {
       select(id); fireEvent.keyDown(grid, { key: 'F2' });
       const input = await waitFor(() => { const el = grid.querySelector('[data-ogrid-cell-editor] input'); expect(el).toBeInTheDocument(); return el as HTMLInputElement; });
       fireEvent.change(input, { target: { value } }); fireEvent.keyDown(input, { key: 'Enter' });
     };
-    return { ...view, grid, cell, select, edit, changes, api: () => ref.current as IOGridApi<Row> };
+    return { ...view, get grid() { return view.container.querySelector('[role="region"]') as HTMLElement; }, cell, select, edit, changes, api: () => ref.current as IOGridApi<Row> };
   }
   describe('data validation', () => {
     it('stop rejects an edit before an event or undo entry is recorded', async () => {
@@ -54,6 +61,97 @@ export function createDataValidationTests(OGrid: React.ComponentType<IOGridProps
       await g.edit('r0', '12');
       fireEvent.click(await screen.findByRole('button', { name: 'Accept value' }));
       expect(g.changes).toHaveBeenCalledTimes(1); expect(g.api().getCellValue('r0', 'qty')).toBe(12);
+    });
+    it('defers a warned cut as one operation and clears its source on acceptance', async () => {
+      const g = setup({ dataValidations: [{ ...whole, rows: { start: 1, end: 1 }, operator: 'greaterThan', value: 5, errorAlert: { style: 'warning' } }] });
+      g.select('r0');
+      const text = cut(g.grid); g.select('r1'); paste(g.grid, text);
+      expect(g.changes).not.toHaveBeenCalled();
+      fireEvent.click(await screen.findByRole('button', { name: 'Accept value' }));
+      expect(g.api().getCellValue('r1', 'qty')).toBe(2);
+      expect(g.api().getCellValue('r0', 'qty')).toBeNull();
+      fireEvent.keyDown(g.grid, { key: 'z', ctrlKey: true });
+      expect(g.api().getCellValue('r0', 'qty')).toBe(2);
+      expect(g.api().getCellValue('r1', 'qty')).toBe(3);
+      fireEvent.keyDown(g.grid, { key: 'y', ctrlKey: true });
+      expect(g.api().getCellValue('r0', 'qty')).toBeNull();
+      expect(g.api().getCellValue('r1', 'qty')).toBe(2);
+    });
+    it('preserves warned formula cut clearing and undo as one transaction', async () => {
+      const g = setup({ formulas: true, initialFormulas: [{ col: 0, row: 0, formula: '=1+1' }], dataValidations: [{ ...whole, rows: { start: 1, end: 1 }, operator: 'greaterThan', value: 5, errorAlert: { style: 'warning' } }] });
+      g.select('r0');
+      const text = cut(g.grid); g.select('r1'); paste(g.grid, text);
+      expect(g.api().getCellValue('r0', 'qty')).toBe(2);
+      fireEvent.click(await screen.findByRole('button', { name: 'Accept value' }));
+      expect(g.api().getCellValue('r0', 'qty')).toBeNull();
+      expect(g.api().getCellValue('r1', 'qty')).toBe(2);
+      fireEvent.keyDown(g.grid, { key: 'z', ctrlKey: true });
+      expect(g.api().getCellValue('r0', 'qty')).toBe(2);
+      expect(g.api().getCellValue('r1', 'qty')).toBe(3);
+    });
+    it('collects two fill warnings before committing and undoes them in one step', async () => {
+      const g = setup({ dataValidations: [{ ...whole, rows: { start: 1, end: 2 }, operator: 'greaterThan', value: 5, errorAlert: { style: 'warning' } }] });
+      g.select('r0'); fireEvent.keyDown(g.grid, { key: 'ArrowDown', shiftKey: true }); fireEvent.keyDown(g.grid, { key: 'ArrowDown', shiftKey: true });
+      fireEvent.keyDown(g.grid, { key: 'd', ctrlKey: true });
+      fireEvent.click(await screen.findByRole('button', { name: 'Accept value' }));
+      expect(g.changes).not.toHaveBeenCalled();
+      fireEvent.click(await screen.findByRole('button', { name: 'Accept value' }));
+      expect(g.api().getCellValue('r1', 'qty')).toBe(2);
+      expect(g.api().getCellValue('r2', 'qty')).toBe(2);
+      fireEvent.keyDown(g.grid, { key: 'z', ctrlKey: true });
+      expect(g.api().getCellValue('r1', 'qty')).toBe(3);
+      expect(g.api().getCellValue('r2', 'qty')).toBe(99);
+    });
+    it('shifts custom references and row targets with structural edits and restores them on undo', () => {
+      const changed = jest.fn();
+      const ref = React.createRef<IOGridApi<Row>>();
+      const rules: IDataValidationRule<Row>[] = [{ type: 'custom', columnIds: ['qty'], rows: { start: 1, end: 1 }, formula: '=A2>0' }];
+      function Host() {
+        const [data, setData] = React.useState(rows);
+        const [cols, setCols] = React.useState(columns);
+        return <OGrid ref={ref} columns={cols} data={data} getRowId={r => r.id} editable cellReferences formulas defaultSortBy="" allowStructureEdits
+          dataValidations={rules}
+          onDataValidationsChange={changed} onRowsChange={e => setData(e.data)} onColumnsChange={e => setCols(e.columns as IColumnDef<Row>[])}
+          onCellValueChanged={e => setData(old => old.map(r => r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r))} />;
+      }
+      const view = render(<Host />), grid = view.container.querySelector('[role="region"]')!;
+      act(() => ref.current!.insertColumn(0, { columnId: 'blank', name: 'Blank', editable: true }));
+      act(() => ref.current!.setCellValue('r1', 'qty', 6));
+      expect(ref.current!.getCellValue('r1', 'qty')).toBe(6);
+      expect(changed.mock.calls[changed.mock.calls.length - 1]?.[0][0]).toMatchObject({ formula: '=B2>0', anchor: { columnId: 'qty', row: 1 } });
+      fireEvent.keyDown(grid, { key: 'z', ctrlKey: true }); fireEvent.keyDown(grid, { key: 'z', ctrlKey: true });
+      expect(changed.mock.calls[changed.mock.calls.length - 1]?.[0][0]).toMatchObject({ formula: '=A2>0', rows: { start: 1, end: 1 } });
+      act(() => ref.current!.insertRows(0, [{ id: 'new', qty: 0, status: '' }]));
+      expect(changed.mock.calls[changed.mock.calls.length - 1]?.[0][0]).toMatchObject({ formula: '=A3>0', rows: { start: 2, end: 2 }, anchor: { columnId: 'qty', row: 2 } });
+      act(() => ref.current!.deleteRows(['r0']));
+      expect(changed.mock.calls[changed.mock.calls.length - 1]?.[0][0]).toMatchObject({ formula: '=A2>0', rows: { start: 1, end: 1 } });
+      fireEvent.keyDown(grid, { key: 'z', ctrlKey: true });
+      expect(changed.mock.calls[changed.mock.calls.length - 1]?.[0][0]).toMatchObject({ formula: '=A3>0', rows: { start: 2, end: 2 } });
+    });
+    it('blocks edits of spill children while circling invalid computed spill values', async () => {
+      const fail = jest.fn();
+      const g = setup({ data: rows.map(r => ({ ...r, qty: '' })) as unknown as Row[], formulas: true,
+        dataValidations: [{ ...whole, operator: 'equal', value: 1 }], circleInvalidData: true, onValidationFail: fail });
+      act(() => g.api().setCellValue('r0', 'qty', '=SEQUENCE(3)'));
+      await waitFor(() => expect(g.cell('r1')).toHaveTextContent('2'));
+      expect(g.cell('r1').querySelector('[data-validation-invalid]')).toBeInTheDocument();
+      act(() => g.api().setCellValue('r1', 'qty', 9));
+      expect(g.cell('r1')).toHaveTextContent('2'); expect(fail).not.toHaveBeenCalled();
+    });
+    it.each(['drop', 'move'] as const)('validates a %s destination without losing the source or adding undo', async kind => {
+      const g = setup({ cellDrop: true, rangeMove: true, dataValidations: [{ ...whole, rows: { start: 1, end: 1 }, operator: 'greaterThan', value: 5 }] });
+      await waitFor(() => expect(!!g.container.querySelector('[aria-busy="true"]')).toBe(false));
+      const values: Record<string, string> = { 'text/plain': '2' };
+      const dt = { files: [], getData: (type: string) => values[type] ?? '', setData: (type: string, value: string) => { values[type] = value; } };
+      if (kind === 'move') {
+        g.select('r0');
+        const handle = await waitFor(() => { const el = g.container.querySelector('[data-ogrid-range-move-handle]'); expect(el).toBeInTheDocument(); return el!; });
+        fireEvent.dragStart(handle, { dataTransfer: dt });
+      }
+      fireEvent.drop(g.cell('r1').querySelector('[data-row-index]')!, { dataTransfer: dt });
+      expect(await screen.findByRole('dialog')).toHaveTextContent('Choose 1 to 10.');
+      expect(g.api().getCellValue('r0', 'qty')).toBe(2); expect(g.api().getCellValue('r1', 'qty')).toBe(3);
+      expect(g.changes).not.toHaveBeenCalled();
     });
     it('information accepts with a notice', async () => {
       const g = setup({ dataValidations: [{ ...whole, errorAlert: { style: 'information', message: 'Outside our suggested range.' } }] });

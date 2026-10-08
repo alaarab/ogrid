@@ -113,3 +113,15 @@ describe('data validation', () => {
     expect(JSON.parse(JSON.stringify(next))).toEqual(next);
   });
 });
+
+it('rejects direct, indirect and range candidate cycles without changing the live graph', () => {
+  const accessor = { getCellValue: (col: number, row: number) => items[row]?.[col === 0 ? 'value' : 'limit'], getRowCount: () => 2, getColumnCount: () => 2 };
+  const engine = new FormulaEngine();
+  engine.setFormula(1, 0, '=A1+1', accessor);
+  const rule: IDataValidationRule = { type: 'whole', columnIds: ['value'], operator: 'between', value: 1, value2: 10 };
+  const validator = createDataValidator([rule], { items, columns, evaluateFormula: (formula, anchor, cell, proposed) => engine.createDetachedEvaluator(accessor, { proposed: proposed ? { ...cell, value: proposed.value } : undefined })(formula, anchor, cell) });
+  for (const candidate of ['=A1+1', '=B1+1', '=SUM(A1:A2)', '=IF(FALSE,A1,3)', '=INDIRECT("A1")+1']) expect(validator.validate(rule, candidate, 'value', 0)).toBe(false);
+  expect(validator.validate(rule, '=B2-1', 'value', 0)).toBe(true);
+  expect(engine.getFormula(0, 0)).toBeUndefined();
+  expect(engine.getValue(1, 0)).toBe(4);
+});

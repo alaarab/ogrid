@@ -513,7 +513,7 @@ export function useDataGridState<T>(
     getRowId,
     editable,
     onCellValueChangedProp,
-    validationGuard: validation.guard,
+    validationGuard: validation.guard, validationBatch: validation,
     onUndo: props.onUndo,
     onRedo: props.onRedo,
     canUndo: props.canUndo,
