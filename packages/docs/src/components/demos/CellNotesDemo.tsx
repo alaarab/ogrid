@@ -10,9 +10,9 @@ interface Item {
 
 const rows: Item[] = [
   { id: 1, item: 'Notebook', qty: 4, price: 3.5 },
+  { id: 4, item: 'Paper (ream)', qty: 2, price: 6 },
   { id: 2, item: 'Pen', qty: 10, price: 1.2 },
   { id: 3, item: 'Stapler', qty: 1, price: 12 },
-  { id: 4, item: 'Paper (ream)', qty: 2, price: 6 },
 ];
 
 function Inner() {
@@ -26,7 +26,7 @@ function Inner() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
-      <div style={{ fontSize: 13 }}>{notes.length} note{notes.length === 1 ? '' : 's'}</div>
+      <div className="live-demo__controls">{notes.length} note{notes.length === 1 ? '' : 's'}</div>
       <div style={{ flex: 1, minHeight: 0 }}>
         <OGrid<Item>
           columns={[

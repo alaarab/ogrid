@@ -12,9 +12,9 @@ interface Item {
 
 const initialRows: Item[] = [
   { id: 1, item: 'Notebook', qty: 4, price: 3.5 },
+  { id: 4, item: 'Paper (ream)', qty: 2, price: 6 },
   { id: 2, item: 'Pen', qty: 10, price: 1.2 },
   { id: 3, item: 'Stapler', qty: 1, price: 12 },
-  { id: 4, item: 'Paper (ream)', qty: 2, price: 6 },
 ];
 
 // Total (column D) = qty * price per row. Insert or delete rows and columns and the references follow.
@@ -44,14 +44,14 @@ function Inner() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 13 }}>
+      <div className="live-demo__controls">
         <button type="button" onClick={() => apiRef.current?.insertRows(0)}>insertRows(0)</button>
         <button type="button" onClick={() => apiRef.current?.insertColumn(1)}>insertColumn(1)</button>
         <button type="button" onClick={() => apiRef.current?.setCellValue(1, 'qty', 8)}>setCellValue(1, 'qty', 8)</button>
         <button type="button" onClick={() => setReadout(String(apiRef.current?.getCellValue(1, 'total')))}>
           getCellValue(1, 'total')
         </button>
-        {readout && <span>= {readout}</span>}
+        {readout && <span className="live-demo__readout">= {readout}</span>}
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>
         <OGrid<Item>
