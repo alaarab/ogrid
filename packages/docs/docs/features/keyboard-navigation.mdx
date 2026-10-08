@@ -130,6 +130,7 @@ When a cell is in edit mode:
 - **Enter** commits the value and moves the active cell down; **Shift+Enter** commits and moves up.
 - **Tab** commits the value and moves the active cell right.
 - **F4** in a formula (text starting with `=`) cycles the reference at or just before the caret: `A1` → `$A$1` → `A$1` → `$A1` → `A1`. Both ends of a range (`A1:B2`) change together. F4 works the same way in the formula bar.
+- **Formula autocomplete** (with `formulas` on): while the function list is open, **Up/Down** move, **Tab** or **Enter** inserts the function, and **Escape** closes the list. With the list closed, Enter, Tab and Escape behave as usual. See [Formulas](./formulas#function-autocomplete-and-argument-hints).
 - **Escape** discards the edit and returns to navigation mode.
 - Arrow keys move the cursor within the editor (they do not navigate between cells while editing).
 

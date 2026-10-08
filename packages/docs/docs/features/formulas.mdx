@@ -90,6 +90,17 @@ Type any value starting with `=` into an editable cell. The engine parses and ev
 
 Typing `=` on a selected cell starts the formula right away (type-to-replace). While you edit a formula, in the cell or in the formula bar, **F4** cycles the reference at the caret between relative and absolute: `A1` → `$A$1` → `A$1` → `$A1` → `A1`.
 
+### Function autocomplete and argument hints
+
+Formula editing help works the same way in the cell editor and in the formula bar, as in Excel:
+
+- **Autocomplete.** While you type a name after `=`, `(`, a comma or an operator, a list shows the matching functions (names that start with what you typed first, then names that contain it) and your named ranges. The highlighted entry's signature and description show below the list. **Up/Down** move, **Tab** or **Enter** inserts `NAME(` (a named range is inserted as is), a click inserts too, and **Escape** closes the list (typing reopens it). With the list closed, Enter commits as usual.
+- **Argument hints.** While the caret is inside a function call, a tooltip shows its signature with the current argument in bold, for example `SUMIFS(sum_range, criteria_range1, criteria1, ...)`. Nested calls, strings and array constants are tracked, so `=IF(A1>1, ROUND(B1, |` hints `ROUND`'s `num_digits`.
+
+Custom functions from `formulaFunctions` are listed alongside the built-ins. Give them a `description` and a `signature` (Excel notation: `[optional]` arguments and a trailing `...` for repeats) to describe them; otherwise the hint uses argument names derived from `minArgs`/`maxArgs`.
+
+The editor becomes an ARIA combobox (`aria-expanded`, `aria-controls`, `aria-activedescendant` pointing at the highlighted option) and the hint is linked with `aria-describedby`. Screen readers hear one announcement when the list opens, not one per keystroke. The popup is rendered by the UI kit (`FormulaAssistPopup` in each package); in core, `getFunctionMetadata`, `listFunctions`, `getFormulaCaretContext`, `getFormulaCompletions` and `applyFormulaCompletion` (from `@alaarab/ogrid-core/formula`) expose the same logic for custom editors.
+
 ## Pre-loading formulas
 
 Use `initialFormulas` to seed formulas when the grid mounts — useful for reports with fixed summary rows:
@@ -201,6 +212,9 @@ Register your own functions and use them alongside built-ins:
       name: 'COMMISSION',
       minArgs: 1,
       maxArgs: 2,
+      // Optional: shown by formula autocomplete and argument hints.
+      description: 'Sales commission at a rate (default 10%).',
+      signature: 'sales, [rate]',
       evaluate: (args) => {
         const sales = Number(args[0]);
         const rate = args[1] !== undefined ? Number(args[1]) : 0.1;

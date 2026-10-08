@@ -180,6 +180,13 @@ export interface IFormulaFunction {
   maxArgs: number;
   /** Functions receive raw AST nodes so they can handle ranges specially. */
   evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown;
+  /** One-line description shown by formula autocomplete (custom functions). */
+  description?: string;
+  /**
+   * Argument list for the argument hint, in Excel notation: "value, [precision]"
+   * or "number1, [number2], ...". Defaults to names derived from minArgs/maxArgs.
+   */
+  signature?: string;
 }
 
 /** The evaluator interface that functions can call back into. */

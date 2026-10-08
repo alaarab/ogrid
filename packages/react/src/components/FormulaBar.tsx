@@ -11,6 +11,7 @@ import { useRef, useEffect } from 'react';
 import { FORMULA_BAR_STYLES, handleFormulaBarKeyDown } from '@alaarab/ogrid-core/formula';
 import { cycleReferenceAtCaret } from '@alaarab/ogrid-core';
 import { NameBox } from './NameBox';
+import { useFormulaAssist } from '../hooks/useFormulaAssist';
 
 export interface FormulaBarProps {
   /** Active cell reference (e.g. "A1"). */
@@ -61,6 +62,9 @@ export function FormulaBar({
     }
   }, [isEditing, inputRef]);
 
+  // Function autocomplete + argument hints (active under a FormulaAssistContext).
+  const assist = useFormulaAssist({ value: formulaText, onChange: onInputChange, getInput: () => inputRef.current, enabled: isEditing });
+
   return (
     <div style={FORMULA_BAR_STYLES.bar as React.CSSProperties} role="toolbar" aria-label="Formula bar">
       <NameBox
@@ -77,7 +81,9 @@ export function FormulaBar({
         value={formulaText}
         readOnly={!isEditing}
         onChange={(e) => onInputChange(e.target.value)}
+        {...assist.inputProps}
         onKeyDown={(e) => {
+          if (isEditing && assist.handleKeyDown(e)) return;
           if (isEditing && e.key === 'F4' && formulaText.startsWith('=')) {
             // F4 cycles the reference at the caret: A1 -> $A$1 -> A$1 -> $A1 (Excel).
             e.preventDefault();
@@ -109,6 +115,7 @@ export function FormulaBar({
         spellCheck={false}
         autoComplete="off"
       />
+      {assist.popup}
     </div>
   );
 }

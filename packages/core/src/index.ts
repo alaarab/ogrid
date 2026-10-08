@@ -405,6 +405,14 @@ export type {
   INamedRange,
   IAuditEntry,
   IAuditTrail,
+  FormulaFunctionCategory,
+  IFormulaFunctionArg,
+  IFormulaFunctionMetadata,
+  IFormulaSignaturePart,
+  IFormulaCaretContext,
+  IFormulaCaretToken,
+  IFormulaCaretCall,
+  IFormulaCompletion,
 } from './formula';
 
 // Utils  -  cellNotes

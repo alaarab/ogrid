@@ -6,6 +6,7 @@ export { ColumnHeaderFilter, type IColumnHeaderFilterProps } from './ColumnHeade
 export { ColumnHeaderMenu, type ColumnHeaderMenuProps } from './ColumnHeaderMenu/ColumnHeaderMenu';
 export { PaginationControls, type IPaginationControlsProps } from './PaginationControls/PaginationControls';
 export { FindReplacePanel } from './FindReplacePanel/FindReplacePanel';
+export { FormulaAssistPopup } from './FormulaAssistPopup/FormulaAssistPopup';
 
 // Re-exports from @alaarab/ogrid-react
 

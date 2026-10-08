@@ -91,6 +91,28 @@ export { FormulaEngine } from './formulaEngine';
 // Built-in functions registry
 export { createBuiltInFunctions } from './functions';
 
+// Function metadata + formula editing help (autocomplete, argument hints)
+export {
+  getFunctionMetadata,
+  listFunctions,
+  parseFunctionSignature,
+  resolveArgumentIndex,
+  getSignatureParts,
+} from './functionMetadata';
+export type {
+  FormulaFunctionCategory,
+  IFormulaFunctionArg,
+  IFormulaFunctionMetadata,
+  IFormulaSignaturePart,
+} from './functionMetadata';
+export { getFormulaCaretContext, getFormulaCompletions, applyFormulaCompletion } from './formulaAutocomplete';
+export type {
+  IFormulaCaretContext,
+  IFormulaCaretToken,
+  IFormulaCaretCall,
+  IFormulaCompletion,
+} from './formulaAutocomplete';
+
 // Formula bar helpers (depend on tokenizer, bundled with formula subpath)
 export {
   extractFormulaReferences,
