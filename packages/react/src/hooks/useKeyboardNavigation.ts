@@ -1,6 +1,9 @@
 import { useCallback, useRef } from 'react';
-import { getSelectAllRange, isColumnEditable, expandRangeToMerges, isCoveredCell, rangesEqual } from '@alaarab/ogrid-core';
-import type { IMergeLayout } from '@alaarab/ogrid-core';
+import {
+  getSelectAllRange, isColumnEditable, expandRangeToMerges, isCoveredCell, rangesEqual, isSingleMergeRange,
+  computeRangeCycleStep, formatDateForDisplay, DEFAULT_DATE_FORMAT,
+} from '@alaarab/ogrid-core';
+import type { IMergeLayout, RangeCycleDirection } from '@alaarab/ogrid-core';
 import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow, getOppositeCorner, booleanParser, parseValue } from '../utils';
 import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
 import { scrollCellIntoView, type ScrollToRowIndex } from '../utils/scrollCellIntoView';
@@ -64,6 +67,8 @@ export interface UseKeyboardNavigationParams<T> {
     /** Group multi-cell edits (range delete) into one undo step. */
     beginBatch?: () => void;
     endBatch?: () => void;
+    /** Seeds the editor a printable key opens (type-to-replace); see useCellEditing. */
+    setPendingEditorValue?: (value: unknown) => void;
   };
   features: {
     editable?: boolean;
@@ -74,6 +79,8 @@ export interface UseKeyboardNavigationParams<T> {
     scrollToIndexRef?: React.RefObject<ScrollToRowIndex | null>;
     onKeyDown?: (event: React.KeyboardEvent) => void;
     fillDown?: () => void;
+    /** Ctrl+R: fill the selection right from its left column. */
+    fillRight?: () => void;
   };
 }
 
@@ -125,6 +132,36 @@ function getKeyTargetKind(e: Pick<React.SyntheticEvent, 'target' | 'currentTarge
   return target.matches(CELL_CONTROL_SELECTOR) ? 'control' : 'grid';
 }
 
+/**
+ * A key that types into a selected cell (type-to-replace): one printable
+ * character with no Ctrl/Meta/Alt (AltGr still types), or an IME keystroke.
+ * Space is left to its own bindings (row toggle, boolean toggle).
+ */
+function getTypedKey(e: React.KeyboardEvent): { text: string } | 'ime' | null {
+  const native = e.nativeEvent as KeyboardEvent | undefined;
+  if (native?.isComposing || e.key === 'Process' || e.keyCode === 229) return 'ime';
+  const altGraph = typeof e.getModifierState === 'function' && e.getModifierState('AltGraph');
+  if ((e.ctrlKey || e.metaKey || e.altKey) && !altGraph) return null;
+  if (e.key === ' ' || e.key === 'Dead') return null;
+  // One character (an astral character counts as one); named keys (F2, Enter) are longer.
+  if (Array.from(e.key).length !== 1) return null;
+  return { text: e.key };
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * Ctrl+; (date) / Ctrl+Shift+; (time) text for a column, from the local clock.
+ * Date columns get YYYY-MM-DD (what the date editor stores); other columns the
+ * column's `dateFormat` (YYYY-MM-DD by default). Time is 24-hour HH:mm.
+ */
+function currentDateTimeText<T>(col: IColumnDef<T>, time: boolean, now: Date = new Date()): string {
+  if (time) return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  const iso = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+  if (col.type === 'date' || col.cellEditor === 'date') return iso;
+  return formatDateForDisplay(iso, col.dateFormat ?? DEFAULT_DATE_FORMAT) ?? iso;
+}
+
 /** True when a native clipboard event belongs to the grid rather than a cell editor or other input. */
 function isGridClipboardEvent(e: React.ClipboardEvent, editingCell: EditingCell | null): boolean {
   const targetKind = getKeyTargetKind(e);
@@ -150,8 +187,8 @@ export function useKeyboardNavigation<T>(
       const { data, state, handlers, features } = paramsRef.current;
       const { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId, mergeLayout } = data;
       const { activeCell, selectionRange, editingCell, selectedRowIds } = state;
-      const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, setContextMenu, onUndo, onRedo, clearClipboardRanges, beginBatch, endBatch } = handlers;
-      const { editable, onCellValueChanged, rowSelection, wrapperRef, scrollToIndexRef, onKeyDown, fillDown } = features;
+      const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, setContextMenu, onUndo, onRedo, clearClipboardRanges, beginBatch, endBatch, setPendingEditorValue } = handlers;
+      const { editable, onCellValueChanged, rowSelection, wrapperRef, scrollToIndexRef, onKeyDown, fillDown, fillRight } = features;
 
       // Consumer intercept: call consumer's handler first; skip grid default if preventDefault() was called
       if (onKeyDown) {
@@ -186,13 +223,33 @@ export function useKeyboardNavigation<T>(
         return true;
       };
 
+      // A selection of more than one cell (a merged cell alone counts as one)
+      // that holds the active cell: Enter and Tab walk it instead of leaving it.
+      const cycleRange = (() => {
+        if (selectionRange == null || activeCell == null) return null;
+        const r = expandRangeToMerges(selectionRange, mergeLayout);
+        const single = (r.startRow === r.endRow && r.startCol === r.endCol) || isSingleMergeRange(r, mergeLayout);
+        const col = activeCell.columnIndex - colOffset;
+        const row = activeCell.rowIndex;
+        const n = { startRow: Math.min(r.startRow, r.endRow), endRow: Math.max(r.startRow, r.endRow), startCol: Math.min(r.startCol, r.endCol), endCol: Math.max(r.startCol, r.endCol) };
+        if (single || row < n.startRow || row > n.endRow || col < n.startCol || col > n.endCol) return null;
+        return r;
+      })();
+      const stepInRange = (range: ISelectionRange, from: IActiveCell, direction: RangeCycleDirection) => {
+        const next = computeRangeCycleStep(range, from.rowIndex, from.columnIndex - colOffset, direction, (r, c) => isCoveredCell(mergeLayout, r, c));
+        // Re-assert the range: an editor's commit that ran first may have collapsed it.
+        setSelectionRange(range);
+        setActiveCell({ rowIndex: next.rowIndex, columnIndex: next.dataColIndex + colOffset });
+      };
+
       if (targetKind === 'editor') {
         // Editors own their keys. On Tab the editor commits first (its handler
         // runs before this one), then the grid closes it and moves on, Excel-style.
         if (e.key === 'Tab' && editingCell != null && activeCell != null) {
           e.preventDefault();
           setEditingCell(null);
-          moveByTab(activeCell, e.shiftKey);
+          if (cycleRange) stepInRange(cycleRange, activeCell, e.shiftKey ? 'left' : 'right');
+          else moveByTab(activeCell, e.shiftKey);
         }
         return;
       }
@@ -286,9 +343,62 @@ export function useKeyboardNavigation<T>(
         return v == null || v === '';
       };
 
+      const activeItem = items[rowIndex];
+      const activeCol = dataColIndex >= 0 ? visibleCols[dataColIndex] : undefined;
+      const canEditActive =
+        activeItem !== undefined && activeCol !== undefined &&
+        editable !== false && onCellValueChanged != null && isColumnEditable<T>(activeCol, activeItem);
+
+      /**
+       * Open the active cell's editor. `seed` is type-to-replace: the typed
+       * text replaces the value (text/date editors) or starts the search (rich
+       * select). A plain select just opens; checkbox/boolean cells don't open
+       * (Space toggles them); custom popover editors open with their value,
+       * since their value type isn't necessarily text. Returns false when the
+       * cell can't be edited this way.
+       */
+      const startEditing = (seed?: string): boolean => {
+        if (!canEditActive || activeItem === undefined || activeCol === undefined) return false;
+        const editor = activeCol.cellEditor;
+        const custom = editor != null && typeof editor !== 'string';
+        if (seed !== undefined) {
+          const isCheckbox = editor === 'checkbox' || (editor == null && activeCol.type === 'boolean');
+          if (isCheckbox) return false;
+        }
+        const seeded = seed !== undefined && !custom && editor !== 'select';
+        setPendingEditorValue?.(seeded ? seed : undefined);
+        setEditingCell({ rowId: getRowId(activeItem), columnId: activeCol.columnId });
+        return true;
+      };
+
+      // Type-to-replace: a printable key on a selected cell starts editing with that character.
+      if (editingCell == null && targetKind === 'grid' && !onCheckboxCol) {
+        const typed = getTypedKey(e);
+        if (typed != null) {
+          // An IME keystroke opens an empty editor; composition continues in its input.
+          if (startEditing(typed === 'ime' ? '' : typed.text) && typed !== 'ime') e.preventDefault();
+          return;
+        }
+      }
+
       // Letter shortcuts compare lowercase: with Shift or Caps Lock held the
       // browser reports 'Z' not 'z', which broke Ctrl+Shift+Z (redo).
       const key = (e.ctrlKey || e.metaKey) && e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+      // Ctrl+; enters today's date, Ctrl+Shift+; (Ctrl+:) the current time into
+      // the active cell, through the column's value parser (Excel).
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (key === ';' || key === ':' || e.code === 'Semicolon')) {
+        if (editingCell != null || !canEditActive || activeItem === undefined || activeCol === undefined) return;
+        e.preventDefault();
+        const time = key === ':' || (key !== ';' && shift);
+        const oldValue = getCellValue<T>(activeItem, activeCol);
+        const result = parseValue<T>(currentDateTimeText(activeCol, time), oldValue, activeItem, activeCol);
+        if (result.valid) {
+          onCellValueChanged?.({ item: activeItem, columnId: activeCol.columnId, oldValue, newValue: result.value, rowIndex });
+        }
+        return;
+      }
+
       switch (key) {
         case 'c':
         case 'x':
@@ -367,26 +477,42 @@ export function useKeyboardNavigation<T>(
         case 'Tab': {
           // A popover editor can't be committed from here; leave Tab to the browser.
           if (editingCell != null) break;
+          if (cycleRange) {
+            e.preventDefault();
+            stepInRange(cycleRange, activeCell, e.shiftKey ? 'left' : 'right');
+            break;
+          }
           if (moveByTab(activeCell, e.shiftKey)) e.preventDefault();
           break;
         }
-        case 'Home': {
-          if (editingCell != null) break;
-          e.preventDefault();
-          const newRowHome = e.ctrlKey ? 0 : rowIndex;
-          setSelectionRange({
-            startRow: newRowHome,
-            startCol: 0,
-            endRow: newRowHome,
-            endCol: 0,
-          });
-          setActiveCell({ rowIndex: newRowHome, columnIndex: colOffset });
-          break;
-        }
+        case 'Home':
         case 'End': {
           if (editingCell != null) break;
           e.preventDefault();
-          const newRowEnd = e.ctrlKey ? maxRowIndex : rowIndex;
+          const ctrlHome = e.ctrlKey || e.metaKey;
+          const toEnd = e.key === 'End';
+          if (shift && !onCheckboxCol) {
+            // Shift+Home/End extend from the active cell (the anchor) to the row's
+            // first/last column; with Ctrl, to the grid's first/last cell.
+            const extent = getOppositeCorner(selectionRange, rowIndex, dataColIndex);
+            const endRow = ctrlHome ? (toEnd ? maxRowIndex : 0) : extent.row;
+            const endCol = toEnd ? visibleColumnCount - 1 : 0;
+            setSelectionRange(normalizeSelectionRange({ startRow: rowIndex, startCol: dataColIndex, endRow, endCol }));
+            if (wrapperRef.current) scrollCellIntoView(wrapperRef.current, endRow, endCol + colOffset, scrollToIndexRef?.current);
+            break;
+          }
+          if (!toEnd) {
+            const newRowHome = ctrlHome ? 0 : rowIndex;
+            setSelectionRange({
+              startRow: newRowHome,
+              startCol: 0,
+              endRow: newRowHome,
+              endCol: 0,
+            });
+            setActiveCell({ rowIndex: newRowHome, columnIndex: colOffset });
+            break;
+          }
+          const newRowEnd = ctrlHome ? maxRowIndex : rowIndex;
           setSelectionRange({
             startRow: newRowEnd,
             startCol: visibleColumnCount - 1,
@@ -450,22 +576,22 @@ export function useKeyboardNavigation<T>(
         case 'Enter':
         case 'F2': {
           e.preventDefault();
-          if (dataColIndex >= 0 && dataColIndex < visibleCols.length) {
-            const col = visibleCols[dataColIndex];
-            const item = items[rowIndex];
-            if (item && col) {
-              const colEditable =
-                col.editable === true ||
-                (typeof col.editable === 'function' && col.editable(item));
-              if (
-                editable !== false &&
-                colEditable &&
-                onCellValueChanged != null
-              ) {
-                setEditingCell({ rowId: getRowId(item), columnId: col.columnId });
-              }
+          if (e.key === 'Enter' && editingCell == null) {
+            // Inside a multi-cell selection Enter walks it (Shift+Enter backward), Excel-style.
+            if (cycleRange) {
+              stepInRange(cycleRange, activeCell, shift ? 'up' : 'down');
+              break;
+            }
+            // Shift+Enter on a single cell moves up (above a merged block).
+            if (shift) {
+              if (onCheckboxCol) break;
+              const m = mergeLayout?.mergeAt(rowIndex, dataColIndex);
+              const up = (m ? m.startRow : rowIndex) - 1;
+              if (up >= 0) moveToDataCell(up, dataColIndex);
+              break;
             }
           }
+          startEditing();
           break;
         }
         case 'Escape':
@@ -482,6 +608,25 @@ export function useKeyboardNavigation<T>(
           break;
         case ' ': {
           if (editingCell != null) break;
+          // Ctrl+Space selects the selection's whole columns, Ctrl+Shift+Space the
+          // whole grid; Shift+Space its whole rows (when Shift+Space isn't the
+          // row-selection toggle below). The active cell stays put (Excel).
+          const ctrlSpace = e.ctrlKey || e.metaKey;
+          const wholeRows = shift && !ctrlSpace && rowSelection === 'none';
+          if ((ctrlSpace || wholeRows) && !onCheckboxCol) {
+            e.preventDefault();
+            const base = normalizeSelectionRange(
+              selectionRange ?? { startRow: rowIndex, startCol: dataColIndex, endRow: rowIndex, endCol: dataColIndex }
+            );
+            const all = ctrlSpace && shift;
+            setSelectionRange({
+              startRow: wholeRows ? base.startRow : 0,
+              endRow: wholeRows ? base.endRow : maxRowIndex,
+              startCol: ctrlSpace && !all ? base.startCol : 0,
+              endCol: ctrlSpace && !all ? base.endCol : visibleColumnCount - 1,
+            });
+            break;
+          }
           // Space on the checkbox cell toggles its row, and Shift+Space there
           // selects the range from the last toggled row, like Shift+click on the
           // checkbox. Shift+Space in a data cell toggles the active row (WAI-ARIA grid).
@@ -545,6 +690,17 @@ export function useKeyboardNavigation<T>(
             if (editable !== false && fillDown) {
               e.preventDefault();
               fillDown();
+            }
+          }
+          break;
+        case 'r':
+          // Ctrl+R fills right (Ctrl+D sideways). Prevented only when handled, so
+          // a read-only grid leaves the browser's reload alone.
+          if ((e.ctrlKey || e.metaKey) && !e.altKey && !shift) {
+            if (editingCell != null) break;
+            if (editable !== false && fillRight) {
+              e.preventDefault();
+              fillRight();
             }
           }
           break;

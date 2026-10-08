@@ -125,9 +125,41 @@ All notable changes to OGrid will be documented in this file.
   focus to the grid. Headless: `useFindReplace` in `@alaarab/ogrid-react`, and
   `findMatches`, `findNextMatchIndex`, `planReplace` and `replaceInCellText` in
   `@alaarab/ogrid-core`.
+- Excel keyboard and selection behaviors:
+  - Type-to-replace: typing a character on a selected editable cell opens its
+    editor with that character in place of the value (text, number and date
+    cells; a `richSelect` opens searching for it, a `select` opens its list;
+    boolean cells and Ctrl/Cmd/Alt chords don't start an edit; IME input opens
+    an empty editor).
+  - Shift+Enter commits an edit and moves up (and moves up when not editing).
+    With more than one cell selected, Enter / Tab (and Shift+Enter /
+    Shift+Tab) move the active cell through the selection without collapsing
+    it, wrapping at its end, including after committing an edit.
+  - Shift+Home / Shift+End extend the selection to the row's first / last
+    column; Ctrl+Shift+Home / Ctrl+Shift+End to the grid's first / last cell.
+  - Ctrl+R fills right (Ctrl+D turned sideways). Ctrl+; enters today's date and
+    Ctrl+Shift+; the current time into the active cell, through the column's
+    value parser.
+  - F4 while editing a formula (in the cell or the formula bar) cycles the
+    reference at the caret: `A1` -> `$A$1` -> `A$1` -> `$A1`.
+  - Whole column / row selection: click a column letter or row number (with
+    `cellReferences`), Shift+click or drag across headers to extend; Ctrl+Space
+    selects the selection's columns, Ctrl+Shift+Space everything, and
+    Shift+Space its rows when `rowSelection` is off (with row selection on,
+    Shift+Space still toggles the row). These are plain ranges, so copy,
+    Delete, fill and status bar aggregates work on them.
+  - The name box is editable: type `B3`, `A1:C5`, `B:D`, `2:4` or a name from
+    `namedRanges` and press Enter to select it; Escape reverts. An invalid or
+    hidden reference is flagged with `aria-invalid`.
+  - `@alaarab/ogrid-core` exports `computeRangeCycleStep`,
+    `cycleReferenceAtCaret` and `parseSheetReference`; inline editors accept
+    `initialText` and `onCommit(value, { move })`.
 
 ### Changed
 
+- Shift+Space in a data cell selects the row as a cell range when
+  `rowSelection` is off (it did nothing before). The name box renders as an
+  `<input>` (same `aria-label`) instead of an `<output>`.
 - Ctrl+Z / Ctrl+Y work while no cell is active (e.g. after deleting the
   selected rows).
 - `@alaarab/ogrid-react-xlsx`: columns use the sheet's widths (Excel's

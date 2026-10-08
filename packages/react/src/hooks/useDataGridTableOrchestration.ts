@@ -4,6 +4,7 @@ import type { UseVirtualScrollResult } from './useVirtualScroll';
 import { useDataGridState } from './useDataGridState';
 import { useMiddleClickScroll } from './useMiddleClickScroll';
 import { useDataGridSheetCoordinates } from './useDataGridSheetCoordinates';
+import { useSheetSelection } from './useSheetSelection';
 import { useDataGridColumnControls } from './useDataGridColumnControls';
 import { useDataGridVirtualization } from './useDataGridVirtualization';
 import { useCellDescriptorCache, useDataGridCellHandlers } from './useDataGridCellHandlers';
@@ -79,6 +80,12 @@ export function useDataGridTableOrchestration<T>(
   const { columnLetters, rowNumberOf, formulaReferences } = useDataGridSheetCoordinates(
     props, visibleCols, cellDescriptorInput.formulaCol, rowNumberOffset, interaction.activeCell, colOffset,
   );
+  const { handleColumnHeaderPointerDown, handleRowHeaderPointerDown } = useSheetSelection<T>({
+    wrapperRef, visibleCols, colOffset, rowCount: props.windowed?.loadedRows?.length ?? items.length,
+    activeCell: interaction.activeCell, setActiveCell: interaction.setActiveCell, setSelectionRange: interaction.setSelectionRange,
+    formulaCol: cellDescriptorInput.formulaCol, formulaRowMap: props.formulaRowMap, rowNumberOffset,
+    cellNavigatorRef: props.cellNavigatorRef,
+  });
   const { resize, reorder } = useDataGridColumnControls(props, layout, wrapperRef);
   const { virtualScrollEnabled, virtualRowHeight, visibleRange, columnRange, onHorizontalScroll } = useDataGridVirtualization(
     props, stickyHeader, visibleCols, resize.getColumnWidth, wrapperRef, scrollToIndexRef,
@@ -112,6 +119,7 @@ export function useDataGridTableOrchestration<T>(
     columnReorder, density, rowHeight, pinnedColumns, currentPage, propPageSize,
     rowNumberOffset, headerRows, allowOverflowX, fitToContent: layoutMode === 'content',
     showColumnLetters, showNameBox, columnLetters, rowNumberOf, formulaReferences,
+    handleColumnHeaderPointerDown, handleRowHeaderPointerDown,
     editCallbacks, interactionHandlers, delegatedCellHandlers,
     cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, selectedRowIdsRef,
     handleSingleRowClick, handlePasteVoid,

@@ -1120,10 +1120,11 @@ describe('useKeyboardNavigation event targets, Tab and anchors', () => {
       expect(t.handlers.handleRowCheckboxChange).toHaveBeenCalledWith('4', true, 4, false);
     });
 
-    it('Shift+Space does nothing without row selection', () => {
+    it('Shift+Space selects the whole row (as a cell range) without row selection', () => {
       const t = setup({ rowSelection: 'none' });
-      expect(t.press(' ', undefined, { shiftKey: true }).preventDefault).not.toHaveBeenCalled();
+      expect(t.press(' ', undefined, { shiftKey: true }).preventDefault).toHaveBeenCalled();
       expect(t.handlers.handleRowCheckboxChange).not.toHaveBeenCalled();
+      expect(t.state.selectionRange).toEqual({ startRow: 3, endRow: 3, startCol: 0, endCol: 2 });
     });
   });
 });

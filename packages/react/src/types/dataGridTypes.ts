@@ -1,7 +1,7 @@
 import type { FilterOption } from '@alaarab/ogrid-core';
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
-import type { IFormulaFunction, IFormulaLimits, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap } from '@alaarab/ogrid-core';
+import type { IFormulaFunction, IFormulaLimits, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap, ISheetReferenceRange } from '@alaarab/ogrid-core';
 
 // Re-export all shared types and functions from core (no React-specific changes)
 export type {
@@ -545,6 +545,23 @@ export interface IOGridDataGridProps<T> {
    * formula bar commits through it.
    */
   formulaCellWriterRef?: React.MutableRefObject<IFormulaCellWriter | null>;
+  /**
+   * Filled by the grid with a navigator that selects sheet ranges. OGrid's
+   * name box jumps through it.
+   */
+  cellNavigatorRef?: React.MutableRefObject<IGridCellNavigator | null>;
+}
+
+/** Selects a range given in sheet coordinates (the name box's jump). */
+export interface IGridCellNavigator {
+  /**
+   * Select the displayed part of `range` (flat columns, sheet rows) and make
+   * its top-left cell active. Returns false when none of it is displayed
+   * (hidden columns, rows filtered out or on another page).
+   */
+  selectRange: (range: ISheetReferenceRange) => boolean;
+  /** Move keyboard focus to the grid's active cell (the grid itself while that cell isn't rendered). */
+  focusActiveCell: () => void;
 }
 
 /** Writes text into a sheet cell (flat column index, sheet row) as if typed into the cell. */

@@ -10,6 +10,7 @@ import { FormulaBar } from '../components/FormulaBar';
 import type { UseFormulaBarResult } from './useFormulaBar';
 import type { UseFormulaEngineResult } from './useFormulaEngine';
 import type { UseOGridActiveCellState } from './useOGridActiveCell';
+import type { UseOGridNameBoxResult } from './useOGridNameBox';
 import type { IColumnDef, IFormulaRowMap, IRecalcResult } from '@alaarab/ogrid-core';
 import type { IFormulaCellWriter, IOGridProps } from '../types';
 
@@ -35,6 +36,8 @@ export function useOGridFormulaBar<T>(
   sheetItems: T[],
   columns: IColumnDef<T>[],
   activeCell: Pick<UseOGridActiveCellState, 'activeCellRef' | 'activeCellCoords'>,
+  /** Name box navigation; without it the formula bar's name box is read-only. */
+  onNameBoxNavigate?: (text: string) => boolean,
 ): UseOGridFormulaBarState {
   const engineEnabled = engine.enabled;
   const engineGetFormula = engine.getFormula;
@@ -93,8 +96,9 @@ export function useOGridFormulaBar<T>(
       startEditing: startFormulaBarEditing,
       inputRef: formulaBarState.inputRef,
       onReturnFocus: returnFocusToGrid,
+      onNameBoxNavigate,
     });
-  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, startFormulaBarEditing, formulaBarState.inputRef, returnFocusToGrid]);
+  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, startFormulaBarEditing, formulaBarState.inputRef, returnFocusToGrid, onNameBoxNavigate]);
 
   return { formulaBarState, formulaCellWriterRef, formulaBarEl };
 }
@@ -113,6 +117,7 @@ export function useOGridFormulas<T>(
   sheetItems: T[],
   columns: IColumnDef<T>[],
   formulaRowMap: IFormulaRowMap | undefined,
+  nameBox?: Pick<UseOGridNameBoxResult, 'navigate'>,
 ) {
   const { formulas, initialFormulas, onFormulaRecalc, formulaFunctions, namedRanges, formulaLimits, sheets } = props;
   const [formulaVersion, setFormulaVersion] = useState(0);
@@ -135,7 +140,7 @@ export function useOGridFormulas<T>(
 
   const activeCell = useOGridActiveCell();
   const { formulaBarState, formulaCellWriterRef, formulaBarEl } = useOGridFormulaBar(
-    formulas, formulaEngine, formulaVersion, sheetItems, columns, activeCell,
+    formulas, formulaEngine, formulaVersion, sheetItems, columns, activeCell, nameBox?.navigate,
   );
 
   const dgFormulaProps = useMemo(() => ({

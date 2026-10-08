@@ -132,7 +132,7 @@ export function createFormulaTests(OGrid: React.ComponentType<IOGridProps<Row>>)
 
   const totals = (container: HTMLElement) => [1, 2, 3].map((id) => text(container, id, 'total'));
   const nameBox = (container: HTMLElement) =>
-    container.querySelector('[role="toolbar"][aria-label="Formula bar"] [aria-label="Active cell reference"]')?.textContent;
+    (container.querySelector('[role="toolbar"][aria-label="Formula bar"] [aria-label="Active cell reference"]') as HTMLInputElement | null)?.value;
   const formulaInput = (container: HTMLElement) =>
     container.querySelector('input[aria-label="Formula input"]') as HTMLInputElement;
 

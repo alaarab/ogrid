@@ -291,6 +291,7 @@ export function BaseDataGridTableInner<T>(
                     registerTabStop={cellFocus.registerTabStop}
                     popoverAnchorEl={o.editing.popoverAnchorEl}
                     pendingEditorValue={o.editing.pendingEditorValue}
+                    onRowHeaderPointerDown={o.handleRowHeaderPointerDown}
                     formulaVersion={gridProps.formulaVersion}
                     pinnedColumns={pinning.pinnedColumns}
                     rowNumWidth={hasRowNumbersCol ? (columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH) : undefined}

@@ -1,4 +1,5 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
+import type { ICellEditCommitOptions } from '@alaarab/ogrid-core';
 import { parseValue } from '../utils';
 import type { RowId, IColumnDef } from '../types';
 import { useLatestRef } from './useLatestRef';
@@ -33,6 +34,14 @@ export interface UseDataGridEditingParams<T> {
   flatColumns?: IColumnDef<T>[];
   /** Row the active cell moves to after an Enter commit (default rowIndex + 1). */
   rowBelow?: (rowIndex: number, dataColIndex: number) => number;
+  /** Row the active cell moves to after a Shift+Enter commit (default rowIndex - 1). */
+  rowAbove?: (rowIndex: number, dataColIndex: number) => number;
+  /**
+   * Next cell inside the current multi-cell selection after an Enter /
+   * Shift+Enter commit, or null when the cell isn't inside one. The selection
+   * is kept (Excel).
+   */
+  stepInSelection?: (rowIndex: number, dataColIndex: number, move: 'down' | 'up') => { rowIndex: number; dataColIndex: number } | null;
 }
 
 export interface UseDataGridEditingResult<T> {
@@ -90,14 +99,35 @@ export function useDataGridEditing<T>(
   const flatColumnsRef = useLatestRef(flatColumns);
 
   const rowBelowRef = useLatestRef(params.rowBelow);
-  // Enter-commit moves to the cell below (below the whole block for a merged cell).
-  const advanceBelow = useCallback((rowIndex: number, globalColIndex: number) => {
+  const rowAboveRef = useLatestRef(params.rowAbove);
+  const stepInSelectionRef = useLatestRef(params.stepInSelection);
+  // Enter-commit moves to the cell below (below the whole block for a merged
+  // cell), Shift+Enter to the cell above; inside a multi-cell selection both
+  // step through the selection and keep it.
+  const advance = useCallback((rowIndex: number, globalColIndex: number, move: 'down' | 'up' = 'down') => {
     const localCol = globalColIndex - colOffset;
-    const newRow = rowBelowRef.current ? rowBelowRef.current(rowIndex, localCol) : rowIndex + 1;
-    if (newRow <= rowIndex || newRow > itemsLengthRef.current - 1) return;
+    const inRange = stepInSelectionRef.current?.(rowIndex, localCol, move);
+    if (inRange) {
+      setActiveCell({ rowIndex: inRange.rowIndex, columnIndex: inRange.dataColIndex + colOffset });
+      return;
+    }
+    let newRow: number;
+    if (move === 'up') {
+      newRow = rowAboveRef.current ? rowAboveRef.current(rowIndex, localCol) : rowIndex - 1;
+      if (newRow >= rowIndex || newRow < 0) return;
+    } else {
+      newRow = rowBelowRef.current ? rowBelowRef.current(rowIndex, localCol) : rowIndex + 1;
+      if (newRow <= rowIndex || newRow > itemsLengthRef.current - 1) return;
+    }
     setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });
     setSelectionRange({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
-  }, [colOffset, rowBelowRef, itemsLengthRef, setActiveCell, setSelectionRange]);
+  }, [colOffset, rowBelowRef, rowAboveRef, stepInSelectionRef, itemsLengthRef, setActiveCell, setSelectionRange]);
+
+  // Type-to-replace seeds the editor through pendingEditorValue; clear it once
+  // no cell is being edited so the next F2/Enter opens with the cell's value.
+  useEffect(() => {
+    if (editingCell == null) setPendingEditorValue(undefined);
+  }, [editingCell, setPendingEditorValue]);
 
   const commitCellEdit = useCallback(
     (
@@ -107,7 +137,7 @@ export function useDataGridEditing<T>(
       newValue: unknown,
       rowIndex: number,
       globalColIndex: number,
-      options?: { skipAdvance?: boolean }
+      options?: ICellEditCommitOptions
     ) => {
       // --- Formula detection ---
       if (formulas && typeof newValue === 'string' && newValue.startsWith('=') && setFormulaRef.current) {
@@ -120,7 +150,7 @@ export function useDataGridEditing<T>(
           setPopoverAnchorEl(null);
           setPendingEditorValue(undefined);
           // Advance to next row
-          if (!options?.skipAdvance) advanceBelow(rowIndex, globalColIndex);
+          if (!options?.skipAdvance) advance(rowIndex, globalColIndex, options?.move);
           return;
         }
       }
@@ -147,7 +177,7 @@ export function useDataGridEditing<T>(
         setEditingCell(null);
         setPopoverAnchorEl(null);
         setPendingEditorValue(undefined);
-        if (!options?.skipAdvance) advanceBelow(rowIndex, globalColIndex);
+        if (!options?.skipAdvance) advance(rowIndex, globalColIndex, options?.move);
         return;
       }
 
@@ -171,9 +201,9 @@ export function useDataGridEditing<T>(
       setPopoverAnchorEl(null);
       setPendingEditorValue(undefined);
       // Advance to next row for inline editors (skip for checkbox — toggling shouldn't move selection)
-      if (!options?.skipAdvance) advanceBelow(rowIndex, globalColIndex);
+      if (!options?.skipAdvance) advance(rowIndex, globalColIndex, options?.move);
     },
-    [formulas, setEditingCell, setPendingEditorValue, advanceBelow, visibleColsRef, onCellValueChangedRef, setFormulaRef, onFormulaCellChangedRef, flatColumnsRef, hasFormulaRef]
+    [formulas, setEditingCell, setPendingEditorValue, advance, visibleColsRef, onCellValueChangedRef, setFormulaRef, onFormulaCellChangedRef, flatColumnsRef, hasFormulaRef]
   );
 
   const cancelPopoverEdit = useCallback(() => {

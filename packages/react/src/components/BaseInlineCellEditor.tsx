@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 import { useInlineCellEditorState, useRichSelectState, useSelectState } from '../hooks';
+import type { InlineCellEditorCommitOptions } from '../hooks/useInlineCellEditorState';
 import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
 import { usePortalTheme } from '../hooks/usePortalTheme';
 
@@ -158,8 +159,14 @@ export interface BaseInlineCellEditorProps<T> {
   column: IColumnDef<T>;
   rowIndex: number;
   editorType: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
-  onCommit: (value: unknown) => void;
+  onCommit: (value: unknown, options?: InlineCellEditorCommitOptions) => void;
   onCancel: () => void;
+  /**
+   * Type-to-replace: the character typed on the selected cell. Text and date
+   * editors open with it in place of the value (caret at the end); a rich
+   * select opens with it as the search text.
+   */
+  initialText?: string;
   /** Framework-specific checkbox renderer */
   renderCheckbox: (checked: boolean, onCommit: (value: boolean) => void, onCancel: () => void) => React.ReactNode;
   /** @deprecated Built-in custom dropdown is now used. Kept for backward compatibility. */
@@ -182,7 +189,7 @@ export interface BaseInlineCellEditorProps<T> {
 let editorIdCounter = 0;
 
 export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): React.ReactElement {
-  const { value, column, editorType, onCommit, onCancel, renderCheckbox } = props;
+  const { value, column, editorType, onCommit, onCancel, renderCheckbox, initialText } = props;
   const wrapperRef = React.useRef<HTMLDivElement>(null);
   const onCancelRef = React.useRef(onCancel);
   onCancelRef.current = onCancel;
@@ -192,7 +199,9 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   const dateEditorType = column.cellEditorParams?.editorType ?? 'text';
 
   const { localValue, setLocalValue, handleKeyDown, handleBlur, commit, cancel } =
-    useInlineCellEditorState({ value, editorType, onCommit, onCancel, dateFormat, dateEditorType });
+    useInlineCellEditorState({ value, editorType, onCommit, onCancel, dateFormat, dateEditorType, initialText });
+  // Read once at mount: the focus effect below must not re-run (and re-select) as it changes.
+  const seededRef = React.useRef(initialText !== undefined);
 
   const editorValues = (column.cellEditorParams?.values as unknown[]) ?? [];
   const editorFormatValue = column.cellEditorParams?.formatValue as ((v: unknown) => string) | undefined;
@@ -202,6 +211,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     initialValue: value,
     onCommit,
     onCancel,
+    initialSearchText: editorType === 'richSelect' ? initialText : undefined,
   });
   const selectState = useSelectState({
     values: editorValues,
@@ -279,8 +289,14 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     const input = wrapper.querySelector('input');
     if (input) {
       input.focus({ preventScroll: true });
-      // Select all text for easy replacement (like Excel)
-      input.select();
+      if (seededRef.current && input.type === 'text') {
+        // Type-to-replace: keep typing after the seeded character.
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+      } else {
+        // Select all text for easy replacement (like Excel)
+        input.select();
+      }
     } else {
       // Focus the wrapper for keyboard events (select editor has no input)
       wrapper.focus({ preventScroll: true });

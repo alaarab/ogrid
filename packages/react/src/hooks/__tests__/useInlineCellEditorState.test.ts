@@ -157,7 +157,7 @@ describe('useInlineCellEditorState', () => {
     act(() => {
       result.current.handleKeyDown(mockEvent);
     });
-    expect(onCommit).toHaveBeenCalledWith('edited');
+    expect(onCommit).toHaveBeenCalledWith('edited', { move: 'down' });
     expect(mockEvent.preventDefault).toHaveBeenCalled();
     expect(mockEvent.stopPropagation).toHaveBeenCalled();
   });

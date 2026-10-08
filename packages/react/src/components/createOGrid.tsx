@@ -13,8 +13,11 @@ export interface InlineCellEditorProps<T> {
   column: IColumnDef<T>;
   rowIndex: number;
   editorType: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
-  onCommit: (value: unknown) => void;
+  /** `options.move`: Enter commits move down (default), Shift+Enter up. */
+  onCommit: (value: unknown, options?: { move?: 'down' | 'up' }) => void;
   onCancel: () => void;
+  /** Type-to-replace: the character typed on the selected cell, which replaces its value. */
+  initialText?: string;
 }
 
 export interface GridRowProps {

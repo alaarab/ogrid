@@ -612,6 +612,17 @@ export function resolveCellStyle<T>(
 }
 
 /**
+ * Options for committing a cell edit. `move` picks where the active cell goes
+ * after the commit: 'down' (Enter, the default) or 'up' (Shift+Enter); inside
+ * a multi-cell selection it steps through the selection instead (Excel).
+ */
+export interface ICellEditCommitOptions {
+  /** Keep the active cell where it is (checkbox toggles, formula bar writes). */
+  skipAdvance?: boolean;
+  move?: 'down' | 'up';
+}
+
+/**
  * Builds props for InlineCellEditor. Shared across all UI packages.
  */
 export function buildInlineEditorProps<T>(
@@ -619,7 +630,7 @@ export function buildInlineEditorProps<T>(
   col: IColumnDef<T>,
   descriptor: CellRenderDescriptor,
   callbacks: {
-    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number, options?: { skipAdvance?: boolean }) => void;
+    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number, options?: ICellEditCommitOptions) => void;
     setEditingCell: (cell: null) => void;
   }
 ) {
@@ -630,8 +641,8 @@ export function buildInlineEditorProps<T>(
     column: col,
     rowIndex: descriptor.rowIndex,
     editorType,
-    onCommit: (newValue: unknown) =>
-      callbacks.commitCellEdit(item, col.columnId, descriptor.value, newValue, descriptor.rowIndex, descriptor.globalColIndex, editorType === 'checkbox' ? { skipAdvance: true } : undefined),
+    onCommit: (newValue: unknown, options?: Pick<ICellEditCommitOptions, 'move'>) =>
+      callbacks.commitCellEdit(item, col.columnId, descriptor.value, newValue, descriptor.rowIndex, descriptor.globalColIndex, editorType === 'checkbox' ? { skipAdvance: true } : options),
     onCancel: () => callbacks.setEditingCell(null),
   };
 }

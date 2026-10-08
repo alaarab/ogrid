@@ -59,6 +59,7 @@ export type {
   IRowsChangeEvent,
   IColumnsChangeEvent,
   IGridStructureActions,
+  IGridCellNavigator,
 } from './types';
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './types';
 
@@ -189,6 +190,7 @@ export type {
   UseInlineCellEditorStateParams,
   UseInlineCellEditorStateResult,
   InlineCellEditorType,
+  InlineCellEditorCommitOptions,
   UseColumnResizeParams,
   UseColumnResizeResult,
   UseRichSelectStateParams,

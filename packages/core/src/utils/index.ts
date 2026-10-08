@@ -100,6 +100,7 @@ export type {
   HeaderFilterConfigInput,
   HeaderFilterConfig,
   CellRenderDescriptorInput,
+  ICellEditCommitOptions,
   CellRenderDescriptor,
   CellRenderMode,
 } from './dataGridViewModel';
@@ -109,8 +110,10 @@ export type { OverlayRect } from './dom';
 export { computeNextSortState } from './sortHelpers';
 export type { ISortState } from './sortHelpers';
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './columnAutosize';
-export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner } from './keyboardNavigation';
-export type { ArrowNavigationContext, ArrowNavigationResult } from './keyboardNavigation';
+export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner, computeRangeCycleStep } from './keyboardNavigation';
+export type { ArrowNavigationContext, ArrowNavigationResult, RangeCycleDirection } from './keyboardNavigation';
+export { cycleReferenceAtCaret, parseSheetReference } from './sheetReferences';
+export type { ISheetReferenceRange, ICycledReference } from './sheetReferences';
 export { resolveMergedCells, isCoveredCell, expandRangeToMerges, isSingleMergeRange } from './mergedCells';
 export type { IResolvedMerge, IMergeLayout, ResolveMergedCellsParams } from './mergedCells';
 export {

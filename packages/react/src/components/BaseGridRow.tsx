@@ -4,6 +4,7 @@ import * as React from 'react';
 import { CHECKBOX_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { areGridRowPropsEqual, getGridCellSurfaceState } from '../utils';
 import { PREVENT_DEFAULT, STOP_PROPAGATION } from '../constants/domHelpers';
+import { ROW_HEADER_INDEX_ATTR } from '../hooks/useSheetSelection';
 import type { GridRowProps } from './createOGrid';
 import type { IColumnDef } from '../types';
 import type { DataGridStyles, DataGridPrimitives } from './BaseDataGridTable.types';
@@ -76,6 +77,8 @@ export interface BaseGridRowProps extends GridRowProps {
   customRowHeight?: number;
   /** Pointer-down for the row-number resize handle (stable identity); omit to hide the handle. */
   onRowResizeStart?: (e: React.PointerEvent, rowId: string | number) => void;
+  /** Pointer down on the row number cell: select the whole row (stable identity). */
+  onRowHeaderPointerDown?: (e: React.PointerEvent, rowIndex: number) => void;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
 }
@@ -88,6 +91,7 @@ function GridRowInner(props: BaseGridRowProps) {
     leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
     selectionRange, activeCell, cutRange, tabStopColumn = -1, registerTabStop, mergePlan, frozen,
     customRowHeight, onRowResizeStart, styles, primitives,
+    onRowHeaderPointerDown,
   } = props;
   const { Tr, Td, renderRowCheckbox } = primitives;
   // Leading columns stay put on horizontal scroll. Radix gets `position: sticky` from CSS;
@@ -154,7 +158,9 @@ function GridRowInner(props: BaseGridRowProps) {
             left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
             ...(rowNumWidth ? { width: rowNumWidth, minWidth: rowNumWidth, maxWidth: rowNumWidth } : undefined),
           }}
-          onPointerDown={PREVENT_DEFAULT}
+          // Click selects the whole row (Shift extends, drag across row numbers extends).
+          {...{ [ROW_HEADER_INDEX_ATTR]: rowIndex }}
+          onPointerDown={onRowHeaderPointerDown ? (e: React.PointerEvent) => onRowHeaderPointerDown(e, rowIndex) : PREVENT_DEFAULT}
         >
           <div className={styles.rowNumberCellInner}>
             {rowNumber ?? rowNumberOffset + rowIndex + 1}

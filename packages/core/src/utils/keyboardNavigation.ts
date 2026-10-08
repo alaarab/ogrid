@@ -251,3 +251,47 @@ export function applyCellDeletion<T>(
   }
   return events;
 }
+
+/** Direction of an Enter/Tab step: Enter moves down (Shift+Enter up), Tab right (Shift+Tab left). */
+export type RangeCycleDirection = 'down' | 'up' | 'right' | 'left';
+
+/**
+ * Excel's Enter/Tab inside a multi-cell selection: the active cell walks the
+ * range and wraps instead of leaving it. Enter (down) runs down a column then
+ * on to the top of the next one; Tab (right) runs across a row then on to the
+ * start of the next one; the last cell wraps to the first. Shift reverses.
+ *
+ * `isSkipped` marks cells that are not stops (cells a merged cell covers); a
+ * range where every other cell is skipped returns the start position.
+ *
+ * Pure function: data column indices, no checkbox offset.
+ */
+export function computeRangeCycleStep(
+  range: ISelectionRange,
+  rowIndex: number,
+  dataColIndex: number,
+  direction: RangeCycleDirection,
+  isSkipped?: (row: number, col: number) => boolean
+): { rowIndex: number; dataColIndex: number } {
+  const r = normalizeSelectionRange(range);
+  const height = r.endRow - r.startRow + 1;
+  const width = r.endCol - r.startCol + 1;
+  const total = height * width;
+  // Linear position in the walk order: column-major for Enter, row-major for Tab.
+  const byColumn = direction === 'down' || direction === 'up';
+  const step = direction === 'down' || direction === 'right' ? 1 : -1;
+  const toIndex = (row: number, col: number) =>
+    byColumn ? (col - r.startCol) * height + (row - r.startRow) : (row - r.startRow) * width + (col - r.startCol);
+  const fromIndex = (i: number) =>
+    byColumn
+      ? { rowIndex: r.startRow + (i % height), dataColIndex: r.startCol + Math.floor(i / height) }
+      : { rowIndex: r.startRow + Math.floor(i / width), dataColIndex: r.startCol + (i % width) };
+  const inside = rowIndex >= r.startRow && rowIndex <= r.endRow && dataColIndex >= r.startCol && dataColIndex <= r.endCol;
+  let i = inside ? toIndex(rowIndex, dataColIndex) : step > 0 ? -1 : total;
+  for (let n = 0; n < total; n++) {
+    i = (((i + step) % total) + total) % total;
+    const next = fromIndex(i);
+    if (!isSkipped?.(next.rowIndex, next.dataColIndex)) return next;
+  }
+  return { rowIndex, dataColIndex };
+}

@@ -76,9 +76,13 @@ A row of Excel-style column letters (A, B, C, ..., Z, AA, AB, ...) appears above
 | 53--78 | BA--BZ |
 | 703+ | AAA, AAB, ... |
 
+Click a column letter to select the whole column. Shift+click another letter, or drag across letters, to select a block of columns. The selection is an ordinary cell range, so copy, Delete, fill (Ctrl+D / Ctrl+R) and the status bar aggregates work on it. A merged cell the column touches grows the selection to include it, as in Excel.
+
 ### 2. Row Numbers
 
 A numbered gutter column appears on the left side of the grid showing the absolute row number (1, 2, 3, ...). Row numbers are consistent across pages -- page 2 with a page size of 25 starts at row 26, not row 1.
+
+Click a row number to select the whole row; Shift+click or drag across row numbers to select several rows.
 
 :::info Row numbers without cell references
 You can show row numbers independently without the full cell references feature by using the `showRowNumbers` prop:
@@ -97,9 +101,21 @@ This gives you the numbered gutter column without column letters or the name box
 
 ### 3. Name Box
 
-A small read-only text field appears in the toolbar showing the currently active cell reference (e.g. "A1", "C15", "G3"). It updates automatically when you click a cell or navigate with the keyboard.
+A small text field in the toolbar shows the active cell reference (e.g. "A1", "C15", "G3"). It updates when you click a cell or navigate with the keyboard.
 
 The name box uses the column letter and absolute row number, so clicking the third column on row 5 of page 2 (with a page size of 10) shows "C15", not "C5".
+
+You can also type into it to jump, as in Excel. Press Enter to select what you typed; Escape reverts and returns focus to the grid.
+
+| Input | Selects |
+|---|---|
+| `B3` | One cell (it becomes the active cell) |
+| `A1:C5` | A range; the top-left cell becomes active |
+| `B:D` (or `C`) | Whole columns |
+| `2:4` | Whole rows |
+| A name from `namedRanges` | Its target range (case-insensitive) |
+
+`$` markers are ignored. A reference that isn't displayed (a hidden column, a row filtered out or on another page) or that names another sheet is rejected: the field is marked invalid and keeps your text so you can fix it. With `formulas` on, the formula bar's name box works the same way.
 
 ## Props
 

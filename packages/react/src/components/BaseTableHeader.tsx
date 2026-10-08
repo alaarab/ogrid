@@ -5,6 +5,7 @@ import * as React from 'react';
 import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_MIN_WIDTH, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { getHeaderFilterConfig, indexToColumnLetter } from '../utils';
 import { useHeaderFilterConfigs } from '../hooks/useHeaderFilterConfigs';
+import { COLUMN_HEADER_INDEX_ATTR } from '../hooks/useSheetSelection';
 import type { useColumnMeta } from '../hooks/useColumnMeta';
 import type { UseDataGridTableOrchestrationResult } from '../hooks/useDataGridTableOrchestration';
 import type { HeaderRow, IColumnDef, IOGridDataGridProps } from '../types';
@@ -109,6 +110,9 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
               key={col.columnId}
               className={`${styles.columnLetterCell}${columnMeta.hdrClasses[col.columnId] ? ` ${columnMeta.hdrClasses[col.columnId]}` : ''}`}
               style={columnMeta.hdrStyles[col.columnId]}
+              // Click selects the whole column (Shift extends, drag across letters extends).
+              {...{ [COLUMN_HEADER_INDEX_ATTR]: colIdx }}
+              onPointerDown={(e) => o.handleColumnHeaderPointerDown(e, colIdx)}
             >
               {columnLetters[colIdx] ?? indexToColumnLetter(colIdx)}
             </th>

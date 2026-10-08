@@ -53,6 +53,7 @@ export type {
   IColumnsChangeEvent,
   IGridStructureActions,
   IGridEditBridge,
+  IGridCellNavigator,
 } from './dataGridTypes';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './dataGridTypes';
