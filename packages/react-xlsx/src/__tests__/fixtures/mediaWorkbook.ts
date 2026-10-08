@@ -13,7 +13,7 @@ const rels = (content: string) => `<Relationships xmlns="http://schemas.openxmlf
 const rel = (id: string, type: string, target: string) => `<Relationship Id="${id}" Type="${R}/${type}" Target="${target}"/>`;
 const anchor = (chartId: string, col = 2) => `<xdr:twoCellAnchor><xdr:from><xdr:col>${col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>${col + 3}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>5</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="1" name="Sales chart"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="${C}"><c:chart xmlns:c="${C}" xmlns:r="${R}" r:id="${chartId}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`;
 
-export async function mediaWorkbookBlob(): Promise<Blob> {
+export async function mediaWorkbookBlob(options: { nativeOffsets?: boolean; oneCellAnchors?: boolean; pivotStyles?: boolean; externalConnection?: boolean } = {}): Promise<Blob> {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Sales');
   ws.addRows([['Region', 'Sales', 'Label', 'Pivot', 'Total', 'Spacer'], ['East', 10], ['West', 20], ['East', 30]]);
@@ -57,5 +57,32 @@ export async function mediaWorkbookBlob(): Promise<Blob> {
     ['pivotTables/pivotTable1.xml', 'pivotTable'], ['pivotCache/pivotCacheDefinition1.xml', 'pivotCacheDefinition'], ['pivotCache/pivotCacheRecords1.xml', 'pivotCacheRecords'],
   ].map(([path, type]) => `<Override PartName="/xl/${path}" ContentType="application/vnd.openxmlformats-officedocument.${type === 'drawing' || type === 'chart' ? 'drawingml' : 'spreadsheetml'}.${type}+xml"/>`).join('');
   zip.file('[Content_Types].xml', (await zip.file('[Content_Types].xml')!.async('string')).replace('drawing1.xml', 'drawing7.xml').replace('</Types>', overrides + '</Types>'));
+  if (options.nativeOffsets) {
+    // Native markers deliberately bypass ExcelJS's character/point conversion.
+    const from = (px: number) => `<xdr:from><xdr:col>0</xdr:col><xdr:colOff>${Math.round(px * 9525)}</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>95250</xdr:rowOff></xdr:from>`;
+    const to = '<xdr:to><xdr:col>1</xdr:col><xdr:colOff>190500</xdr:colOff><xdr:row>3</xdr:row><xdr:rowOff>47625</xdr:rowOff></xdr:to>';
+    let drawing = await zip.file('xl/drawings/drawing7.xml')!.async('string');
+    drawing = drawing.replace(/<xdr:from>.*?<\/xdr:from>/g, (_, index: number) => from(index === drawing.indexOf('<xdr:from>') ? 45000 / 9525 : 40)).replace(/<xdr:to>.*?<\/xdr:to>/g, to);
+    if (options.oneCellAnchors) drawing = drawing.replace(/<xdr:twoCellAnchor[^>]*>/g, '<xdr:oneCellAnchor>').replace(/<xdr:to>.*?<\/xdr:to>/g, '<xdr:ext cx="762000" cy="285750"/>').replace(/<\/xdr:twoCellAnchor>/g, '</xdr:oneCellAnchor>');
+    zip.file('xl/drawings/drawing7.xml', drawing);
+  }
+  if (options.pivotStyles) {
+    const styles = await zip.file('xl/styles.xml')!.async('string');
+    zip.file('xl/styles.xml', styles.replace('<fonts', () => '<numFmts count="2"><numFmt numFmtId="170" formatCode="&quot;$&quot;#,##0.0000"/><numFmt numFmtId="171" formatCode="yyyy-mm-dd&quot; UTC&quot;"/></numFmts><fonts')
+      .replace(/<dxfs[^>]*\/>/, () => '<dxfs count="2"><dxf><font><b/></font></dxf><dxf><font><color rgb="FF009900"/></font><numFmt numFmtId="170" formatCode="&quot;$&quot;#,##0.0000"/></dxf></dxfs>'));
+    const pivotPath = 'xl/pivotTables/pivotTable1.xml';
+    zip.file(pivotPath, (await zip.file(pivotPath)!.async('string')).replace('<dataField name=', '<dataField numFmtId="170" name=').replace('<pivotField dataField=', '<pivotField numFmtId="171" dataField=').replace('<pivotTableStyleInfo', '<formats count="1"><format dxfId="1"><pivotArea type="data"/></format></formats><pivotTableStyleInfo'));
+    const cachePath = 'xl/pivotCache/pivotCacheDefinition1.xml';
+    zip.file(cachePath, (await zip.file(cachePath)!.async('string')).replace('name="Sales" numFmtId="0"', 'name="Sales" numFmtId="170"'));
+  }
+  if (options.externalConnection) {
+    const cachePath = 'xl/pivotCache/pivotCacheDefinition1.xml';
+    zip.file(cachePath, (await zip.file(cachePath)!.async('string')).replace(/<cacheSource.*?<\/cacheSource>/, '<cacheSource type="external" connectionId="1"/>'));
+    zip.file('xl/connections.xml', `<connections xmlns="${S}" xmlns:r="${R}"><connection id="1" name="Sales DB" type="5" refreshedVersion="6" background="1" saveData="1"><dbPr connection="Provider=SalesProvider;Data Source=sales.example" command="SELECT Region, Sales FROM Sales"/><extLst><ext uri="ogrid-test"><source xmlns="urn:connection-source" r:id="rIdSource"/></ext></extLst></connection></connections>`);
+    zip.file('xl/_rels/connections.xml.rels', rels(rel('rIdSource', 'customXml', '../customXml/item1.xml') + '<Relationship Id="rIdExternal" Type="' + R + '/externalLink" Target="https://example.com/sales.odc" TargetMode="External"/>'));
+    zip.file('customXml/item1.xml', '<source xmlns="urn:connection-source">Sales connection metadata</source>');
+    zip.file('xl/_rels/workbook.xml.rels', (await zip.file('xl/_rels/workbook.xml.rels')!.async('string')).replace('</Relationships>', rel('rIdConnections', 'connections', 'connections.xml') + '</Relationships>'));
+    zip.file('[Content_Types].xml', (await zip.file('[Content_Types].xml')!.async('string')).replace('</Types>', '<Override PartName="/xl/connections.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.connections+xml"/></Types>'));
+  }
   return new Blob([new Uint8Array(await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' }))]);
 }

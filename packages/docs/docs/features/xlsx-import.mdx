@@ -143,7 +143,7 @@ Export starts from a copy of the source workbook and writes back only what chang
 
 Images sit over their anchored cells and follow column widths, saved row heights, sorting and scrolling, including virtual scrolling. Media whose anchor cells are hidden, filtered out, off the current page, or outside the loaded limits is hidden. Images and chart placeholders are display-only; select and edit the underlying cells as usual.
 
-Charts show **Chart: Sales by Region — opens in Excel** rather than an interactive chart. On export, chart parts and their drawing relationships are restored with new relationship IDs where needed, alongside ExcelJS's image drawings. Pivot tables show their saved cells; their caches are marked `refreshOnLoad` so Excel rebuilds them from the edited source data. Cached chart values may remain stale until Excel recalculates.
+Charts show **Chart: Sales by Region — opens in Excel** rather than an interactive chart. On export, chart parts and their drawing relationships are restored with new relationship IDs where needed, alongside ExcelJS's image drawings. Pivot tables show their saved cells; their caches are marked `refreshOnLoad` so Excel rebuilds them from the edited source data or their preserved external connections. Pivot number formats and differential styles are merged into the exported workbook's style tables, and their IDs are remapped. Cached chart values may remain stale until Excel recalculates.
 
 To preserve charts and pivots, load the original bytes through `blob` or `workbookFromBlob`, then save with `document.toBlob()`, `document.download()` or `xlsxBlobFromWorkbook(await document.toWorkbook())`. A workbook parsed directly with `workbook.xlsx.load()` has already lost the unsupported parts. Raw `workbook.xlsx.writeBuffer()` also bypasses preservation.
 
@@ -153,7 +153,7 @@ Known gaps:
 
 - Image move, resize and delete controls, chart rendering, and pivot authoring are not implemented. Worksheet background images and absolute (non-cell) chart anchors are not displayed.
 - Chart and pivot source references use the original A1 ranges. Inserting/deleting rows or columns or renaming sheets outside the document is unsupported; ranges are not rewritten. A changed sheet extent produces an export warning, but equal-size structural changes cannot be detected. Use Excel to make those changes.
-- Preservation targets worksheet charts and pivots in `.xlsx`; other unsupported ExcelJS features (such as slicers, chart sheets, macros and drawing shapes) are not restored. Custom numeric format/style IDs inside pivot parts are not remapped when ExcelJS rewrites workbook styles.
+- Preservation targets worksheet charts and pivots in `.xlsx`; other unsupported ExcelJS features (such as slicers, chart sheets, macros and drawing shapes) are not restored.
 
 - Rows render at their saved heights (scaled to the grid's row height), but rows without a saved height don't grow to fit wrapped text. See [Wrap Text](./wrap-text#xlsx).
 - The toolbar reads the selection from the rendered cells. With row virtualization, a selection taller than the visible window only formats the rows on screen.

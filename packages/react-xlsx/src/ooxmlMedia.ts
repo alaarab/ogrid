@@ -1,6 +1,8 @@
 import JSZip from 'jszip';
 import type ExcelJS from 'exceljs';
 import type { ChartAnchor, SourceArchive } from './sourceArchive';
+import { EMUS_PER_PIXEL, nativeMediaPoint } from './mediaGeometry';
+import { pivotStyleRemapper } from './pivotStyles';
 import {
   children, descendants, DRAWING_NS, element, localName, PACKAGE_REL_NS,
   parseXml, relativePart, REL_NS, relId, relsPath, resolvePart, setRelId, textOf, xmlOf, type XmlElement,
@@ -37,15 +39,7 @@ function marker(anchor: XmlElement, name: string, worksheet: ExcelJS.Worksheet):
   const node = children(anchor, name)[0];
   if (!node) return undefined;
   const number = (key: string) => Number(textOf(children(node, key)[0] ?? element(key)));
-  const col = number('col');
-  const row = number('row');
-  // ExcelJS anchors express offsets against the saved column/row units.
-  const colWidth = worksheet.columns?.[col]?.width;
-  const rowHeight = worksheet.findRow(row + 1)?.height;
-  return {
-    col: col + number('colOff') / (colWidth ? Math.floor(colWidth * 10000) : 640000),
-    row: row + number('rowOff') / (rowHeight ? Math.floor(rowHeight * 10000) : 180000),
-  };
+  return nativeMediaPoint(worksheet, { nativeCol: number('col'), nativeRow: number('row'), nativeColOff: number('colOff'), nativeRowOff: number('rowOff') });
 }
 
 /** Read chart placeholders while the original ZIP is still available. */
@@ -75,7 +69,7 @@ export async function readSourceArchive(bytes: ArrayBuffer, workbook: ExcelJS.Wo
       const ext = children(anchor, 'ext')[0];
       anchors.push({
         title: titleText || 'Untitled chart', tl, br: marker(anchor, 'to', worksheet),
-        ...(ext ? { ext: { width: Number(ext.attrs.cx) / 9525, height: Number(ext.attrs.cy) / 9525 } } : {}),
+        ...(ext ? { ext: { width: Number(ext.attrs.cx) / EMUS_PER_PIXEL, height: Number(ext.attrs.cy) / EMUS_PER_PIXEL } } : {}),
       });
     }
     if (anchors.length) charts.set(name, anchors);
@@ -93,6 +87,9 @@ export async function preserveMedia(source: SourceArchive, output: ArrayBuffer, 
   const originalTypes = await read(original, '[Content_Types].xml');
   const types = await read(out, '[Content_Types].xml');
   const copied = new Map<string, string>();
+  const connectionIds = new Set<string>();
+  let styles: XmlElement | undefined;
+  let remapStyles: ((part: XmlElement) => void) | undefined;
   const reserved = new Set(Object.keys(out.files));
   const unique = (path: string) => {
     let candidate = path;
@@ -126,10 +123,23 @@ export async function preserveMedia(source: SourceArchive, output: ArrayBuffer, 
     const target = unique(path);
     copied.set(path, target);
     let data: string | Uint8Array = await file.async('uint8array');
-    if (/\/pivotCacheDefinition[^/]*\.xml$/.test(path)) {
-      const cache = parseXml(await file.async('string'));
-      cache.attrs.refreshOnLoad = '1';
-      data = xmlOf(cache);
+    const contentType = children(originalTypes, 'Override').find((node) => node.attrs.PartName === '/' + path)?.attrs.ContentType;
+    // Cache records can contain millions of entries and have no style IDs.
+    // Keep those bytes intact; only definitions need their references remapped.
+    if (contentType?.endsWith('.pivotTable+xml') || contentType?.endsWith('.pivotCacheDefinition+xml')) {
+      const pivot = parseXml(await file.async('string'));
+      if (!remapStyles) {
+        styles = await read(out, 'xl/styles.xml');
+        remapStyles = pivotStyleRemapper(await read(original, 'xl/styles.xml'), styles);
+      }
+      remapStyles(pivot);
+      if (localName(pivot) === 'pivotCacheDefinition') {
+        pivot.attrs.refreshOnLoad = '1';
+        for (const cacheSource of descendants(pivot, 'cacheSource')) {
+          if (cacheSource.attrs.type === 'external' && cacheSource.attrs.connectionId) connectionIds.add(cacheSource.attrs.connectionId);
+        }
+      }
+      data = xmlOf(pivot);
     }
     out.file(target, data);
     addType(path, target);
@@ -246,12 +256,22 @@ export async function preserveMedia(source: SourceArchive, output: ArrayBuffer, 
       if (!rel) throw new Error('Missing pivot cache relationship');
       setRelId(cache, await transferRel(rel, 'xl/workbook.xml', 'xl/workbook.xml', newRels));
     }
+    if (connectionIds.size) {
+      const rel = children(rels).find((r) => r.attrs.Type?.endsWith('/connections'));
+      if (!rel) throw new Error('Missing external pivot connections relationship');
+      const connections = await read(original, resolvePart('xl/workbook.xml', rel.attrs.Target ?? ''));
+      for (const id of connectionIds) {
+        if (!children(connections, 'connection').some((c) => c.attrs.id === id)) throw new Error(`Missing external pivot connection: ${id}`);
+      }
+      await transferRel(rel, 'xl/workbook.xml', 'xl/workbook.xml', newRels);
+    }
     // pivotCaches follows calcPr and precedes the remaining workbook children.
     const index = wb.children.findIndex((c) => typeof c !== 'string' && ['oleSize', 'customWorkbookViews', 'smartTagPr', 'smartTagTypes', 'webPublishing', 'fileRecoveryPr', 'webPublishObjects', 'extLst'].includes(localName(c)));
     wb.children.splice(index < 0 ? wb.children.length : index, 0, caches);
     out.file('xl/workbook.xml', xmlOf(wb));
     out.file(relsPath('xl/workbook.xml'), xmlOf(newRels));
   }
+  if (styles) out.file('xl/styles.xml', xmlOf(styles));
   out.file('[Content_Types].xml', xmlOf(types));
   // A1 references in chart/pivot parts are deliberately untouched. Structural
   // edits outside this document need a range-rewriting implementation.
