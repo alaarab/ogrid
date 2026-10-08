@@ -155,6 +155,7 @@ export type {
   UseUndoRedoFormulaCells,
   UseFillHandleResult,
   UseFillHandleParams,
+  FillModifierEvent,
   UseDataGridStateParams,
   UseDataGridStateResult,
   DataGridLayoutState,

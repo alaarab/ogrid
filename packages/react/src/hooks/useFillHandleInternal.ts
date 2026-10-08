@@ -5,7 +5,7 @@ import type { ISelectionRange, IActiveCell } from '../types';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
 import { applyFillValues, computeFillRange } from '../utils';
 import { createDragRangeMarker, dataCellAtPoint } from './dragRangeMarker';
-import { computeFillDragEdits } from '@alaarab/ogrid-core';
+import { computeAutoFillEndRow, computeFillDragEdits } from '@alaarab/ogrid-core';
 import type { IFillFormulaOptions } from '../utils';
 import { useLatestRef } from './useLatestRef';
 
@@ -23,6 +23,8 @@ export interface UseFillHandleInternalParams<T> {
   endBatch?: () => void;
   /** Optional formula-aware fill options. When provided, cells with formulas adjust references during fill. */
   formulaOptions?: IFillFormulaOptions<T>;
+  /** Merge-covered cells count as empty when a double-click looks for the adjacent data's end. */
+  isCoveredCell?: (row: number, col: number) => boolean;
 }
 
 export interface UseFillHandleInternalResult {
@@ -30,6 +32,11 @@ export interface UseFillHandleInternalResult {
   fillDrag: { startRow: number; startCol: number; endRow?: number; endCol?: number } | null;
   setFillDrag: (value: { startRow: number; startCol: number; endRow?: number; endCol?: number } | null) => void;
   handleFillHandleMouseDown: (e: React.MouseEvent) => void;
+  /**
+   * Double-click on the fill handle: fill the selection down to the end of
+   * the contiguous data in the column to its left (else right), like Excel.
+   */
+  handleFillHandleDoubleClick: (e: React.MouseEvent) => void;
   /** Fill the current selection down from the top row (Ctrl+D). No-op if no selection or editable=false. */
   fillDown: () => void;
 }
@@ -58,6 +65,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     endBatch,
     formulaOptions,
   } = params;
+  const isCoveredCellRef = useLatestRef(params.isCoveredCell);
 
   const onCellValueChangedRef = useLatestRef(onCellValueChangedProp);
   const [fillDrag, setFillDrag] = useState<{ startRow: number; startCol: number; endRow?: number; endCol?: number } | null>(null);
@@ -128,7 +136,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       });
     };
 
-    const onUp = () => {
+    const onUp = (e: PointerEvent) => {
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
@@ -160,11 +168,12 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       setActiveCell({ rowIndex: fillDrag.startRow, columnIndex: fillDrag.startCol + colOffsetRef.current });
 
       // Tile the original selection over the extension (the commit the headless
-      // useFillHandle shares). The batch also covers formulas the fill writes,
-      // so one undo reverts the whole fill.
+      // useFillHandle shares). Series continue (1, 2 -> 3, 4; Mon -> Tue);
+      // Ctrl/Cmd held at release flips copy and series, as in Excel. The batch
+      // also covers formulas the fill writes, so one undo reverts the whole fill.
       beginBatch?.();
       try {
-        const { events } = computeFillDragEdits(source, end.endRow, end.endCol, itemsRef.current, visibleColsRef.current, formulaOptionsRef.current);
+        const { events } = computeFillDragEdits(source, end.endRow, end.endCol, itemsRef.current, visibleColsRef.current, formulaOptionsRef.current, { alternate: e.ctrlKey || e.metaKey });
         for (const evt of events) onCellValueChangedRef.current?.(evt);
       } finally {
         // Always close the batch, or a throwing handler leaves undo stuck.
@@ -234,6 +243,31 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     []
   );
 
+  const handleFillHandleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const range = selectionRangeRef.current;
+      if (!range || editable === false || !onCellValueChangedRef.current) return;
+      const src = normalizeSelectionRange(range);
+      const endRow = computeAutoFillEndRow(src, itemsRef.current, visibleColsRef.current, isCoveredCellRef.current);
+      if (endRow <= src.endRow) return;
+      // The same commit as a drag down to `endRow`, so series and formulas fill alike.
+      let filled: ISelectionRange = src;
+      beginBatch?.();
+      try {
+        const result = computeFillDragEdits(src, endRow, src.endCol, itemsRef.current, visibleColsRef.current, formulaOptionsRef.current, { alternate: e.ctrlKey || e.metaKey });
+        filled = result.range;
+        for (const evt of result.events) onCellValueChangedRef.current?.(evt);
+      } finally {
+        endBatch?.();
+      }
+      setSelectionRange(filled);
+      setActiveCell({ rowIndex: src.startRow, columnIndex: src.startCol + colOffsetRef.current });
+    },
+    [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef, formulaOptionsRef, isCoveredCellRef, setSelectionRange, setActiveCell, colOffsetRef]
+  );
+
   const fillDown = useCallback(() => {
     const range = selectionRangeRef.current;
     if (!range || editable === false || !onCellValueChangedRef.current) return;
@@ -257,5 +291,5 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     }
   }, [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef, formulaOptionsRef]);
 
-  return { fillDrag, setFillDrag, handleFillHandleMouseDown, fillDown };
+  return { fillDrag, setFillDrag, handleFillHandleMouseDown, handleFillHandleDoubleClick, fillDown };
 }

@@ -195,10 +195,18 @@ Standard shortcuts work on any selection — no configuration needed:
 |-----|--------|-------------------|
 | Ctrl+C / Cmd+C | Copy as tab-separated text | No |
 | Ctrl+V / Cmd+V | Paste into cells | Yes |
+| Ctrl+Shift+V / Cmd+Shift+V | Paste values only (computed values, not formulas) | Yes |
 | Ctrl+X / Cmd+X | Cut (copy then clear) | Yes |
 | Delete / Backspace | Clear selected cells | Yes |
 
 Copy respects `valueFormatter` — what you see is what you get in the clipboard. Paste calls `valueParser` on each value, so bad data is rejected before it lands in your rows.
+
+Paste follows Excel's rules:
+
+- **Repeat over a selection.** When the selection is larger than the pasted block and an exact multiple of it in both directions, the block repeats to fill it, so a single copied value fills every selected cell. Otherwise the block pastes once at the selection's top-left cell. A cut pastes once.
+- **Formulas move with the paste.** With `formulas` on, a formula copied inside the grid shifts its relative references by the distance from where it was copied to where it lands (`=A1` copied from B1 and pasted into C3 becomes `=B3`; `$A$1` stays). Text pasted from outside the grid is not shifted, and a cut moves formulas unchanged.
+- **Paste values only.** The context menu item and Ctrl+Shift+V paste the computed values of copied formulas, and text that starts with `=` is stored as text.
+- **Tables in and out.** Copy writes an HTML `<table>` (of the displayed values) next to the tab-separated text, so pasting into Excel, Google Sheets, Word or Google Docs keeps the table. When a paste carries only HTML (some apps), the first `<table>` in it is read.
 
 The keyboard shortcuts go through the browser's native clipboard events: Ctrl+C and Ctrl+X put the TSV on the `copy` / `cut` event's `clipboardData`, and Ctrl+V and Shift+Insert paste from the `paste` event. That works on plain http, where `navigator.clipboard` does not exist, and in Firefox and Safari, where `navigator.clipboard.readText` is denied by default. Only the context menu's Copy, Cut and Paste use the clipboard programmatically (`writeText` / `readText`); a rejected read there calls `onClipboardError` and pastes nothing.
 
@@ -207,6 +215,25 @@ The keyboard shortcuts go through the browser's native clipboard events: Ctrl+C 
 <FillHandleDemo />
 
 The small square in the bottom-right corner of a selection — drag it down (or up, or sideways) to fill cells. Works exactly like Excel: the fill extends the selection along one axis at a time, whichever the pointer is farther outside the selection on, so a diagonal drag fills down or across but never both. Dragging back inside the selection fills nothing. Each filled cell goes through `valueParser`, so validation still applies.
+
+Like Excel, the fill continues a series when it finds one, and copies otherwise. Each column of the selection (or each row, when filling sideways) is its own series; filling up or left counts backward.
+
+| Source | Fills as |
+|---|---|
+| `1, 2` (two or more numbers) | `3, 4, 5`, following their linear trend |
+| `5` (a single number) | `5, 5, 5` (copy). Hold Ctrl/Cmd to count `6, 7, 8` |
+| `2024-01-31` (a date) | next day each cell |
+| `2024-01-15, 2024-02-15` | monthly (yearly when 12 months apart), clamped to short months |
+| `Mon` / `Monday` | `Tue`, `Wed`, ... (case kept, wraps around) |
+| `Jan` / `January` | `Feb`, `Mar`, ... |
+| `Q1` | `Q2`, `Q3`, `Q4`, `Q1` |
+| `Item 1` | `Item 2`, `Item 3` (zero padding like `A009` is kept) |
+| a formula | the formula, with its relative references shifted |
+| anything else | the source block, repeated |
+
+Hold **Ctrl** (Cmd on Mac) when you release to flip the behavior, as in Excel: a series copies instead, and a single number counts up. Dates are `YYYY-MM-DD` strings or `Date` objects.
+
+**Double-click the fill handle** to fill the selection down to the end of the data next to it: the contiguous filled cells in the column on its left, or on its right when the left one is empty below the selection. It fills the same way a drag to that row would.
 
 :::tip Pro tip
 Select a range of cells before dragging the fill handle to populate multiple columns at once. The fill handle uses `requestAnimationFrame` internally, so it stays smooth even on large selections.

@@ -280,8 +280,12 @@ describe('useClipboard', () => {
       const event = makeEvent();
       act(() => { result.current.handleCopyEvent(event); });
 
-      expect(event.clipboardData?.setData).toHaveBeenCalledTimes(1);
+      expect(event.clipboardData?.setData).toHaveBeenCalledTimes(2);
       expect(event.clipboardData?.setData).toHaveBeenCalledWith('text/plain', 'Alice\t10\r\nBob\t20');
+      expect(event.clipboardData?.setData).toHaveBeenCalledWith(
+        'text/html',
+        '<table><tbody><tr><td>Alice</td><td>10</td></tr><tr><td>Bob</td><td>20</td></tr></tbody></table>'
+      );
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(writeTextMock).not.toHaveBeenCalled();
       expect(result.current.copyRange).toEqual(range);
@@ -533,7 +537,7 @@ describe('useClipboard', () => {
     expect(last.get(3)).toBe('c');
   });
 
-  it('pastes at the top-left of a selection made upward', async () => {
+  it('pastes at the top-left of a selection made upward (a single value fills it)', async () => {
     const events: { rowIndex: number }[] = [];
     const { result } = renderHook(() =>
       useClipboard({
@@ -548,7 +552,7 @@ describe('useClipboard', () => {
     );
     readTextMock.mockResolvedValue('x');
     await act(async () => { await result.current.handlePaste(); });
-    expect(events.map((e) => e.rowIndex)).toEqual([0]);
+    expect(events.map((e) => e.rowIndex)).toEqual([0, 1]);
   });
 
   it('copy does not throw when navigator.clipboard is unavailable (non-secure context)', () => {

@@ -87,6 +87,7 @@ export { useFillHandle } from './useFillHandle';
 export type {
   UseFillHandleParams,
   UseFillHandleResult,
+  FillModifierEvent,
 } from './useFillHandle';
 export { useDataGridState } from './useDataGridState';
 export type {

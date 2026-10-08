@@ -41,7 +41,7 @@ export function useRenderCellContent<T>(
     setPopoverAnchorEl, cancelPopoverEdit, setActiveCell, interaction, colOffset,
     handleFillHandleMouseDown, onCellError, cellDescriptorInput,
   } = o;
-  const { setSelectionRange } = interaction;
+  const { setSelectionRange, handleFillHandleDoubleClick } = interaction;
   const { editable, getFormulaValue, hasFormula, getFormula } = cellDescriptorInput;
   const hasValueChangeHandler = !!cellDescriptorInput.onCellValueChanged;
   const { InlineCellEditor, renderPopoverEditor, renderBooleanCell } = primitives;
@@ -123,9 +123,12 @@ export function useRenderCellContent<T>(
             </div>
             {descriptor.canEditAny && descriptor.isSelectionEndCell && (
               // biome-ignore lint/a11y/useAriaPropsSupportedByRole: the fill handle is a pointer-only drag affordance; the label is intentional and relied on as a stable hook
+              // biome-ignore lint/a11y/noStaticElementInteractions: pointer-only affordance (drag, double-click to fill down); the keyboard equivalent is Ctrl+D
+              // biome-ignore lint/a11y/noNoninteractiveElementInteractions: as above, Ctrl+D is the keyboard fill
               <div
                 className={styles.fillHandle}
                 onPointerDown={handleFillHandleMouseDown}
+                onDoubleClick={handleFillHandleDoubleClick}
                 aria-label="Fill handle"
               />
             )}
@@ -143,6 +146,6 @@ export function useRenderCellContent<T>(
         </CellErrorBoundary>
       );
     },
-    [editCallbacks, interactionHandlers, delegatedCellHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, colOffset, setSelectionRange, setActiveCell, styles, primitives, InlineCellEditor, renderPopoverEditor, renderBooleanCell, editable, hasValueChangeHandler, getFormulaValue, hasFormula, getFormula]
+    [editCallbacks, interactionHandlers, delegatedCellHandlers, handleFillHandleMouseDown, handleFillHandleDoubleClick, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, colOffset, setSelectionRange, setActiveCell, styles, primitives, InlineCellEditor, renderPopoverEditor, renderBooleanCell, editable, hasValueChangeHandler, getFormulaValue, hasFormula, getFormula]
   );
 }

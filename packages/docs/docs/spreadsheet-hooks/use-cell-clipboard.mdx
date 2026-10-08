@@ -81,6 +81,14 @@ const clipboard = useCellClipboard({
 
 ## Behavior notes
 
+- **A paste repeats over a larger selection** that is an exact multiple of the
+  pasted block (Excel), so one value fills every selected cell; otherwise it
+  pastes once at the top-left. A cut pastes once.
+- **`onCopy` / `onCut` also write `text/html`**, a plain `<table>` of the
+  same cells, so pasting into Excel, Google Sheets or a document keeps the
+  table. `onPaste` falls back to the event's `text/html` (its first `<table>`)
+  when it carries no plain text.
+
 - **The three programmatic actions never reject.** Failures go to `onClipboardError` and the
   promise resolves, so `await clipboard.pasteRange()` is safe without a
   `try`/`catch`.

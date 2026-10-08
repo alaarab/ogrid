@@ -35,11 +35,11 @@ export interface GridContextMenuProps extends GridContextMenuHandlerProps {
 }
 
 export function GridContextMenu(props: GridContextMenuProps): React.ReactElement {
-  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, structure, classNames } = props;
+  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, structure, classNames } = props;
   const ref = React.useRef<HTMLDivElement>(null);
   const handlers = React.useMemo(
-    () => getContextMenuHandlers({ onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, onClose }),
-    [onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, onClose]
+    () => getContextMenuHandlers({ onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, onClose }),
+    [onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, onClose]
   );
 
   const isDisabled = React.useCallback(
@@ -47,9 +47,10 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
       if (item.disabledWhenNoSelection && !hasSelection) return true;
       if (item.id === 'undo' && !canUndo) return true;
       if (item.id === 'redo' && !canRedo) return true;
+      if (item.id === 'pasteValues' && !onPasteValues) return true;
       return false;
     },
-    [hasSelection, canUndo, canRedo]
+    [hasSelection, canUndo, canRedo, onPasteValues]
   );
 
   const structureItems = React.useMemo(

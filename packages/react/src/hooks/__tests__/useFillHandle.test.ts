@@ -18,7 +18,7 @@ const columns: IColumnDef<Row>[] = [
   { columnId: 'name', name: 'Name', type: 'text', editable: true },
 ];
 
-function setup() {
+function setup(options: { fillSeries?: boolean } = {}) {
   const events: ICellValueChangedEvent<Row>[] = [];
   const rows = makeRows();
   const { result: rangeResult } = renderHook(() =>
@@ -31,6 +31,7 @@ function setup() {
         rows,
         columns,
         onFillCells: (e) => events.push(...e),
+        ...options,
       }),
     { initialProps: { range: rangeResult.current } },
   );
@@ -183,7 +184,7 @@ describe('useFillHandle', () => {
 });
 
 describe('useFillHandle  -  multi-cell source (S01)', () => {
-  it('commitFill tiles the source block instead of copying the top-left cell', () => {
+  it('commitFill extends each source column (here a number series) instead of copying the top-left cell', () => {
     const { rangeResult, fillResult, events, rerender } = setup();
     act(() => rangeResult.current.startRange(0, 0));
     act(() => rangeResult.current.extendRange(1, 1));
@@ -192,8 +193,8 @@ describe('useFillHandle  -  multi-cell source (S01)', () => {
     act(() => fillResult.current.updateFill(3, 1));
     act(() => fillResult.current.commitFill());
     const got = events.map((e) => `${e.rowIndex}:${e.columnId}=${e.newValue}`);
-    // Source cells (rows 0-1) untouched; rows 2-3 repeat the 2-row pattern per column.
-    expect(got).toEqual(['2:a=10', '2:b=100', '3:a=20', '3:b=200']);
+    // Source cells (rows 0-1) untouched; rows 2-3 continue each column's series.
+    expect(got).toEqual(['2:a=30', '2:b=300', '3:a=40', '3:b=400']);
   });
 });
 
@@ -244,5 +245,56 @@ describe('useFillHandle  -  axis lock (Excel)', () => {
     act(() => fillResult.current.commitFill());
     expect(out).toEqual([]);
     expect(fillResult.current.isFilling).toBe(false);
+  });
+});
+
+describe('useFillHandle  -  series and double-click (Excel)', () => {
+  const got = (list: ICellValueChangedEvent<Row>[]) => list.map((e) => `${e.rowIndex}:${e.columnId}=${e.newValue}`);
+
+  function selectAndDrag(t: ReturnType<typeof setup>, from: [number, number], to: [number, number]) {
+    act(() => t.rangeResult.current.startRange(from[0], from[1]));
+    t.rerender({ range: t.rangeResult.current });
+    act(() => t.fillResult.current.startFill());
+    act(() => t.fillResult.current.updateFill(to[0], to[1]));
+  }
+
+  it('a lone number copies; Ctrl held at commit counts it up', () => {
+    const plain = setup();
+    selectAndDrag(plain, [0, 0], [2, 0]);
+    act(() => plain.fillResult.current.commitFill());
+    expect(got(plain.events)).toEqual(['1:a=10', '2:a=10']);
+
+    const ctrl = setup();
+    selectAndDrag(ctrl, [0, 0], [2, 0]);
+    act(() => ctrl.fillResult.current.commitFill({ ctrlKey: true }));
+    expect(got(ctrl.events)).toEqual(['1:a=11', '2:a=12']);
+  });
+
+  it('fillSeries: false copies a series source', () => {
+    const t = setup({ fillSeries: false });
+    act(() => t.rangeResult.current.startRange(0, 0));
+    act(() => t.rangeResult.current.extendRange(1, 0));
+    t.rerender({ range: t.rangeResult.current });
+    act(() => t.fillResult.current.startFill());
+    act(() => t.fillResult.current.updateFill(3, 0));
+    act(() => t.fillResult.current.commitFill());
+    expect(got(t.events)).toEqual(['2:a=10', '3:a=20']);
+  });
+
+  it('autoFillDown fills to the end of the left neighbor column and selects the result', () => {
+    const t = setup();
+    act(() => t.rangeResult.current.startRange(0, 1));
+    t.rerender({ range: t.rangeResult.current });
+    act(() => t.fillResult.current.autoFillDown({ ctrlKey: true }));
+    expect(got(t.events)).toEqual(['1:b=101', '2:b=102', '3:b=103']);
+    expect(t.rangeResult.current.range).toEqual({ startRow: 0, startCol: 1, endRow: 3, endCol: 1 });
+  });
+
+  it('autoFillDown is a no-op on the last row', () => {
+    const t = setup();
+    act(() => t.rangeResult.current.startRange(3, 1));
+    t.rerender({ range: t.rangeResult.current });
+    act(() => t.fillResult.current.autoFillDown());
+    expect(t.events).toEqual([]);
   });
 });

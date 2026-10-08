@@ -81,6 +81,8 @@ export interface UseDataGridInteractionParams<T> {
   hasFormula?: (col: number, row: number) => boolean;
   /** Sets or clears a formula for a flat column + row. */
   setFormula?: (col: number, row: number, formula: string | null) => void;
+  /** Computed value of a formula cell (flat column + sheet row), for "paste values only". */
+  getFormulaValue?: (col: number, row: number) => unknown;
   /** Called when a cell is clicked during formula editing to insert a cell reference. */
   onFormulaInsertReference?: (reference: string) => boolean;
   /** Formula engine column of a column id (flat index), or -1. Defaults to the flat column lookup. */
@@ -212,6 +214,7 @@ export function useDataGridInteraction<T>(
     getFormula,
     hasFormula,
     setFormula,
+    getFormulaValue,
     onFormulaInsertReference,
     formulaCells,
   } = params;
@@ -337,12 +340,16 @@ export function useDataGridInteraction<T>(
         const r = toRow(row);
         return r >= 0 && hasFormula(col, r);
       }),
+      getFormulaValue: getFormulaValue && ((col: number, row: number) => {
+        const r = toRow(row);
+        return r >= 0 ? getFormulaValue(col, r) : undefined;
+      }),
       setFormula: write && ((col: number, row: number, formula: string | null) => {
         const r = toRow(row);
         if (r >= 0) write(col, r, formula, row);
       }),
     };
-  }, [formulas, getFormula, hasFormula, setFormula, hasFormulaCells, undoSetFormula, formulaRowRef, hostFormulaHistory, hostSetFormula]);
+  }, [formulas, getFormula, hasFormula, getFormulaValue, setFormula, hasFormulaCells, undoSetFormula, formulaRowRef, hostFormulaHistory, hostSetFormula]);
 
   const {
     selectionRange,
@@ -360,7 +367,11 @@ export function useDataGridInteraction<T>(
     expandRange,
   });
 
-  const { handleCopy, handleCut, handleCopyEvent, handleCutEvent, handlePaste, handlePasteEvent, cutRange, copyRange, clearClipboardRanges } = useClipboard({
+  const formulaRowForClipboard = useCallback((row: number) => formulaRowRef.current?.(row) ?? row, [formulaRowRef]);
+  const {
+    handleCopy, handleCut, handleCopyEvent, handleCutEvent, handlePaste, handlePasteEvent,
+    handlePasteValues: handlePasteValuesAsync, armPasteValues, cutRange, copyRange, clearClipboardRanges,
+  } = useClipboard({
     items,
     getRowId,
     onClipboardError,
@@ -377,8 +388,11 @@ export function useDataGridInteraction<T>(
     getFormula: viewFormulas?.getFormula,
     hasFormula: viewFormulas?.hasFormula,
     setFormula: viewFormulas?.setFormula,
+    getFormulaValue: viewFormulas?.getFormulaValue,
+    formulaRow: formulaRowForClipboard,
     isCoveredCell: isCoveredMergeCell,
   });
+  const handlePasteValues = useCallback(() => { void handlePasteValuesAsync(); }, [handlePasteValuesAsync]);
 
   const handleCellMouseDown = useCallback(
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
@@ -416,7 +430,7 @@ export function useDataGridInteraction<T>(
     return { flatColumns, ...viewFormulas, formulaRow };
   }, [viewFormulas, flatColumns, formulaRowRef]);
 
-  const { handleFillHandleMouseDown, fillDown } = useFillHandleInternal({
+  const { handleFillHandleMouseDown, handleFillHandleDoubleClick, fillDown } = useFillHandleInternal({
     items,
     visibleCols,
     editable,
@@ -429,12 +443,13 @@ export function useDataGridInteraction<T>(
     beginBatch: undoRedo.beginBatch,
     endBatch: undoRedo.endBatch,
     formulaOptions: fillFormulaOptions,
+    isCoveredCell: isCoveredMergeCell,
   });
 
   const { handleGridKeyDown, handleGridPaste, handleGridCopy, handleGridCut } = useKeyboardNavigation({
     data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId, mergeLayout },
     state: { activeCell, selectionRange, editingCell, selectedRowIds },
-    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopyEvent, handleCutEvent, handlePasteEvent, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
+    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopyEvent, handleCutEvent, handlePasteEvent, armPasteValues, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
     features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, scrollToIndexRef, onKeyDown, fillDown },
   });
 
@@ -453,6 +468,8 @@ export function useDataGridInteraction<T>(
     handleGridCopy: cellSelection ? handleGridCopy : (NOOP as typeof handleGridCopy),
     handleGridCut: cellSelection ? handleGridCut : (NOOP as typeof handleGridCut),
     handleFillHandleMouseDown: cellSelection ? handleFillHandleMouseDown : (NOOP as typeof handleFillHandleMouseDown),
+    handleFillHandleDoubleClick: cellSelection ? handleFillHandleDoubleClick : (NOOP as typeof handleFillHandleDoubleClick),
+    handlePasteValues: cellSelection ? handlePasteValues : NOOP,
     handleCopy: cellSelection ? handleCopy : NOOP,
     handleCut: cellSelection ? handleCut : NOOP,
     handlePaste: cellSelection ? handlePaste : (NOOP_ASYNC as typeof handlePaste),
@@ -467,7 +484,7 @@ export function useDataGridInteraction<T>(
   }), [
     cellSelection, activeCell, setActiveCell, selectionRange, setSelectionRange,
     handleCellMouseDown, handleSelectAllCells, hasCellSelection, handleGridKeyDown, handleGridPaste, handleGridCopy, handleGridCut,
-    handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange,
+    handleFillHandleMouseDown, handleFillHandleDoubleClick, handlePasteValues, handleCopy, handleCut, handlePaste, cutRange, copyRange,
     clearClipboardRanges, canUndo, canRedo, undo, redo,
     isDragging,
   ]);
