@@ -102,7 +102,8 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
                 className={styles.popoverContent}
                 style={portalTheme}
                 sideOffset={4}
-                collisionPadding={12}
+                // Reserve the shared entrance animation's 4px upward travel beyond the 12px margin.
+                collisionPadding={{ top: 16, right: 12, bottom: 12, left: 12 }}
                 align="start"
                 onOpenAutoFocus={(e: Event) => e.preventDefault()}
               >

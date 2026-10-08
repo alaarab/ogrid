@@ -103,7 +103,7 @@
   box-sizing: border-box;
   width: 320px;
   max-width: min(calc(100vw - 24px), var(--radix-popover-content-available-width));
-  max-height: min(calc(100dvh - 24px), var(--radix-popover-content-available-height));
+  max-height: min(calc(100dvh - 28px), var(--radix-popover-content-available-height));
   color: var(--ogrid-fg, #242424);
   background: var(--ogrid-bg, #fff);
   overflow: auto;
