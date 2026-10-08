@@ -527,6 +527,11 @@
 }
 
 // Shared native controls retain the same semantics in both kit popovers.
+.filterPopover:has(:global([data-ogrid-condition])) {
+  width: 420px;
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+}
 .filterPopover :global([data-ogrid-condition]) {
   select, input {
     @include surface.control;

@@ -10,6 +10,8 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Mouse-opened cell, column and sheet menus use a subtle active-item highlight while keyboard navigation retains a visible focus ring. Condition filters place each operator beside its value with And/Or between the two rows, hiding the second value for `(none)`. The validation docs snippet matches the demo's 1–10 quantity rule and messages.
+
 - Both React kits ship grid and popover styles in one `index.css` (also available at `styles/index.css`), while keeping JavaScript split. Modal styles travel with the lazy validation dialog and need no additional CSS import. Radix validation uses themed buttons, fields and a modal backdrop; input messages use themed, collision-aware portals so they clear invalid circles and grid clipping. Built docs and consumer examples now check computed styles in both themes and kits.
 
 - Validation now checks paste, fill, and moves against their proposed values and formulas, including cleared cut sources and array/spill reads. Spill children appear in range-backed list dropdowns, and Find & Replace reports accepted and skipped writes after validation decisions.

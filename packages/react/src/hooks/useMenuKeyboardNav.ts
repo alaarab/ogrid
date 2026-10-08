@@ -8,6 +8,8 @@ export interface UseMenuKeyboardNavOptions {
   onClose: () => void;
   /** Element to return focus to on close. Defaults to whatever was focused when the menu opened. */
   getRestoreTarget?: () => HTMLElement | null;
+  /** Override the opening focus ring when the opener's input method is known. */
+  initialFocusVisible?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ export function useMenuKeyboardNav(
   menuRef: React.RefObject<HTMLElement | null>,
   options: UseMenuKeyboardNavOptions
 ): { onKeyDown: (e: React.KeyboardEvent) => void } {
-  const { active, onClose } = options;
+  const { active, onClose, initialFocusVisible } = options;
   const restoreRef = React.useRef(options.getRestoreTarget);
   restoreRef.current = options.getRestoreTarget;
 
@@ -28,14 +30,22 @@ export function useMenuKeyboardNav(
     if (!active) return;
     const menu = menuRef.current;
     const previouslyFocused = (restoreRef.current?.() ?? document.activeElement) as HTMLElement | null;
+    // A programmatic focus from a cell whose mousedown was prevented can match
+    // :focus-visible even after a mouse opening. Preserve the trigger's modality.
+    if (menu) menu.dataset.ogridMenuKeyboard = String(initialFocusVisible ?? previouslyFocused?.matches(':focus-visible') ?? false);
+    const onPointerDown = () => {
+      if (menu) menu.dataset.ogridMenuKeyboard = 'false';
+    };
+    menu?.addEventListener('pointerdown', onPointerDown);
     menu?.querySelector<HTMLElement>(ITEM_SELECTOR)?.focus({ preventScroll: true });
     return () => {
+      menu?.removeEventListener('pointerdown', onPointerDown);
       const current = document.activeElement;
       // Only restore if focus is still inside the menu (or was dropped to body); never steal it from a click target.
       if (current && current !== document.body && !(menu?.contains(current))) return;
       if (previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true });
     };
-  }, [active, menuRef]);
+  }, [active, menuRef, initialFocusVisible]);
 
   const onKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
@@ -43,6 +53,7 @@ export function useMenuKeyboardNav(
       e.stopPropagation();
       const menu = menuRef.current;
       if (!menu) return;
+      menu.dataset.ogridMenuKeyboard = 'true';
       const items = Array.from(menu.querySelectorAll<HTMLElement>(ITEM_SELECTOR));
       const idx = items.indexOf(document.activeElement as HTMLElement);
       let next: number | null = null;

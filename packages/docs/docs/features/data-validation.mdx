@@ -20,13 +20,14 @@ import type { IDataValidationRule } from '@alaarab/ogrid-react-radix';
 const rules: IDataValidationRule<Order>[] = [
   {
     type: 'whole', columnIds: ['quantity'],
-    operator: 'between', value: 1, value2: 100, allowBlank: false,
-    inputMessage: { title: 'Quantity', text: 'Enter 1 to 100 units.' },
-    errorAlert: { style: 'stop', title: 'Invalid quantity', message: 'Choose a whole number from 1 to 100.' },
+    operator: 'between', value: 1, value2: 10, allowBlank: false,
+    inputMessage: { title: 'Quantity', text: 'Enter a whole number from 1 to 10.' },
+    errorAlert: { style: 'stop', title: 'Quantity', message: 'Choose a whole number from 1 to 10.' },
   },
   {
-    type: 'list', columnIds: ['status'], rows: { start: 0, end: 4 },
+    type: 'list', columnIds: ['status'], rows: { start: 0, end: 1 },
     values: ['Open', 'Closed'],
+    errorAlert: { style: 'warning', title: 'Status', message: 'This status is outside the list. Keep it?' },
   },
 ];
 

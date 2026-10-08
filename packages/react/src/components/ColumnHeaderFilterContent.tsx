@@ -45,9 +45,10 @@ export interface IColumnHeaderFilterProps {
 
 // ---- Condition Filter Content ----
 
-const conditionContainerStyle: React.CSSProperties = { padding: '16px', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 220 };
-const conditionRowStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 };
-const conditionOperandsStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 };
+const conditionContainerStyle: React.CSSProperties = { padding: '16px', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 };
+const conditionRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 };
+const conditionSelectStyle: React.CSSProperties = { flex: '0 1 55%', minWidth: 0 };
+const conditionOperandsStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, flex: 1, minWidth: 0 };
 const conditionInputStyle: React.CSSProperties = { flex: 1, minWidth: 0 };
 const conditionJoinStyle: React.CSSProperties = { display: 'flex', gap: 12, fontSize: 12 };
 const conditionJoinLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 4 };
@@ -117,6 +118,7 @@ export const ConditionFilterContent: React.FC<ConditionFilterContentProps> = ({
       <div style={conditionRowStyle} data-ogrid-condition={index + 1}>
         <select
           className={classNames?.select}
+          style={conditionSelectStyle}
           aria-label={`${prefix} ${index + 1}`}
           value={draft.operator}
           onChange={(e) => onDraftChange(index, { operator: e.target.value as ConditionOperator | '' })}
