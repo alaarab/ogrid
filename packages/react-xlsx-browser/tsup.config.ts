@@ -1,15 +1,14 @@
 import { defineConfig } from 'tsup';
 
 // Self-contained browser ESM. Inlines React, ReactDOM, ExcelJS, and every
-// @alaarab/ogrid-* dep so no-bundler consumers can drop the file in a
-// static vendor/ dir and `import()` it directly. ~1.5 MB raw / ~500 KB
-// gzipped — pays for itself by removing the consumer's need to bundle
-// the transitive React + xlsx graph themselves.
+// @alaarab/ogrid-* dep so no-bundler consumers can copy dist/ into a
+// static vendor/ directory and import the entry directly. Optional UI and
+// media passthrough remain separate chunks, without external dependencies.
 export default defineConfig({
   entry: { 'ogrid-xlsx': 'src/index.ts' },
   format: ['esm'],
   outDir: 'dist',
-  splitting: false,
+  splitting: true,
   treeshake: true,
   clean: false,
   // Types are copied from @alaarab/ogrid-react-xlsx by scripts/copy-types.mjs.

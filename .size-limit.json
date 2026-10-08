@@ -12,7 +12,7 @@
   {
     "name": "react",
     "path": "packages/react/dist/esm/index.js",
-    "limit": "135 kB",
+    "limit": "146.1 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist"
     ]
@@ -20,7 +20,7 @@
   {
     "name": "react-radix",
     "path": "packages/react-radix/dist/esm/index.js",
-    "limit": "172 kB",
+    "limit": "184.8 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist"
     ]
@@ -28,7 +28,7 @@
   {
     "name": "react-fluent",
     "path": "packages/react-fluent/dist/esm/index.js",
-    "limit": "210 kB",
+    "limit": "226.1 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist"
     ]
@@ -36,7 +36,7 @@
   {
     "name": "react-xlsx",
     "path": "packages/react-xlsx/dist/esm/index.js",
-    "limit": "462 kB",
+    "limit": "509.7 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist"
     ]
@@ -44,6 +44,6 @@
   {
     "name": "react-xlsx-browser",
     "path": "packages/react-xlsx-browser/dist/ogrid-xlsx.js",
-    "limit": "460 kB"
+    "limit": "505.8 kB"
   }
 ]

@@ -21,7 +21,7 @@ Two packages ship this:
 | Package | When to use |
 |---|---|
 | [`@alaarab/ogrid-react-xlsx`](https://www.npmjs.com/package/@alaarab/ogrid-react-xlsx) | React apps with a bundler (Vite, Next.js, Webpack, etc.). |
-| [`@alaarab/ogrid-react-xlsx-browser`](https://www.npmjs.com/package/@alaarab/ogrid-react-xlsx-browser) | Static HTML pages, SharePoint Framework drops, or any no-bundler context. One self-contained ESM file. |
+| [`@alaarab/ogrid-react-xlsx-browser`](https://www.npmjs.com/package/@alaarab/ogrid-react-xlsx-browser) | Static HTML pages, SharePoint Framework drops, or any no-bundler context. Self-contained ESM with local lazy chunks. |
 
 Both expose the same component surface — `XlsxWorkbookGrid`, `XlsxGrid`, and an imperative `mount()` helper.
 
@@ -206,18 +206,19 @@ Supported formats: `.xlsx`, `.csv`, `.tsv` (backed by ExcelJS).
 
 ## Browser bundle (no bundler)
 
-For SharePoint Framework, static HTML, or any page that can't (or won't) run a JS bundler, install `@alaarab/ogrid-react-xlsx-browser`. It's a single ESM file — `dist/ogrid-xlsx.js` — with React, ReactDOM, ExcelJS, and every `@alaarab/ogrid-*` dep inlined. ~1.5MB minified, gzipped well by any HTTP server.
+For SharePoint Framework, static HTML, or any page that can't (or won't) run a JS bundler, install `@alaarab/ogrid-react-xlsx-browser`. Its entry is `dist/ogrid-xlsx.js`, with React, ReactDOM, ExcelJS and all OGrid dependencies included. Optional UI, drag behavior and media live in sibling chunks loaded on demand; no package imports or bundler are needed.
 
 ```bash
 npm i @alaarab/ogrid-react-xlsx-browser
 ```
 
-Copy the two output files into a `vendor/` directory you serve statically:
+Copy every `.js` and `.css` file from `dist/` into the same `vendor/` directory you serve statically:
 
 ```
 vendor/
   ogrid-xlsx.js
   ogrid-xlsx.css
+  ...other .js and .css chunks from dist/
 ```
 
 Then drop this into any HTML page:

@@ -1,11 +1,11 @@
 /** Runtime check of the shipped no-bundler ESM and CSS. Run after turbo build. */
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { chromium } from '@playwright/test';
 
 const dist = new URL('../packages/react-xlsx-browser/dist/', import.meta.url);
-const assets = new Map(await Promise.all(['ogrid-xlsx.js', 'ogrid-xlsx.css'].map(async name => [ `/${name}`, await readFile(new URL(name, dist)) ])));
+const assets = new Map(await Promise.all((await readdir(dist)).filter(name => /\.(js|css)$/.test(name)).map(async name => [ `/${name}`, await readFile(new URL(name, dist)) ])));
 const server = createServer((request, response) => {
   if (request.url === '/') {
     response.setHeader('content-type', 'text/html');
