@@ -18,6 +18,8 @@ import ExcelJS from 'exceljs';
 import type { IColumnDef } from '@alaarab/ogrid-core';
 import { adjustFormulaReferences, parseCellRef, tokenize } from '@alaarab/ogrid-core/formula';
 import { normalizeFormula, rebaseFormulaRows } from './formulaReferences';
+import type { XlsxCellStyle } from './cellStyles';
+import type { IMergedCell } from './gridAdapter';
 
 /**
  * Output of sheetToGridData. Feeds straight into <OGrid> as
@@ -35,6 +37,56 @@ export interface SheetGridData {
   truncated?: { rowCount: number; columnCount: number };
   /** CSV parsing stopped at a load limit; the original extent is unknown. */
   parseTruncated?: boolean;
+  /**
+   * Everything about the sheet besides values: per-cell styles, column widths,
+   * row heights, merges, frozen panes and list validations, keyed the way the
+   * grid addresses cells (row id = `__rowIdx`, column id = column letter).
+   */
+  formatting: SheetFormatting;
+}
+
+/** Key of a cell in {@link SheetFormatting.styles}. */
+export function cellKey(rowId: string | number, columnId: string): string {
+  return `${rowId}:${columnId}`;
+}
+
+/** Non-value sheet state read by {@link sheetToGridData}. */
+export interface SheetFormatting {
+  /** Row 1 was promoted to column names (data row 0 is sheet row 2). */
+  headerPromoted: boolean;
+  /** Styles of loaded data cells, by {@link cellKey}. Cells with the default look are absent. */
+  styles: Map<string, XlsxCellStyle>;
+  /** Explicit column widths in Excel character units, by column id. */
+  columnWidths: Record<string, number>;
+  /** The sheet's default column width in Excel character units. */
+  defaultColumnWidth: number;
+  /** Explicit data-row heights in points, by row id. Round-trip only (grid rows are uniform). */
+  rowHeights: Map<number, number>;
+  /** Merged blocks whose top-left cell is a loaded data cell. */
+  merges: IMergedCell[];
+  /** Merges the grid cannot show (they touch the promoted header row), as A1 ranges. Kept for export. */
+  unmappedMerges: string[];
+  /** Frozen panes in grid terms: data rows below the header, and leading columns. */
+  frozen: { rows: number; columns: number };
+  /** Allowed values of list validations that cover a column's every loaded data row. */
+  listValidations: Record<string, string[]>;
+  /** Sheet tab color as CSS hex, when set. */
+  tabColor?: string;
+}
+
+/** Excel stores widths in character units of the default font's max digit width (7px for Calibri 11). */
+const MAX_DIGIT_WIDTH_PX = 7;
+/** Excel's default column width as stored in files (8.43 characters + padding = 64px). */
+export const DEFAULT_COLUMN_WIDTH_CHARS = 9.140625;
+
+/** Excel column width (characters, as stored in the file) → screen pixels. */
+export function columnWidthToPx(chars: number): number {
+  return Math.trunc(((256 * chars + Math.trunc(128 / MAX_DIGIT_WIDTH_PX)) / 256) * MAX_DIGIT_WIDTH_PX);
+}
+
+/** Screen pixels → Excel column width (characters, as stored in the file). */
+export function pxToColumnWidth(px: number): number {
+  return Math.trunc((Math.max(0, px) / MAX_DIGIT_WIDTH_PX) * 256) / 256;
 }
 
 /** Row shape — keyed by column letter (A, B, C, ..., AA, AB, ...).
@@ -297,7 +349,7 @@ export function sheetToGridData(
   sheet: ExcelJS.Worksheet | null | undefined,
   options: SheetToGridDataOptions = {},
 ): SheetGridData {
-  if (!sheet) return { columns: [], rows: [], initialFormulas: [] };
+  if (!sheet) return { columns: [], rows: [], initialFormulas: [], formatting: emptyFormatting() };
 
   // Find the populated extent by visiting only cells that exist. The
   // declared dimensions (rowCount/columnCount) come from the file and can be
@@ -314,7 +366,7 @@ export function sheetToGridData(
     });
     if (rowHasValue && rowNumber > usedRows) usedRows = rowNumber;
   });
-  if (!usedCols || !usedRows) return { columns: [], rows: [], initialFormulas: [] };
+  if (!usedCols || !usedRows) return { columns: [], rows: [], initialFormulas: [], formatting: emptyFormatting(sheet) };
 
   const maxCols = sanitizeLimit(options.maxCols, DEFAULT_MAX_COLS);
   const maxRows = sanitizeLimit(options.maxRows, DEFAULT_MAX_ROWS);
@@ -336,6 +388,8 @@ export function sheetToGridData(
     const out = matrix[rowNumber - 1] as unknown[];
     row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
       if (colNumber > colCount) return;
+      // Merged-away cells report their master's value; the merge model shows it once.
+      if (cell.type === ExcelJS.ValueType.Merge) return;
       out[colNumber - 1] = readCellValue(cell, colNumber - 1, rowNumber - 1, initialFormulas);
     });
   });
@@ -380,22 +434,30 @@ export function sheetToGridData(
     else if (allBool) types[c] = 'boolean';
   }
 
-  // Build columns + rows keyed by letter. Explicit defaultWidth + minWidth
-  // are critical: without them, ogrid sizes columns to fit the widest cell
+  const formatting = readFormatting(sheet, promote, dataMatrix.length, colCount);
+
+  // Build columns + rows keyed by letter. An explicit defaultWidth is
+  // critical: without it, ogrid sizes columns to fit the widest cell
   // content, which on a sheet with one long paragraph cell (e.g. an
   // affidavit body) blows the column out to thousands of pixels and
-  // forces a giant horizontal scrollbar. 120px matches the canonical
-  // SpreadsheetDemo defaults; cells that overflow truncate with ellipsis.
+  // forces a giant horizontal scrollbar. Widths come from the sheet (or its
+  // default column width, 64px in a stock workbook); overflow truncates.
   const columns: IColumnDef<SheetRow>[] = [];
   for (let c = 0; c < colCount; c++) {
     const letter = indexToColumnLetter(c);
+    const width = columnWidthToPx(formatting.columnWidths[letter] ?? formatting.defaultColumnWidth);
+    const listValues = formatting.listValidations[letter];
+    const hidden = sheet.columns?.[c]?.hidden === true;
     columns.push({
       columnId: letter,
       name: headerNames ? (headerNames[c] ?? letter) : letter,
       type: types[c],
       sortable: true,
-      defaultWidth: 120,
-      minWidth: 60,
+      defaultWidth: Math.max(width, 24),
+      minWidth: 24,
+      ...(c < formatting.frozen.columns ? { pinned: 'left' as const } : {}),
+      ...(hidden ? { defaultVisible: false } : {}),
+      ...(listValues ? { cellEditor: 'select', cellEditorParams: { values: listValues } } : {}),
       // valueGetter omitted — ogrid reads row[columnId] by default.
     });
   }
@@ -426,7 +488,7 @@ export function sheetToGridData(
     : initialFormulas;
 
   return {
-    columns, rows, initialFormulas: adjustedFormulas,
+    columns, rows, initialFormulas: adjustedFormulas, formatting,
     ...(truncated ? { truncated } : {}),
     ...(truncatedCsvSheets.has(sheet) ? { parseTruncated: true } : {}),
   };
@@ -553,3 +615,189 @@ function indexToColumnLetter(n: number): string {
 export function listSheets(workbook: ExcelJS.Workbook): string[] {
   return workbook.worksheets.map((w) => w.name);
 }
+
+// ---- Formatting -------------------------------------------------------------
+
+function emptyFormatting(sheet?: ExcelJS.Worksheet): SheetFormatting {
+  const tabColor = sheet ? tabColorOf(sheet) : undefined;
+  return {
+    headerPromoted: false,
+    styles: new Map(),
+    columnWidths: {},
+    defaultColumnWidth: sheet ? defaultColumnWidthOf(sheet) : DEFAULT_COLUMN_WIDTH_CHARS,
+    rowHeights: new Map(),
+    merges: [],
+    unmappedMerges: [],
+    frozen: { rows: 0, columns: 0 },
+    listValidations: {},
+    ...(tabColor ? { tabColor } : {}),
+  };
+}
+
+function defaultColumnWidthOf(sheet: ExcelJS.Worksheet): number {
+  const w = sheet.properties?.defaultColWidth;
+  return typeof w === 'number' && w > 0 ? w : DEFAULT_COLUMN_WIDTH_CHARS;
+}
+
+/** A sheet's tab color as CSS hex, when set. */
+export function tabColorOf(sheet: ExcelJS.Worksheet): string | undefined {
+  const argb = (sheet.properties?.tabColor as { argb?: string } | undefined)?.argb;
+  return typeof argb === 'string' && /^[0-9A-Fa-f]{6,8}$/.test(argb) ? `#${argb.slice(-6).toUpperCase()}` : undefined;
+}
+
+/**
+ * True when a style looks like the workbook default: no fill, border,
+ * alignment, protection or number format, and a plain default font. Those
+ * cells are left out of the style map; export never rewrites them.
+ */
+export function isDefaultStyle(style: XlsxCellStyle | undefined): boolean {
+  if (!style) return true;
+  for (const [key, value] of Object.entries(style)) {
+    if (value === undefined || value === null) continue;
+    if (key === 'numFmt') {
+      if (value !== 'General' && value !== '') return false;
+      continue;
+    }
+    if (key === 'fill') {
+      if ((value as ExcelJS.Fill).type !== 'pattern' || (value as ExcelJS.FillPattern).pattern !== 'none') return false;
+      continue;
+    }
+    if (key === 'border' || key === 'alignment' || key === 'protection') {
+      if (Object.values(value as object).some((v) => v !== undefined && v !== null && v !== false)) return false;
+      continue;
+    }
+    if (key === 'font') {
+      const font = value as Partial<ExcelJS.Font>;
+      if (font.bold || font.italic || font.underline || font.strike || font.outline || font.vertAlign) return false;
+      if (font.size !== undefined && font.size !== 11) return false;
+      if (font.name && !/^(calibri|aptos( narrow)?)$/i.test(font.name)) return false;
+      const color = font.color as (Partial<ExcelJS.Color> & { tint?: number }) | undefined;
+      if (color && !(color.theme === 1 && !color.tint) && color.argb !== 'FF000000') return false;
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
+interface MergeRange { top: number; left: number; bottom: number; right: number; range?: string }
+
+function readFormatting(sheet: ExcelJS.Worksheet, promoted: boolean, dataRows: number, colCount: number): SheetFormatting {
+  const formatting = emptyFormatting(sheet);
+  formatting.headerPromoted = promoted;
+  const headerOffset = promoted ? 1 : 0;
+  const lastSheetRow = dataRows + headerOffset;
+
+  // Cell styles, including styled cells that hold no value (fills, borders).
+  for (let r = headerOffset + 1; r <= lastSheetRow; r++) {
+    const row = sheet.findRow(r);
+    if (!row) continue;
+    const rowId = r - 1 - headerOffset;
+    if (typeof row.height === 'number' && row.height > 0) formatting.rowHeights.set(rowId, row.height);
+    const last = Math.min(row.cellCount, colCount);
+    for (let c = 1; c <= last; c++) {
+      const cell = row.findCell(c);
+      if (!cell) continue;
+      const style = cell.style as XlsxCellStyle | undefined;
+      if (!isDefaultStyle(style)) formatting.styles.set(cellKey(rowId, indexToColumnLetter(c - 1)), style as XlsxCellStyle);
+    }
+  }
+
+  for (const [i, column] of (sheet.columns ?? []).entries()) {
+    if (i >= colCount) break;
+    if (typeof column?.width === 'number' && column.width > 0) formatting.columnWidths[indexToColumnLetter(i)] = column.width;
+  }
+
+  // Merges. ExcelJS keeps them as Range objects keyed by master address.
+  const merges = Object.values((sheet as unknown as { _merges?: Record<string, MergeRange | undefined> })._merges ?? {});
+  for (const m of merges) {
+    if (!m) continue;
+    if (m.top <= headerOffset || m.top > lastSheetRow || m.left > colCount) {
+      formatting.unmappedMerges.push(`${indexToColumnLetter(m.left - 1)}${m.top}:${indexToColumnLetter(m.right - 1)}${m.bottom}`);
+      continue;
+    }
+    const rowSpan = Math.min(m.bottom, lastSheetRow) - m.top + 1;
+    const colSpan = Math.min(m.right, colCount) - m.left + 1;
+    formatting.merges.push({
+      rowId: m.top - 1 - headerOffset,
+      columnId: indexToColumnLetter(m.left - 1),
+      ...(rowSpan > 1 ? { rowSpan } : {}),
+      ...(colSpan > 1 ? { colSpan } : {}),
+    });
+  }
+
+  // Frozen panes: ySplit counts sheet rows, so the promoted header is one of them.
+  const view = sheet.views?.find((v) => v.state === 'frozen') as ExcelJS.WorksheetViewFrozen | undefined;
+  if (view) {
+    formatting.frozen = {
+      rows: Math.max(0, Math.min((view.ySplit ?? 0) - headerOffset, dataRows)),
+      columns: Math.max(0, Math.min(view.xSplit ?? 0, colCount)),
+    };
+  }
+
+  // List validations, approximated per column: a column gets a dropdown
+  // editor only when one list rule covers every loaded data row in it.
+  if (dataRows > 0) {
+    for (let c = 1; c <= colCount; c++) {
+      const letter = indexToColumnLetter(c - 1);
+      const first = validationAt(sheet, `${letter}${headerOffset + 1}`);
+      const formula = first?.type === 'list' ? first.formulae?.[0] : undefined;
+      if (formula === undefined) continue;
+      let covered = true;
+      for (let r = headerOffset + 2; r <= lastSheetRow && covered; r++) {
+        const dv = validationAt(sheet, `${letter}${r}`);
+        covered = dv?.type === 'list' && dv.formulae?.[0] === formula;
+      }
+      if (!covered) continue;
+      const values = listValues(sheet, String(formula));
+      if (values.length) formatting.listValidations[letter] = values;
+    }
+  }
+  return formatting;
+}
+
+/** ExcelJS reads validations into a per-address map (missing from its typings). */
+function validationAt(sheet: ExcelJS.Worksheet, address: string): ExcelJS.DataValidation | undefined {
+  return (sheet as unknown as { dataValidations?: { find(a: string): ExcelJS.DataValidation | undefined } })
+    .dataValidations?.find(address);
+}
+
+/** Values of a list validation: an inline "a,b,c" list, a range (optionally on another sheet), or a defined name. */
+export function listValues(sheet: ExcelJS.Worksheet, formula: string): string[] {
+  const f = formula.trim().replace(/^=/, '');
+  if (f.startsWith('"')) {
+    return f.slice(1, f.endsWith('"') ? -1 : undefined).replace(/""/g, '"').split(',').map((v) => v.trim()).filter((v) => v !== '');
+  }
+  const wb = sheet.workbook;
+  let ref = f;
+  if (/^[A-Za-z_\\][\w.]*$/.test(f) && !/^\$?[A-Za-z]{1,3}\$?\d+$/.test(f)) {
+    ref = wb.definedNames?.getRanges(f)?.ranges?.[0] ?? '';
+    if (!ref) return [];
+  }
+  const bang = ref.lastIndexOf('!');
+  const sheetName = bang >= 0 ? ref.slice(0, bang).replace(/^'|'$/g, '').replace(/''/g, "'") : undefined;
+  const target = sheetName ? wb.getWorksheet(sheetName) : sheet;
+  const area = (bang >= 0 ? ref.slice(bang + 1) : ref).replace(/\$/g, '');
+  const m = /^([A-Z]{1,3})(\d+)(?::([A-Z]{1,3})(\d+))?$/i.exec(area);
+  if (!target || !m) return [];
+  const c1 = columnLetterToNumber(m[1] as string);
+  const r1 = Number(m[2]);
+  const c2 = m[3] ? columnLetterToNumber(m[3]) : c1;
+  const r2 = m[4] ? Number(m[4]) : r1;
+  const out: string[] = [];
+  for (let r = Math.min(r1, r2); r <= Math.max(r1, r2) && out.length < 1000; r++) {
+    for (let c = Math.min(c1, c2); c <= Math.max(c1, c2); c++) {
+      const v = normalizeCellValue(target.findRow(r)?.findCell(c)?.value);
+      if (v !== '' && v != null) out.push(v instanceof Date ? v.toISOString().slice(0, 10) : String(v));
+    }
+  }
+  return out;
+}
+
+function columnLetterToNumber(letters: string): number {
+  let n = 0;
+  for (const ch of letters.toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n;
+}
+
+export { indexToColumnLetter };
