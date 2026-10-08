@@ -235,6 +235,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
             role="menuitem"
             tabIndex={-1}
             className={classNames?.item}
+            data-ogrid-menu-action={item.id}
             disabled={item.disabled}
             onClick={() => {
               handlers[item.id]?.();

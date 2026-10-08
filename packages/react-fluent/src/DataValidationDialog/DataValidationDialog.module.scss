@@ -1,0 +1,19 @@
+@use '../../../react/src/styles/validation-form' as form;
+.surface {
+  @include form.content;
+  width: min(520px, calc(100vw - 32px));
+  :global([data-ogrid-validation-form]) {
+    select, input:not([type='checkbox']), textarea {
+      color: var(--colorNeutralForeground1, var(--ogrid-fg));
+      background: var(--colorNeutralBackground1, var(--ogrid-bg));
+      border-color: var(--colorNeutralStroke1, var(--ogrid-control-border));
+      border-bottom-color: var(--colorNeutralStrokeAccessible, var(--ogrid-control-border));
+      border-radius: var(--borderRadiusMedium, 4px);
+      &:focus-visible { outline-color: var(--colorBrandStroke1, var(--ogrid-ring)); }
+    }
+  }
+}
+.tabs { margin-bottom: 20px; }
+.footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--colorNeutralStroke2, var(--ogrid-border)); }
+.clear { margin-right: auto; }
+.message { margin: 8px 0 16px; line-height: 1.6; }

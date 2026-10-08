@@ -1,13 +1,15 @@
+@use '../../../react/src/styles/surface' as surface;
 // OGrid Fluent – Find & Replace panel (floats at the grid's top-right)
 
 .panel {
+  @include surface.elevated;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   box-sizing: border-box;
-  width: 400px;
+  width: 440px;
   max-width: 100%;
-  padding: 6px;
+  padding: 12px;
   color: var(--ogrid-fg, #242424);
   background: var(--ogrid-bg, #fff);
   border: 1px solid var(--ogrid-border, #d1d1d1);
@@ -32,6 +34,7 @@
 }
 
 .status {
+  font-size: 12px;
   flex-shrink: 0;
   min-width: 56px;
   color: var(--ogrid-muted, #616161);
@@ -43,5 +46,5 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px 8px;
+  gap: 8px 12px;
 }

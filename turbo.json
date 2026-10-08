@@ -25,6 +25,8 @@
         "$TURBO_ROOT$/scripts/add-use-client.mjs",
         "$TURBO_ROOT$/scripts/write-node-entry.mjs",
         "$TURBO_ROOT$/scripts/single-stylesheet.mjs",
+        "$TURBO_ROOT$/scripts/lazy-stylesheet.mjs",
+        "$TURBO_ROOT$/scripts/scoped-classname.mjs",
         "$TURBO_ROOT$/scripts/react-jsx/**"
       ],
       "outputs": [

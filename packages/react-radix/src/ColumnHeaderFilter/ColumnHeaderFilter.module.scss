@@ -1,3 +1,4 @@
+@use '../../../react/src/styles/surface' as surface;
 // OGrid Radix – column header filter (minimal default)
 
 .columnHeader {
@@ -97,23 +98,20 @@
 
 // Popover content (Radix Popover.Content)
 .popoverContent {
+  @include surface.elevated;
   z-index: var(--ogrid-z-popover, 10001);
   box-sizing: border-box;
   width: 320px;
   max-width: min(calc(100vw - 24px), var(--radix-popover-content-available-width));
   max-height: min(calc(100dvh - 24px), var(--radix-popover-content-available-height));
   color: var(--ogrid-fg, #242424);
-  font-family: var(--ogrid-font, inherit);
   background: var(--ogrid-bg, #fff);
-  border: 1px solid var(--ogrid-border, #d1d1d1);
-  border-radius: var(--ogrid-radius-xl, 8px);
-  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
   overflow: auto;
   overscroll-behavior: contain;
 }
 
 .popoverHeader {
-  padding: 10px 14px;
+  padding: 12px 16px;
   font-size: 12px;
   font-weight: 600;
   color: var(--ogrid-muted, #616161);
@@ -242,7 +240,7 @@
 }
 
 .personOption {
-  padding: 8px 12px;
+  padding: 12px 16px;
   cursor: pointer;
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
@@ -258,7 +256,7 @@
 }
 
 .selectedUserSection {
-  padding: 8px 12px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
 }
 
@@ -307,7 +305,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 12px 16px;
   border-top: 1px solid var(--ogrid-border, #e0e0e0);
   background: var(--ogrid-bg-subtle, #f5f5f5);
 }
@@ -392,3 +390,29 @@
   vertical-align: super;
   color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
 }
+
+// Shared native controls retain the same semantics in both kit popovers.
+.popoverContent :global([data-ogrid-condition]) {
+  select, input {
+    @include surface.control;
+    width: 100%;
+    font-size: 13px;
+  }
+}
+.popoverContent :global([data-ogrid-condition-join]) {
+  align-self: flex-start;
+  padding: 4px;
+  border-radius: var(--ogrid-radius, 6px);
+  background: var(--ogrid-bg-subtle, #f3f3f3);
+  label {
+    position: relative;
+    padding: 4px 12px;
+    border-radius: var(--ogrid-radius-sm, 4px);
+    cursor: pointer;
+    &:has(input:checked) { background: var(--ogrid-bg, #fff); box-shadow: var(--ogrid-shadow-sm, 0 1px 3px rgba(0,0,0,0.12)); font-weight: 600; }
+    &:has(input:focus-visible) { outline: 2px solid var(--ogrid-ring, #217346); outline-offset: 2px; }
+    input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  }
+}
+.clearButton, .applyButton { @include surface.focus-ring; min-height: 32px; font: inherit; font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .clearButton, .applyButton { transition: none; } }

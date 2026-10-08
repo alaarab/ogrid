@@ -98,37 +98,23 @@ const renameInputStyle: React.CSSProperties = {
   fontSize: 12,
   lineHeight: '20px',
   margin: '2px 4px',
-  padding: '0 4px',
+  padding: '4px 8px',
   width: 120,
+  minHeight: 32,
   border: '1px solid var(--ogrid-accent, #0078d4)',
-  borderRadius: 2,
+  borderRadius: 'var(--ogrid-radius, 6px)',
   color: 'var(--ogrid-fg, #242424)',
   background: 'var(--ogrid-bg, #fff)',
 };
 
+// Fixed placement stays inline; both kits share the menu's visual rules.
 const menuStyle: React.CSSProperties = {
   position: 'fixed',
   zIndex: 'var(--ogrid-z-popover, 10001)' as unknown as number,
-  minWidth: 160,
-  padding: '4px 0',
-  background: 'var(--ogrid-bg, #fff)',
-  color: 'var(--ogrid-fg, #242424)',
-  border: '1px solid var(--ogrid-border, #e0e0e0)',
-  borderRadius: 4,
-  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.16)',
-  fontSize: 12,
 };
 
 const menuItemStyle: React.CSSProperties = {
-  display: 'block',
-  width: '100%',
-  textAlign: 'left',
-  background: 'none',
-  border: 'none',
-  padding: '6px 12px',
-  font: 'inherit',
-  color: 'inherit',
-  cursor: 'pointer',
+  width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer',
 };
 
 const menuDividerStyle: React.CSSProperties = { height: 1, margin: '4px 0', border: 'none', background: 'var(--ogrid-border, #e0e0e0)' };
@@ -139,7 +125,7 @@ const swatchStyle: React.CSSProperties = {
   width: 18,
   height: 18,
   padding: 0,
-  borderRadius: 2,
+  borderRadius: 'var(--ogrid-radius, 6px)',
   border: '1px solid var(--ogrid-border, #e0e0e0)',
   cursor: 'pointer',
 };
@@ -323,6 +309,7 @@ export function SheetTabs({
                 key={sheet.id}
                 ref={renameInputRef}
                 style={renameInputStyle}
+                data-ogrid-sheet-rename=""
                 aria-label="Sheet name"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -448,11 +435,12 @@ function SheetTabMenu(props: SheetTabMenuProps): React.ReactElement {
       ref={menuRef}
       role="menu"
       aria-label={`${name} sheet options`}
+      data-ogrid-sheet-menu=""
       style={{ ...menuStyle, left: position.left, top: position.top }}
       onKeyDown={onKeyDown}
     >
       {onRename && (
-        <button type="button" role="menuitem" tabIndex={-1} style={menuItemStyle} onClick={() => run(() => onRename(sheetId), false)}>
+        <button type="button" role="menuitem" tabIndex={-1} data-ogrid-menu-action="rename" style={menuItemStyle} onClick={() => run(() => onRename(sheetId), false)}>
           Rename
         </button>
       )}
@@ -467,7 +455,7 @@ function SheetTabMenu(props: SheetTabMenuProps): React.ReactElement {
         </>
       )}
       {onDelete && (
-        <button type="button" role="menuitem" tabIndex={-1} style={menuItemStyle} disabled={sheets.length <= 1} onClick={() => run(() => onDelete(sheetId), false)}>
+        <button type="button" role="menuitem" tabIndex={-1} data-ogrid-menu-action="deleteSheet" style={menuItemStyle} disabled={sheets.length <= 1} onClick={() => run(() => onDelete(sheetId), false)}>
           Delete
         </button>
       )}

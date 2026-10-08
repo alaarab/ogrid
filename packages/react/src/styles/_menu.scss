@@ -1,0 +1,36 @@
+@use 'surface' as surface;
+
+%menu {
+  @include surface.elevated;
+  min-width: 200px;
+  padding: 4px;
+  color: var(--ogrid-fg);
+  background: var(--ogrid-bg);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+%item {
+  @include surface.focus-ring;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: var(--ogrid-radius);
+  font: inherit;
+  line-height: 20px;
+  white-space: nowrap;
+  &:hover:not(:disabled), &:focus-visible { background: var(--ogrid-bg-hover); }
+  &:active:not(:disabled) { background: var(--ogrid-active-bg); }
+  &:disabled { opacity: 0.5; cursor: default; }
+  &[data-ogrid-menu-action^='delete'] {
+    color: var(--ogrid-danger);
+  }
+  &[aria-haspopup='menu']::after { content: '›' / ''; margin-left: auto; color: var(--ogrid-muted); }
+  @media (pointer: coarse) { min-height: 44px; }
+}
+
+@mixin menu { @extend %menu; }
+@mixin item { @extend %item; }

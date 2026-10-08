@@ -69,6 +69,7 @@ function NoteEditor({
   }, []);
   return (
     <div className={styles.cellNote} role="dialog" aria-label={isNew ? 'New note' : 'Edit note'}>
+      <div className={styles.cellNoteAuthor}>{isNew ? 'New note' : 'Edit note'}</div>
       <textarea
         ref={textareaRef}
         className={styles.cellNoteTextarea}

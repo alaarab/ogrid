@@ -1,4 +1,7 @@
 import { defineConfig } from 'tsup';
+import { compile } from 'sass';
+import { scopedClassName, compactModules } from '../../scripts/scoped-classname.mjs';
+import { lazyStylesheet } from '../../scripts/lazy-stylesheet.mjs';
 import { sassPlugin, postcssModules } from 'esbuild-sass-plugin';
 import { singleStylesheet } from '../../scripts/single-stylesheet.mjs';
 
@@ -20,6 +23,9 @@ export default defineConfig({
     options.jsxImportSource = 'ogrid-react-jsx';
     options.alias = { ...options.alias, 'ogrid-react-jsx': '../../scripts/react-jsx' };
   },
-  esbuildPlugins: [sassPlugin({ transform: postcssModules({ generateScopedName: 'ogrid-fluent__[name]__[local]' }) }), singleStylesheet()],
+  esbuildPlugins: [
+    // Keep modal-only SCSS with the lazy dialog, including in browser consumers.
+    lazyStylesheet(compile, compactModules(postcssModules({ generateScopedName: scopedClassName('f', new URL('./src/', import.meta.url)) }))),
+    sassPlugin({ transform: compactModules(postcssModules({ generateScopedName: scopedClassName('f', new URL('./src/', import.meta.url)) })) }), singleStylesheet()],
   outExtension: () => ({ js: '.js' }),
 });

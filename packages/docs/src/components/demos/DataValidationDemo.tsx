@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { FluentProvider, webLightTheme, webDarkTheme } from '@fluentui/react-components';
-import { useColorMode } from '@docusaurus/theme-common';
 import type { IColumnDef, IDataValidationRule, ICellValueChangedEvent } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 interface Row { id: number; product: string; quantity: number; status: string }
@@ -21,15 +20,19 @@ function ValidationGrid({ kit }: { kit: 'radix' | 'fluent' }) {
       onCellValueChanged={(e: ICellValueChangedEvent<Row>) => setData((prev) => prev.map((r) => r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r))} />
   </>;
 }
-function FluentValidationGrid() {
-  const { colorMode } = useColorMode();
-  return <FluentProvider theme={colorMode === 'dark' ? webDarkTheme : webLightTheme}><ValidationGrid kit="fluent" /></FluentProvider>;
-}
+// Docusaurus theme hooks belong to the optional Fluent preview, not the Radix demo.
+const FluentValidationGrid = lazy(async () => {
+  const { useColorMode } = await import('@docusaurus/theme-common');
+  return { default: function FluentValidationGrid() {
+    const { colorMode } = useColorMode();
+    return <FluentProvider theme={colorMode === 'dark' ? webDarkTheme : webLightTheme}><ValidationGrid kit="fluent" /></FluentProvider>;
+  } };
+});
 function Demo() {
   const [kit, setKit] = useState<'radix' | 'fluent'>('radix');
   return <>
     <div className="live-demo__controls"><label>UI kit <select aria-label="UI kit" value={kit} onChange={e => setKit(e.target.value as typeof kit)}><option value="radix">Radix</option><option value="fluent">Fluent</option></select></label></div>
-    {kit === 'fluent' ? <FluentValidationGrid /> : <ValidationGrid kit="radix" />}
+    {kit === 'fluent' ? <Suspense fallback={null}><FluentValidationGrid /></Suspense> : <ValidationGrid kit="radix" />}
   </>;
 }
 export default function DataValidationDemo() {

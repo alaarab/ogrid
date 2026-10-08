@@ -188,7 +188,7 @@ export function useRenderCellContent<T>(
             borderRight: sheetCol === spill.endCol ? '1px solid #4b89dc' : undefined,
           }} />}
           {circleInvalidData && rule && !validator.validate(rule, descriptor.displayValue, col.columnId, row) && (
-            <span role="img" data-validation-invalid="" aria-label="Invalid data" style={{ position: 'absolute', inset: 2, border: '2px solid #d13438', borderRadius: '50%', pointerEvents: 'none', zIndex: 2 }} />
+            <span role="img" data-validation-invalid="" aria-label="Invalid data" style={{ position: 'absolute', inset: 2, border: '2px solid var(--ogrid-invalid-color, var(--ogrid-danger, #d13438))', borderRadius: '50%', pointerEvents: 'none', zIndex: 2 }} />
           )}
           {descriptor.isActive && rule?.inputMessage && rule.inputMessage.show !== false && (
             <ValidationInputMessage message={rule.inputMessage} styles={styles} primitives={primitives} />

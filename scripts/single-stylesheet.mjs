@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 
 /** Esbuild includes lazy imports' CSS in the entry's CSS bundle. Ship that
  * complete stylesheet alone; JS chunks intentionally have no CSS loader.
+ * Modal-only CSS is embedded by lazyStylesheet and rendered with the dialog.
  * Check the build graph so a newly introduced lazy stylesheet cannot silently
  * escape the documented import (including in the no-bundler XLSX build).
  */

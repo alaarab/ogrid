@@ -1,0 +1,31 @@
+// One icon rule set for all menus, with no icon runtime.
+:global([data-ogrid-menu-action]) {
+  &::before {
+    content: '';
+    flex: 0 0 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+  }
+  &[data-ogrid-menu-action^='delete']::before, &[data-ogrid-menu-action='copy']::before, &[data-ogrid-menu-action='cut']::before, &[data-ogrid-menu-action^='paste']::before, &[data-ogrid-menu-action$='Note']::before, &[data-ogrid-menu-action='rename']::before {
+    background: currentColor;
+    mask-position: center;
+    mask-size: 16px;
+    mask-repeat: no-repeat;
+  }
+  &[data-ogrid-menu-action^='delete']::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round' d='M3 4.5h10M6 4V2.5h4V4M4 5l.5 8.5h7L12 5M6.5 7v4M9.5 7v4'/%3E%3C/svg%3E");
+  }
+  &[data-ogrid-menu-action='copy']::before, &[data-ogrid-menu-action^='paste']::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='black' stroke-width='1.25' stroke-linejoin='round' d='M5.5 5.5h8v8h-8zM10.5 5.5v-3h-8v8h3'/%3E%3C/svg%3E");
+  }
+  &[data-ogrid-menu-action^='insert']::before { content: '+' / ''; font-size: 18px; }
+  &[data-ogrid-menu-action$='Note']::before, &[data-ogrid-menu-action='rename']::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='black' stroke-width='1.25' stroke-linejoin='round' d='M3 2.5h10v7l-4 4H3zM9 13.5v-4h4M5.5 5h5M5.5 7.5h3'/%3E%3C/svg%3E");
+  }
+  &[data-ogrid-menu-action='undo']::before { content: '↶' / ''; font-size: 18px; }
+  &[data-ogrid-menu-action='redo']::before { content: '↷' / ''; font-size: 18px; }
+  &[data-ogrid-menu-action='cut']::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cg fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round'%3E%3Ccircle cx='4' cy='4' r='2'/%3E%3Ccircle cx='4' cy='12' r='2'/%3E%3Cpath d='M6 6l7 7M6 10l7-7'/%3E%3C/g%3E%3C/svg%3E");
+  }
+}
