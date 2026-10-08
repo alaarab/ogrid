@@ -20,6 +20,8 @@ export interface FormulaBarProps {
   formulaText: string;
   /** Whether the input is in editing mode. */
   isEditing: boolean;
+  /** Show the anchor formula in grey when a read-only spill child is active. */
+  spillChild?: boolean;
   /** Called when the user changes the input text. */
   onInputChange: (text: string) => void;
   /** Commit the formula bar value. */
@@ -44,6 +46,7 @@ export function FormulaBar({
   cellRef,
   formulaText,
   isEditing,
+  spillChild,
   onInputChange,
   onCommit,
   onCancel,
@@ -77,12 +80,14 @@ export function FormulaBar({
       <input
         ref={inputRef}
         type="text"
-        style={FORMULA_BAR_STYLES.input as React.CSSProperties}
+        style={{ ...FORMULA_BAR_STYLES.input as React.CSSProperties, ...(spillChild ? { color: 'var(--ogrid-muted-foreground, #808080)' } : {}) }}
+        data-spill-child={spillChild ? '' : undefined}
         value={formulaText}
         readOnly={!isEditing}
-        onChange={(e) => onInputChange(e.target.value)}
+        onChange={(e) => { if (!spillChild) onInputChange(e.target.value); }}
         {...assist.inputProps}
         onKeyDown={(e) => {
+          if (spillChild) return;
           if (isEditing && assist.handleKeyDown(e)) return;
           if (isEditing && e.key === 'F4' && formulaText.startsWith('=')) {
             // F4 cycles the reference at the caret: A1 -> $A$1 -> A$1 -> $A1 (Excel).

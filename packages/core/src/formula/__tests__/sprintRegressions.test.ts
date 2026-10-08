@@ -247,18 +247,20 @@ describe('T4 resource bounds', () => {
     expect(grid([[0, 2], [3, 4]]).calc('=MDETERM(A1:B2)')).toBe(-6);
     expect(grid().calc('=MDETERM(A1:L12)', 13)).toBe(0);
   });
-  it('F03: scalar matrix results read only the necessary entries', () => {
+  it('F03: matrix arrays preserve all results within the work limit', () => {
     const { engine, accessor } = grid([[1, 2, 3, 4, 5, 6], [0, 1, 0, 7, 8, 9], [0, 0, 1, 10, 11, 12]]);
     let reads = 0;
     const original = accessor.getCellValue;
     accessor.getCellValue = (c, r) => { reads++; return original(c, r); };
     engine.setFormula(10, 0, '=TRANSPOSE(A1:C3)', accessor);
     expect(engine.getValue(10, 0)).toBe(1);
-    expect(reads).toBe(1);
+    expect(engine.getValue(12, 2)).toBe(1);
+    expect(reads).toBeLessThan(30);
     reads = 0;
     engine.setFormula(10, 0, '=MMULT(A1:C3,D1:F3)', accessor);
     expect(engine.getValue(10, 0)).toBe(48);
-    expect(reads).toBe(6);
+    expect(engine.getValue(12, 2)).toBe(12);
+    expect(reads).toBeLessThan(50);
     expect(grid([[2, 0], [0, 4]]).calc('=MINVERSE(A1:B2)')).toBe(0.5);
     error(engine.setFormula(65, 0, '=MINVERSE(A1:BM65)', accessor).updatedCells[0]?.newValue, '#VALUE!');
   });

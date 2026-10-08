@@ -237,6 +237,12 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
 
       const rows = Math.abs(rangeArg.end.row - rangeArg.start.row) + 1;
       const cols = Math.abs(rangeArg.end.col - rangeArg.start.col) + 1;
+      if (Math.trunc(rowNum) === 0 || Math.trunc(colNum) === 0) {
+        if (rowNum < 0 || rowNum > rows || colNum < 0 || colNum > cols) return new FormulaError('#REF!', 'INDEX out of bounds');
+        const data = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
+        const selected = rowNum === 0 ? data : [data[Math.trunc(rowNum) - 1] ?? []];
+        return colNum === 0 ? selected : selected.map(row => [row[Math.trunc(colNum) - 1]]);
+      }
       const horizontal = rows === 1 && colArg === undefined;
       const r = horizontal ? 0 : Math.trunc(rowNum) - 1;
       const c = Math.trunc(horizontal ? rowNum : colNum) - 1;
@@ -322,16 +328,20 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       if (lookupValue instanceof FormulaError) return lookupValue;
       // lookup_array
       const lookupArrayArg = args[1];
-      if (lookupArrayArg === undefined || lookupArrayArg.kind !== 'range') {
+      if (lookupArrayArg === undefined || lookupArrayArg.kind !== 'range' && lookupArrayArg.kind !== 'spillRef') {
         return new FormulaError('#VALUE!', 'XLOOKUP lookup_array must be a range');
       }
-      const lookupArray = context.getRangeValues({ start: lookupArrayArg.start, end: lookupArrayArg.end });
+      const lookupResult = evaluator.evaluate(lookupArrayArg, context);
+      if (lookupResult instanceof FormulaError) return lookupResult;
+      const lookupArray = lookupResult as unknown[][];
       // return_array
       const returnArrayArg = args[2];
-      if (returnArrayArg === undefined || returnArrayArg.kind !== 'range') {
+      if (returnArrayArg === undefined || returnArrayArg.kind !== 'range' && returnArrayArg.kind !== 'spillRef') {
         return new FormulaError('#VALUE!', 'XLOOKUP return_array must be a range');
       }
-      const returnArray = context.getRangeValues({ start: returnArrayArg.start, end: returnArrayArg.end });
+      const returnResult = evaluator.evaluate(returnArrayArg, context);
+      if (returnResult instanceof FormulaError) return returnResult;
+      const returnArray = returnResult as unknown[][];
       // if_not_found (optional)
       let ifNotFound: unknown = new FormulaError('#N/A', 'XLOOKUP no match found');
       const infArg = args[3];
@@ -406,6 +416,8 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       if (foundIdx === -1) return ifNotFound;
       // Return from return_array at same position
       const isReturnRow = returnArray.length === 1;
+      if (isRow && returnArray.length > 1) return returnArray.map(row => [row[foundIdx] ?? null]);
+      if (!isRow && (returnArray[0]?.length ?? 0) > 1) return [returnArray[foundIdx] ?? []];
       if (isReturnRow) return returnArray[0]?.[foundIdx] ?? null;
       return returnArray[foundIdx]?.[0] ?? null;
     },

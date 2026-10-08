@@ -15,8 +15,8 @@
 // for those.
 
 import ExcelJS from 'exceljs';
-import type { IColumnDef } from '@alaarab/ogrid-core';
-import { adjustFormulaReferences, parseCellRef, tokenize } from '@alaarab/ogrid-core/formula';
+import type { ISpillRange, IColumnDef } from '@alaarab/ogrid-core';
+import { adjustFormulaReferences, parseCellRef, parseRange, tokenize } from '@alaarab/ogrid-core/formula';
 import { normalizeFormula, rebaseFormulaRows } from './formulaReferences';
 import type { XlsxCellStyle } from './cellStyles';
 import type { IMergedCell } from './gridAdapter';
@@ -29,6 +29,8 @@ export interface SheetGridData {
   columns: IColumnDef<SheetRow>[];
   rows: SheetRow[];
   initialFormulas: Array<{ col: number; row: number; formula: string }>;
+  /** Array formula refs as exposed by ExcelJS; cached children remain in rows. */
+  arrayRanges?: ISpillRange[];
   /**
    * Set when the sheet's populated area exceeded `maxRows`/`maxCols`/
    * `maxCells` and was cut down. Holds the untruncated extent so callers can
@@ -385,6 +387,7 @@ export function sheetToGridData(
   const matrix: unknown[][] = new Array(rowCount);
   for (let r = 0; r < rowCount; r++) matrix[r] = new Array(colCount).fill('');
   const initialFormulas: SheetGridData['initialFormulas'] = [];
+  const arrayRanges: ISpillRange[] = [];
   sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     if (rowNumber > rowCount) return;
     const out = matrix[rowNumber - 1] as unknown[];
@@ -392,6 +395,11 @@ export function sheetToGridData(
       if (colNumber > colCount) return;
       // Merged-away cells report their master's value; the merge model shows it once.
       if (cell.type === ExcelJS.ValueType.Merge) return;
+      const value = cell.value;
+      if (value && typeof value === 'object' && 'formula' in value && 'shareType' in value && value.shareType === 'array' && 'ref' in value && typeof value.ref === 'string') {
+        const range = parseRange(value.ref);
+        if (range) arrayRanges.push({ anchorCol: colNumber - 1, anchorRow: rowNumber - 1, endCol: range.end.col, endRow: range.end.row });
+      }
       out[colNumber - 1] = readCellValue(cell, colNumber - 1, rowNumber - 1, initialFormulas);
     });
   });
@@ -491,6 +499,7 @@ export function sheetToGridData(
 
   return {
     columns, rows, initialFormulas: adjustedFormulas, formatting,
+    ...(arrayRanges.length ? { arrayRanges: arrayRanges.filter(r => !promote || r.anchorRow > 0).map(r => ({ ...r, anchorRow: r.anchorRow - (promote ? 1 : 0), endRow: r.endRow - (promote ? 1 : 0) })) } : {}),
     ...(truncated ? { truncated } : {}),
     ...(truncatedCsvSheets.has(sheet) ? { parseTruncated: true } : {}),
   };

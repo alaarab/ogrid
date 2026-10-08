@@ -1,10 +1,11 @@
 ---
 sidebar_position: 5
 title: Formulas
-description: Excel-like formula support with 187 built-in functions, live recalculation, and dependency tracking
+description: Excel-like formula support with dynamic arrays, live recalculation, and dependency tracking
 ---
 
 import FormulasDemo from '@site/src/components/demos/FormulasDemo';
+import DynamicArraysDemo from '@site/src/components/demos/DynamicArraysDemo';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
@@ -12,7 +13,7 @@ import TabItem from '@theme/TabItem';
 
 Type `=SUM(A1:A5)` into any editable cell and it evaluates instantly. Change a value in A1 and everything that depends on it recalculates. It works like Excel, built right into your grid — no external library, no backend call, no wiring required.
 
-The engine adds ~12KB gzipped and is completely **tree-shakeable** — grids without `formulas={true}` don't pay any cost.
+The engine is instantiated when `formulas` is enabled. For direct TypeScript use, import it from `@alaarab/ogrid-core/formula` without the grid UI.
 
 ## Live Demo
 
@@ -76,6 +77,44 @@ Same props across all React packages — just change the import:
 
   </TabItem>
 </Tabs>
+
+## Dynamic arrays
+
+One formula can return a rectangular array. Its top-left cell is the **anchor**; the remaining values spill into neighboring cells. Supply enough empty grid rows and columns to display the output.
+
+<DynamicArraysDemo />
+
+| Formula | Output |
+| --- | --- |
+| `=UNIQUE(A1:B5)` | Distinct rows; optional `by_col` and `exactly_once` arguments |
+| `=FILTER(A1:B5,B1:B5>=3,"No matches")` | Matching rows or columns |
+| `=SORT(A1:B5,2,-1)` | Rows sorted by the second column, descending |
+| `=SORTBY(A1:B5,B1:B5,-1,A1:A5,1)` | Rows sorted by multiple keys |
+| `=SEQUENCE(3,2,10,5)` | Three rows and two columns, starting at 10 in steps of 5 |
+| `=TEXTSPLIT("a,b;c,d",",",";")` | Two rows and two columns; shorter rows are padded with `#N/A` |
+| `=RANDARRAY(3,2,1,10,TRUE)` | Three rows and two columns of random integers |
+| `=TRANSPOSE(A1:B5)` | A range with rows and columns exchanged |
+| `=A1:A5*2` | Each input multiplied by two |
+
+Operators broadcast scalars and singleton rows or columns across arrays. Scalar functions such as `ABS`, `ROUND`, `UPPER`, and `LEN`, plus `IF`, `IFERROR`, and `IFNA`, also produce arrays. `MMULT`, `MINVERSE`, `INDEX` with a zero row or column, and `XLOOKUP` with multiple return columns preserve their output shape. Empty arrays produce `#CALC!`; generated arrays obey the engine's resource limits.
+
+Only the anchor is editable. Selecting a spilled child shows the anchor formula in grey in the formula bar. Selecting the spill outlines it in blue; copying a child copies its value. Typing, paste, fill, Delete, and Find/Replace skip spilled children. Editing or deleting the anchor resizes or clears the output.
+
+A non-empty target, another formula, or another spill blocks the entire output: the anchor displays `#SPILL!`. Nothing is overwritten. Clearing the obstruction lets the formula spill again. Values such as `0` and `FALSE` count as occupied; empty strings and blank cells do not.
+
+### Spill references and implicit intersection
+
+`A1#` refers to the complete array owned by A1, so `=SUM(A1#)`, `=COUNTA(A1#)`, and `=ROWS(A1#)` follow its changing size. Formulas referencing individual children also recalculate when the spill changes. A reference to a cell without a successful spill produces `#REF!` (a blocked anchor propagates `#SPILL!`).
+
+Use `=@A1:A10` to select the value on the formula's current sheet row. A horizontal range intersects on the current column; an intersection outside the range produces `#VALUE!`. `@` applied to an array expression selects its first value.
+
+### XLSX interoperability
+
+`react-xlsx` imports ExcelJS array formulas (`shareType: 'array'`, `ref`) and normalizes `_xlfn.` / `_xlws.` prefixes. It keeps cached children separate from inputs, preventing false spill collisions. Export writes one array formula at the anchor, the current `ref` extent, and cached values for all output cells. Spill references use Excel's `_xlfn.ANCHORARRAY(...)` representation in the file.
+
+**ExcelJS 4.4 cannot write or preserve Excel 365's `cm` cell metadata and `XLDAPR` dynamic-array metadata.** The exported formula therefore has the legacy `t="array"` representation: Excel opens the saved extent as a fixed CSE array, with cached results available before recalculation. Input changes do not automatically resize that legacy extent. Clear the legacy array range and re-enter the anchor formula with Enter in Excel 365 to create a native dynamic spill; re-enter dependent `#` references if Excel recalculated them before conversion. Older Excel versions cannot evaluate the newer functions and may show `#NAME?` on recalculation. This also applies to imported native dynamic arrays saved again through ExcelJS.
+
+This file-format distinction is documented by [ExcelJS's array formula API](https://github.com/exceljs/exceljs#array-formula) and [Microsoft's dynamic-array metadata schema](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/d1ef676d-d970-4ddd-b642-62f5e0c291e0). Excel desktop opening has not been manually tested in this worktree.
 
 ## Entering formulas
 
@@ -296,7 +335,7 @@ Formula errors display in red (controlled by `--ogrid-formula-error-color`):
 `#NAME?` is almost always a typo. Formula function names are case-insensitive — `sum`, `SUM`, and `Sum` all work — but `=SUMM(A1:A5)` gives `#NAME?`.
 :::
 
-## All 187 built-in functions
+## Built-in functions
 
 ### Math and trigonometry (53)
 `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `COUNTA`, `PRODUCT`, `SUMPRODUCT`, `SUMSQ`, `SUBTOTAL`, `MEDIAN`, `LARGE`, `SMALL`, `RANK`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `INT`, `TRUNC`, `MROUND`, `CEILING`, `CEILING.MATH`, `FLOOR`, `FLOOR.MATH`, `EVEN`, `ODD`, `ABS`, `MOD`, `POWER`, `SQRT`, `SIGN`, `QUOTIENT`, `LOG`, `LOG10`, `LN`, `EXP`, `PI`, `RAND`, `RANDBETWEEN`, `COMBIN`, `PERMUT`, `FACT`, `GCD`, `LCM`, `SIN`, `COS`, `TAN`, `ASIN`, `ACOS`, `ATAN`, `ATAN2`, `RADIANS`, `DEGREES`
@@ -307,8 +346,8 @@ Formula errors display in red (controlled by `--ogrid-formula-error-color`):
 ### Text (32)
 `CONCATENATE`, `CONCAT`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT`, `MID`, `LEN`, `REPT`, `EXACT`, `PROPER`, `CLEAN`, `SUBSTITUTE`, `FIND`, `SEARCH`, `REPLACE`, `CHAR`, `CODE`, `TEXT`, `VALUE`, `NUMBERVALUE`, `TEXTJOIN`, `TEXTSPLIT`, `TEXTBEFORE`, `TEXTAFTER`, `DOLLAR`, `FIXED`, `T`, `N`, `FORMULATEXT`, `PHONETIC`
 
-### Lookup and reference (19)
-`VLOOKUP`, `HLOOKUP`, `XLOOKUP`, `LOOKUP`, `INDEX`, `MATCH`, `XMATCH`, `INDIRECT`, `OFFSET`, `ADDRESS`, `ROW`, `COLUMN`, `ROWS`, `COLUMNS`, `SEQUENCE`, `TRANSPOSE`, `MMULT`, `MDETERM`, `MINVERSE`
+### Lookup and reference (24)
+`VLOOKUP`, `HLOOKUP`, `XLOOKUP`, `LOOKUP`, `INDEX`, `MATCH`, `XMATCH`, `INDIRECT`, `OFFSET`, `ADDRESS`, `ROW`, `COLUMN`, `ROWS`, `COLUMNS`, `UNIQUE`, `FILTER`, `SORT`, `SORTBY`, `SEQUENCE`, `RANDARRAY`, `TRANSPOSE`, `MMULT`, `MDETERM`, `MINVERSE`
 
 ### Date (25)
 `TODAY`, `NOW`, `YEAR`, `MONTH`, `DAY`, `DATE`, `TIME`, `HOUR`, `MINUTE`, `SECOND`, `WEEKDAY`, `WEEKNUM`, `ISOWEEKNUM`, `DATEVALUE`, `TIMEVALUE`, `DATEDIF`, `DAYS`, `DAYS360`, `EDATE`, `EOMONTH`, `YEARFRAC`, `NETWORKDAYS`, `NETWORKDAYS.INTL`, `WORKDAY`, `WORKDAY.INTL`
@@ -329,8 +368,7 @@ Criteria use Excel syntax in all of these: `">5"`, `"<>done"`, `"=apple"`, and t
 
 ### Where OGrid differs from Excel
 
-- **No spilling.** A formula cell holds one value, so array functions return their first element: `SEQUENCE` gives its start value and `TEXTSPLIT` gives the first piece (first column of the first row). Where Excel returns `#CALC!` for an empty `TEXTSPLIT` result, OGrid returns `#VALUE!`.
-- **No array constants or empty arguments.** `{1,2,3}` and skipped arguments like `TEXTSPLIT(A1,,";")` aren't supported, so pass every argument up to the last one you need.
+- **No array constants.** Literal arrays such as `{1,2,3}` are not supported. Ranges and array-returning functions can be used instead. Optional arguments can be skipped, for example `TEXTSPLIT(A1,,";")`.
 - **`SUBTOTAL` 101-111 skip hidden rows** (rows in [`hiddenRowIds`](./hiding#hidden-rows)), and 1-11 count them, as in Excel. Rows removed by a filter are still counted by both. Like Excel, `SUBTOTAL` skips cells that contain their own `SUBTOTAL`, so nested subtotals aren't counted twice.
 - **`XMATCH` binary search.** Search modes `2` and `-2` are accepted but run as a normal first-to-last search, which returns the same position on sorted data.
 - **`LET`** binds names to values for the rest of the call: `=LET(rate, B1, qty, C1, rate * qty)`. A name bound to a range stays a range, so `=LET(r, A1:A10, SUM(r) / COUNT(r))` works. A `LET` name takes priority over a named range with the same name, and it can't look like a cell reference (`x1` is cell X1).
@@ -339,7 +377,7 @@ Criteria use Excel syntax in all of these: `">5"`, `"<>done"`, `"=apple"`, and t
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `formulas` | `boolean` | `false` | Enable formula support. Tree-shakeable — zero cost when not used. |
+| `formulas` | `boolean` | `false` | Instantiate the formula engine and enable formula editing. |
 | `initialFormulas` | `Array<{ col, row, formula }>` | — | Pre-load formulas on mount (0-based col/row indices). |
 | `onFormulaRecalc` | `(result: IRecalcResult) => void` | — | Called after each recalculation with the updated cell list. |
 | `formulaFunctions` | `Record<string, IFormulaFunction>` | — | Custom functions to register alongside built-ins. |

@@ -311,6 +311,51 @@ export function createFormulaTests(OGrid: React.ComponentType<IOGridProps<Row>>)
     });
   });
 
+  describe('dynamic spills', () => {
+    const spillFormula = [{ col: 3, row: 0, formula: '=SEQUENCE(B1)' }];
+    it('renders children, outlines the range, greys the anchor formula, rejects edits, and copies values', async () => {
+      const onChange = jest.fn();
+      const { container } = renderGrid({ initialFormulas: spillFormula }, onChange);
+      expect([1, 2, 3].map(id => text(container, id, 'total'))).toEqual(['1', '2', '3']);
+      activate(container, 1, 'total');
+      expect(container.querySelectorAll('[data-spill-outline]')).toHaveLength(3);
+      const child = activate(container, 2, 'total');
+      const input = formulaInput(container);
+      expect(input.value).toBe('=SEQUENCE(B1)');
+      expect(input).toHaveAttribute('data-spill-child');
+      fireEvent.click(input);
+      expect(input.readOnly).toBe(true);
+      fireEvent.doubleClick(child);
+      expect(container.querySelector('tbody input')).toBeNull();
+      gridKey(container, { key: 'Delete' });
+      gridKey(container, { key: 'x' });
+      expect(container.querySelector('tbody input')).toBeNull();
+      const grid = container.querySelector('[role="region"]') as HTMLElement;
+      grid.focus();
+      const paste = new Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, 'clipboardData', { value: { getData: () => '99' } });
+      await act(async () => { fireEvent(grid, paste); });
+      expect(text(container, 2, 'total')).toBe('2');
+      expect(onChange).not.toHaveBeenCalled();
+      const copied: Record<string, string> = {};
+      const copy = new Event('copy', { bubbles: true, cancelable: true });
+      Object.defineProperty(copy, 'clipboardData', { value: { setData: (format: string, value: string) => { copied[format] = value; } } });
+      await act(async () => { fireEvent(grid, copy); });
+      expect(copied['text/plain']).toBe('2');
+      expect(copied['text/html']).toContain('<td>2</td>');
+    });
+
+    it('resizes on input edits and clears children when the anchor is deleted', async () => {
+      const { container } = renderGrid({ initialFormulas: spillFormula });
+      await editCell(container, 1, 'qty', '2');
+      await waitFor(() => expect([1, 2, 3].map(id => text(container, id, 'total'))).toEqual(['1', '2', '']));
+      activate(container, 1, 'total');
+      gridKey(container, { key: 'Delete' });
+      await waitFor(() => expect([1, 2, 3].map(id => text(container, id, 'total'))).toEqual(['', '', '']));
+      expect(container.querySelector('[data-spill-outline]')).toBeNull();
+    });
+  });
+
   describe('formula bar', () => {
     it('replaces a formula with its underlying raw value and supports undo and redo', async () => {
       const onChange = jest.fn();

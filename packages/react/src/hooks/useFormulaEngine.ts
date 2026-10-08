@@ -20,6 +20,7 @@ import {
   type IRecalcResult,
   type IAuditEntry,
   type IAuditTrail,
+  type ISpillRange,
 } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '@alaarab/ogrid-core';
 import { FormulaEngine, FormulaError } from '@alaarab/ogrid-core/formula';
@@ -65,6 +66,8 @@ export interface UseFormulaEngineParams<T> {
 export interface UseFormulaEngineResult {
   /** Get the formula engine's computed value for a cell coordinate. */
   getFormulaValue: (col: number, row: number) => unknown;
+  /** Successful spill containing the cell, including its editable anchor. */
+  getSpillRange: (col: number, row: number) => ISpillRange | undefined;
   /** Check if a cell has a formula. */
   hasFormula: (col: number, row: number) => boolean;
   /** Get the formula string for a cell. */
@@ -101,6 +104,7 @@ export interface UseFormulaEngineResult {
 
 const NOOP_RESULT: UseFormulaEngineResult = {
   getFormulaValue: () => undefined,
+  getSpillRange: () => undefined,
   hasFormula: () => false,
   getFormula: () => undefined,
   setFormula: () => {},
@@ -366,6 +370,8 @@ export function useFormulaEngine<T>(
     return engineRef.current?.getValue(col, row);
   }, []);
 
+  const getSpillRange = useCallback((col: number, row: number) => engineRef.current?.getSpillRange(col, row), []);
+
   const hasFormula = useCallback((col: number, row: number): boolean => {
     return engineRef.current?.hasFormula(col, row) ?? false;
   }, []);
@@ -420,6 +426,7 @@ export function useFormulaEngine<T>(
   const result = useMemo<UseFormulaEngineResult>(() => ({
     getFormulaValue,
     hasFormula,
+    getSpillRange,
     getFormula,
     setFormula,
     onCellChanged,
@@ -431,7 +438,7 @@ export function useFormulaEngine<T>(
     loadFormulas,
     createDetachedEvaluator,
     enabled: true,
-  }), [getFormulaValue, hasFormula, getFormula, setFormula, onCellChanged, onCellsChanged, getPrecedents, getDependents, getAuditTrail, getAllFormulas, loadFormulas, createDetachedEvaluator]);
+  }), [getFormulaValue, hasFormula, getSpillRange, getFormula, setFormula, onCellChanged, onCellsChanged, getPrecedents, getDependents, getAuditTrail, getAllFormulas, loadFormulas, createDetachedEvaluator]);
 
   return formulas ? result : NOOP_RESULT;
 }

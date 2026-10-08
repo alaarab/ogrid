@@ -347,12 +347,37 @@ export function useDataGridState<T>(
   });
 
   const {
-    visibleCols,
+    visibleCols: rawVisibleCols,
     visibleColumnCount,
     colOffset,
     hasCheckboxCol,
   } = layoutResult;
-  const flatColumns = layoutResult.layout.flatColumns;
+  const rawFlatColumns = layoutResult.layout.flatColumns;
+  const { getSpillRange, getFormulaValue, formulaVersion } = props;
+  // All grid edit paths (typing, paste, fill, Delete, Find/Replace and the bar)
+  // use these columns, so one editability rule protects spilled children.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: formulaVersion refreshes the column identities and all memoized rows after spill resize/recalc
+  const protectedColumns = useMemo(() => {
+    if (!getSpillRange || !getFormulaValue) return null;
+    const rowByItem = new Map<T, number>();
+    rowItems.forEach((item, row) => { rowByItem.set(item, props.formulaRowMap?.toSheetRow(row) ?? row); });
+    return new Map(rawFlatColumns.map((column, col) => {
+      const spillAt = (item: T) => getSpillRange(col, rowByItem.get(item) ?? -1);
+      const child = (item: T) => {
+        const spill = spillAt(item);
+        return !!spill && (spill.anchorCol !== col || spill.anchorRow !== rowByItem.get(item));
+      };
+      return [column.columnId, {
+        ...column,
+        editable: (item: T) => !child(item) && isColumnEditable(column, item),
+        valueGetter: (item: T) => child(item) ? getFormulaValue(col, rowByItem.get(item) ?? -1) : getCellValue(item, column),
+      } as IColumnDef<T>] as const;
+    }));
+  }, [rawFlatColumns, rowItems, props.formulaRowMap, getSpillRange, getFormulaValue, formulaVersion]);
+  const flatColumns = useMemo(() => protectedColumns ? rawFlatColumns.map(c => protectedColumns.get(c.columnId) ?? c) : rawFlatColumns, [rawFlatColumns, protectedColumns]);
+  const visibleCols = useMemo(() => protectedColumns ? rawVisibleCols.map(c => protectedColumns.get(c.columnId) ?? c) : rawVisibleCols, [rawVisibleCols, protectedColumns]);
+
+  const resolvedLayout = useMemo(() => protectedColumns ? { ...layoutResult.layout, flatColumns, visibleCols } : layoutResult.layout, [layoutResult.layout, protectedColumns, flatColumns, visibleCols]);
 
   // --- Frozen rows and merged cells (resolved against the displayed rows) ---
   const frozenRows = resolveFrozenRowCount(props.frozenRows, rowItems.length);
@@ -628,7 +653,7 @@ export function useDataGridState<T>(
   const { gridEditBridgeRef } = props;
   const bridgeStateRef = useLatestRef({
     flatColumns, rowIndexByRowId: layoutResult.layout.rowIndexByRowId, getRowId, formulas: props.formulas,
-    getFormula: props.getFormula, onCellValueChanged, formulaRow,
+    getFormula: props.getFormula, getSpillRange: props.getSpillRange, onCellValueChanged, formulaRow,
     writeSheetFormula: interactionResult.writeSheetFormula,
     beginBatch: interactionResult.beginBatch, endBatch: interactionResult.endBatch,
     recordAction: interactionResult.recordAction,
@@ -641,6 +666,8 @@ export function useDataGridState<T>(
       if (!colDef) return false;
       const displayRow = st.rowIndexByRowId.get(st.getRowId(item)) ?? -1;
       const sheetRow = sheetRowHint >= 0 ? sheetRowHint : displayRow >= 0 ? st.formulaRow(displayRow) : -1;
+      const spill = st.getSpillRange?.(col, sheetRow);
+      if (spill && (spill.anchorCol !== col || spill.anchorRow !== sheetRow)) return false;
       if (st.formulas && typeof value === 'string' && value.length > 1 && value.startsWith('=')) {
         if (sheetRow < 0 || !st.writeSheetFormula) return false;
         st.writeSheetFormula(col, sheetRow, value, displayRow);
@@ -724,8 +751,12 @@ export function useDataGridState<T>(
     ]
   );
 
+  const activeSpillCol = activeCell ? formulaCol(visibleCols[activeCell.columnIndex - colOffset]?.columnId ?? '') : -1;
+  const activeSpillRow = activeCell ? formulaRow(activeCell.rowIndex) : -1;
+  const activeSpillRange = props.getSpillRange?.(activeSpillCol, activeSpillRow);
   const cellDescriptorInput: CellRenderDescriptorInput<T> = useMemo(
     () => ({
+      activeSpillRange,
       editingCell,
       activeCell: cellSelection ? activeCell : null,
       selectionRange: cellSelection ? selectionRange : null,
@@ -746,6 +777,7 @@ export function useDataGridState<T>(
       mergeLayout,
     }),
     [
+      activeSpillRange,
       editingCell,
       activeCell,
       selectionRange,
@@ -806,7 +838,7 @@ export function useDataGridState<T>(
   }), [headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError, mergeLayout, frozenRows]);
 
   return {
-    layout: layoutResult.layout,
+    layout: resolvedLayout,
     rowSelection: rowSelectionState,
     editing: editingResult.editing,
     interaction: interactionResult.interaction,

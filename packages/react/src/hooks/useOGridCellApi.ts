@@ -11,7 +11,7 @@ export interface UseOGridCellApiParams<T> {
   /** Flat leaf columns; a formula's column index is an index into this array. */
   columns: IColumnDef<T>[];
   getRowId: (item: T) => RowId;
-  formulaEngine: Pick<UseFormulaEngineResult, 'enabled' | 'hasFormula' | 'getFormulaValue'>;
+  formulaEngine: Pick<UseFormulaEngineResult, 'enabled' | 'hasFormula' | 'getFormulaValue' | 'getSpillRange'>;
   bridgeRef: MutableRefObject<IGridEditBridge<T> | null>;
 }
 
@@ -51,7 +51,7 @@ export function useOGridCellApi<T>(params: UseOGridCellApiParams<T>): UseOGridCe
     const cell = locate(rowId, columnId);
     if (!cell) return undefined;
     const engine = latest.current.formulaEngine;
-    if (engine.enabled && engine.hasFormula(cell.col, cell.row)) return engine.getFormulaValue(cell.col, cell.row);
+    if (engine.enabled && (engine.hasFormula(cell.col, cell.row) || engine.getSpillRange?.(cell.col, cell.row))) return engine.getFormulaValue(cell.col, cell.row);
     return readCell<T>(cell.item, cell.colDef);
   }, [locate, latest]);
 

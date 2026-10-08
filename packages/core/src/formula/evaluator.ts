@@ -11,6 +11,7 @@ import type {
   BinaryOp,
 } from './types';
 import { FormulaError } from './types';
+import { asArray, mapArrays } from './arrays';
 import { dateToSerial } from './functions/date/shared';
 import { MAX_FORMULA_DEPTH, MAX_FORMULA_STEPS, MAX_RANGE_CELLS, MAX_TEXT_LENGTH } from './limits';
 
@@ -126,13 +127,15 @@ export function evalArg(
 }
 
 /** A literal node for a scalar result, or undefined when there is none. */
-function literalNode(value: unknown): ASTNode | undefined {
-  if (typeof value === 'number') return { kind: 'number', value };
-  if (typeof value === 'string') return { kind: 'string', value };
-  if (typeof value === 'boolean') return { kind: 'boolean', value };
-  if (value instanceof FormulaError) return { kind: 'error', error: value };
-  return undefined;
+function literalNode(value: unknown): ASTNode {
+  return { kind: 'value', value };
 }
+
+/** Built-ins whose scalar arguments Excel evaluates element by element. */
+const ELEMENTWISE_FUNCTIONS = new Set((
+  'ABS ACOS ACOSH ACOT ACOTH ASIN ASINH ATAN ATANH ATAN2 COS COSH COT COTH CSC CSCH DEGREES EXP INT LN LOG LOG10 MOD POWER RADIANS ROUND ROUNDDOWN ROUNDUP SIGN SIN SINH SQRT TAN TANH TRUNC CEILING FLOOR MROUND ' +
+  'LEFT RIGHT MID LEN LOWER UPPER PROPER TRIM CLEAN REPT SUBSTITUTE REPLACE FIND SEARCH TEXT VALUE CHAR CODE UNICHAR UNICODE EXACT NOT N T ISNUMBER ISTEXT ISBLANK ISERROR ISERR ISNA ISLOGICAL YEAR MONTH DAY HOUR MINUTE SECOND DATE TIME'
+).split(' '));
 
 /** Replace LET-bound names in `node`, respecting shadowing by nested LETs. */
 function substituteNames(node: ASTNode, bindings: ReadonlyMap<string, ASTNode>): ASTNode {
@@ -195,29 +198,41 @@ export class FormulaEvaluator implements IEvaluator {
         if (work > maxWork) throw new FormulaError('#VALUE!', 'Formula work limit exceeded');
       };
       const original = context;
+      const readRange = (range: Parameters<IFormulaContext['getRangeValues']>[0], preserveShape = false): unknown[][] => {
+        const data = preserveShape && original.getArrayRangeValues ? original.getArrayRangeValues(range) : original.getRangeValues(range);
+        let cells = 0;
+        for (const row of data) {
+          cells += row.length;
+          for (const value of row) {
+            if (typeof value === 'string' && value.length > MAX_TEXT_LENGTH) throw new FormulaError('#VALUE!', 'Cell text too long');
+          }
+        }
+        rangeCells += cells;
+        if (rangeCells > maxRangeCells) throw new FormulaError('#VALUE!', 'Range too large');
+        consumeWork(cells);
+        return data;
+      };
       context = {
         ...original,
         consumeWork,
+        maxArrayCells: maxRangeCells,
+        getSpillValues: original.getSpillValues && (address => {
+          const value = original.getSpillValues?.(address);
+          if (Array.isArray(value)) {
+            const cells = value.reduce((sum, row) => sum + row.length, 0);
+            rangeCells += cells;
+            if (rangeCells > maxRangeCells) throw new FormulaError('#VALUE!', 'Range too large');
+            consumeWork(cells);
+          }
+          return value;
+        }),
         getCellValue: address => {
           const value = original.getCellValue(address);
           consumeWork(typeof value === 'string' ? value.length + 1 : 1);
           return value;
         },
-        getRangeValues: range => {
-          const data = original.getRangeValues(range);
-          let cells = 0;
-          for (const row of data) {
-            cells += row.length;
-            for (const value of row) {
-              if (typeof value === 'string' && value.length > MAX_TEXT_LENGTH) throw new FormulaError('#VALUE!', 'Cell text too long');
-            }
-          }
-          rangeCells += cells;
-          if (rangeCells > maxRangeCells) throw new FormulaError('#VALUE!', 'Range too large');
-          // Reading a cell is constant work; functions charge for the text they scan.
-          consumeWork(cells);
-          return data;
-        },
+        getRangeValues: range => readRange(range),
+        getArrayRangeValues: range => readRange(range, true),
       };
     }
     if (this.depth >= MAX_FORMULA_DEPTH || ++this.steps > this.maxWork) return new FormulaError('#VALUE!', 'Formula evaluation limit exceeded');
@@ -227,6 +242,9 @@ export class FormulaEvaluator implements IEvaluator {
       if (typeof result === 'number' && !Number.isFinite(result)) return new FormulaError('#NUM!', 'Non-finite result');
       if (typeof result === 'string' && result.length > MAX_TEXT_LENGTH) return new FormulaError('#VALUE!', 'Text result too long');
       return result;
+    } catch (error) {
+      if (error instanceof FormulaError) return error;
+      throw error;
     } finally { this.depth--; }
   }
 
@@ -237,6 +255,7 @@ export class FormulaEvaluator implements IEvaluator {
       case 'string':
         return node.value;
       case 'boolean':
+      case 'value':
         return node.value;
       case 'error':
         return node.error;
@@ -247,8 +266,10 @@ export class FormulaEvaluator implements IEvaluator {
       }
 
       case 'range':
-        // Standalone range reference outside a function  -  evaluate as the top-left cell
-        return context.getCellValue(node.start);
+        return (context.getArrayRangeValues ?? context.getRangeValues)({ start: node.start, end: node.end });
+
+      case 'spillRef':
+        return context.getSpillValues?.(node.address) ?? new FormulaError('#REF!', 'Cell has no spill range');
 
       case 'functionCall':
         return this.evaluateFunction(node.name, node.args, context);
@@ -313,6 +334,10 @@ export class FormulaEvaluator implements IEvaluator {
       return new FormulaError('#ERROR!', `${name} accepts at most ${fn.maxArgs} argument(s)`);
     }
 
+    if (ELEMENTWISE_FUNCTIONS.has(name)) {
+      const values = args.map(arg => this.evaluate(arg, context));
+      if (values.some(Array.isArray)) return mapArrays(values, context, cells => fn.evaluate(cells.map(literalNode), context, this));
+    }
     return fn.evaluate(args, context, this);
   }
 
@@ -322,30 +347,13 @@ export class FormulaEvaluator implements IEvaluator {
     right: ASTNode,
     context: IFormulaContext
   ): unknown {
-    // String concatenation
-    if (op === '&') {
-      const l = this.evaluate(left, context);
-      if (l instanceof FormulaError) return l;
-      const r = this.evaluate(right, context);
-      if (r instanceof FormulaError) return r;
-      return toText(l) + toText(r);
-    }
-
-    // Comparison operators
-    if (op === '>' || op === '<' || op === '>=' || op === '<=' || op === '=' || op === '<>') {
-      const l = this.evaluate(left, context);
-      if (l instanceof FormulaError) return l;
-      const r = this.evaluate(right, context);
-      if (r instanceof FormulaError) return r;
-      return this.compare(op, l, r);
-    }
-
-    // Arithmetic operators
-    const lVal = this.evaluate(left, context);
-    if (lVal instanceof FormulaError) return lVal;
-    const rVal = this.evaluate(right, context);
-    if (rVal instanceof FormulaError) return rVal;
-
+    const leftValue = this.evaluate(left, context);
+    const rightValue = this.evaluate(right, context);
+    return mapArrays([leftValue, rightValue], context, ([lVal, rVal]) => {
+      if (lVal instanceof FormulaError) return lVal;
+      if (rVal instanceof FormulaError) return rVal;
+      if (op === '&') return toText(lVal) + toText(rVal);
+      if (op === '>' || op === '<' || op === '>=' || op === '<=' || op === '=' || op === '<>') return this.compare(op, lVal, rVal);
     const lNum = toNumber(lVal);
     if (lNum instanceof FormulaError) return lNum;
     const rNum = toNumber(rVal);
@@ -374,18 +382,29 @@ export class FormulaEvaluator implements IEvaluator {
     // Overflow and NaN (e.g. (-8)^(1/3)) surface as #NUM!, as in Excel.
     if (!Number.isFinite(result)) return new FormulaError('#NUM!', 'Result is not a finite number');
     return result;
+    });
   }
 
   private evaluateUnaryOp(
-    op: '+' | '-',
+    op: '+' | '-' | '@',
     operand: ASTNode,
     context: IFormulaContext
   ): unknown {
+    if (op === '@' && operand.kind === 'range') {
+      const minRow = Math.min(operand.start.row, operand.end.row), maxRow = Math.max(operand.start.row, operand.end.row);
+      const minCol = Math.min(operand.start.col, operand.end.col), maxCol = Math.max(operand.start.col, operand.end.col);
+      const row = minRow === maxRow ? minRow : context.currentCell?.row;
+      const col = minCol === maxCol ? minCol : context.currentCell?.col;
+      if (row === undefined || col === undefined || row < minRow || row > maxRow || col < minCol || col > maxCol) return new FormulaError('#VALUE!', 'No implicit intersection');
+      return context.getCellValue({ ...operand.start, row, col });
+    }
     const val = this.evaluate(operand, context);
-    if (val instanceof FormulaError) return val;
-    const num = toNumber(val);
-    if (num instanceof FormulaError) return num;
-    return op === '-' ? -num : num;
+    if (op === '@') return asArray(val)[0]?.[0];
+    return mapArrays([val], context, ([value]) => {
+      const num = toNumber(value);
+      if (num instanceof FormulaError) return num;
+      return op === '-' ? -num : num;
+    });
   }
 
   private compare(op: BinaryOp, left: unknown, right: unknown): boolean {
