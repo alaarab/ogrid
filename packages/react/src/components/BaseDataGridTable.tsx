@@ -10,7 +10,7 @@ import { useFrozenRowOffsets } from '../hooks/useFrozenRowOffsets';
 import { useStructureContextMenu } from '../hooks/useStructureContextMenu';
 import { useHidingContextMenu } from '../hooks/useHidingContextMenu';
 import { useCellNotes } from '../hooks/useCellNotes';
-import { useGridDragDrop } from '../hooks/useGridDragDrop';
+import type { useGridDragDrop, UseGridDragDropParams, UseGridDragDropResult } from '../hooks/useGridDragDrop';
 import { CellNotePopover } from './CellNotePopover';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
 import {
@@ -67,14 +67,42 @@ let noteIdCounter = 0;
  * Both built-in kits set `primitives.useDelegatedCellHandlers`, so cells share
  * one set of stable interaction handlers instead of per-cell closures.
  */
-export function BaseDataGridTableInner<T>(
-  props: IOGridDataGridProps<T> & {
-    styles: DataGridStyles;
-    primitives: DataGridPrimitives;
+export type BaseDataGridTableProps<T> = IOGridDataGridProps<T> & {
+  styles: DataGridStyles;
+  primitives: DataGridPrimitives;
+};
+
+const LazyDragDataGridTable = React.lazy(() => import('./DragDataGridTable.js'));
+
+/** Mount the optional drag hooks only for opted-in grids. */
+export function BaseDataGridTableInner<T>(props: BaseDataGridTableProps<T>): React.ReactElement {
+  if (props.rowDragging || props.rangeMove || props.cellDrop || props.onCellDrop) {
+    const DragTable = LazyDragDataGridTable as React.ComponentType<BaseDataGridTableProps<T> & { renderTable: typeof BaseDataGridTableContent<T> }>;
+    return <React.Suspense fallback={null}><DragTable {...props} renderTable={BaseDataGridTableContent} /></React.Suspense>;
   }
+  return <BaseDataGridTableContent {...props} />;
+}
+
+const IGNORE_DRAG = () => {};
+const IGNORE_DRAG_KEY = () => false;
+function useDisabledDragDrop<T>(params: UseGridDragDropParams<T>): UseGridDragDropResult<T> {
+  return {
+    orderedItems: params.items, isDraggingRow: false, isExternalDragOver: false,
+    dropLine: null, rangeMoveHandle: null,
+    handleRowDragStart: IGNORE_DRAG, handleRangeMoveDragStart: IGNORE_DRAG,
+    handleKeyDown: IGNORE_DRAG_KEY,
+    wrapperHandlers: { onDragOver: IGNORE_DRAG, onDragLeave: IGNORE_DRAG, onDrop: IGNORE_DRAG, onDragEnd: IGNORE_DRAG },
+  };
+}
+
+/** Shared rendering; the optional feature component supplies its hook. */
+export function BaseDataGridTableContent<T>(
+  props: BaseDataGridTableProps<T> & { useDragDrop?: typeof useGridDragDrop }
 ): React.ReactElement {
-  const { styles, primitives, ...gridProps } = props;
-  const o = useDataGridTableOrchestration({ props: gridProps as IOGridDataGridProps<T> });
+  const { styles, primitives, useDragDrop = useDisabledDragDrop, ...gridProps } = props;
+  const dragKeyDownRef = React.useRef<(e: React.KeyboardEvent) => boolean>(IGNORE_DRAG_KEY);
+  const onRowReorderKeyDown = React.useCallback((e: React.KeyboardEvent) => dragKeyDownRef.current(e), []);
+  const o = useDataGridTableOrchestration({ props: gridProps as IOGridDataGridProps<T>, onRowReorderKeyDown });
 
   const {
     wrapperRef, tableContainerRef, lastMouseShiftRef,
@@ -125,14 +153,14 @@ export function BaseDataGridTableInner<T>(
 
   // Drag-and-drop: row reorder, range move and external cell drops.
   const sorted = (gridProps.sortModel?.length ?? 0) > 0 || (gridProps.sortBy ?? '') !== '';
-  const dragDrop = useGridDragDrop<T>({
+  const dragDrop = useDragDrop<T>({
     items,
     getRowId,
     visibleCols,
     colOffset,
     wrapperRef,
     containerRef: tableContainerRef,
-    rowDragging: gridProps.rowDragging,
+    rowDragging: gridProps.rowDragging && !windowed,
     onRowOrderChange: gridProps.onRowOrderChange,
     sorted,
     rangeMove: gridProps.rangeMove,
@@ -145,17 +173,12 @@ export function BaseDataGridTableInner<T>(
     dropTextAt: interaction.dropTextAt,
     recordAction: o.recordAction,
   });
-  const dragItems = dragDrop.orderedItems;
+  dragKeyDownRef.current = dragDrop.handleKeyDown;
 
   // Ctrl+F / Ctrl+H open Find & Replace; Ctrl/Cmd+Shift+Up/Down reorders rows.
   const handleWrapperKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    if (dragDrop.handleKeyDown(e)) return;
     if (!findKeyDown(e)) handleGridKeyDown(e);
-  }, [dragDrop.handleKeyDown, findKeyDown, handleGridKeyDown]);
-  const handleGridKeyDownWithDrag = React.useCallback((e: React.KeyboardEvent) => {
-    if (dragDrop.handleKeyDown(e)) return;
-    handleGridKeyDown(e);
-  }, [dragDrop.handleKeyDown, handleGridKeyDown]);
+  }, [findKeyDown, handleGridKeyDown]);
 
   // ARIA grid geometry. aria-rowindex counts header rows and earlier pages;
   // aria-rowcount is -1 ("unknown") when the grid can't see the full total.
@@ -281,7 +304,7 @@ export function BaseDataGridTableInner<T>(
         data-min-table-width={Math.round(minTableWidth)}
         data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
         onContextMenu={PREVENT_DEFAULT}
-        onKeyDown={findReplace.enabled ? handleWrapperKeyDown : handleGridKeyDownWithDrag}
+        onKeyDown={findReplace.enabled ? handleWrapperKeyDown : handleGridKeyDown}
         data-ogrid-find={findReplace.enabled ? findReplace.scopeId : undefined}
         onPaste={interaction.handleGridPaste}
         onCopy={interaction.handleGridCopy}
@@ -332,7 +355,7 @@ export function BaseDataGridTableInner<T>(
                     virtualScrollEnabled={virtualScrollEnabled}
                     visibleRange={visibleRange}
                     columnRange={columnRange}
-                    items={dragItems}
+                    items={items}
                     windowed={windowed}
                     rowHeight={virtualRowHeight}
                     getRowId={getRowId}
@@ -359,7 +382,7 @@ export function BaseDataGridTableInner<T>(
                     popoverAnchorEl={o.editing.popoverAnchorEl}
                     pendingEditorValue={o.editing.pendingEditorValue}
                     onRowHeaderPointerDown={o.handleRowHeaderPointerDown}
-                    rowDragging={!!gridProps.rowDragging && !sorted}
+                    rowDragging={!!gridProps.rowDragging && !sorted && !windowed}
                     onRowDragStart={dragDrop.handleRowDragStart}
                     formulaVersion={gridProps.formulaVersion}
                     conditionalFormat={gridProps.conditionalFormat}

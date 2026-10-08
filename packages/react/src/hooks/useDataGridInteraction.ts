@@ -24,7 +24,6 @@ const NOOP_ASYNC = async () => {};
 const NOOP_MOUSE = (_e: React.MouseEvent, _r: number, _c: number) => {};
 const NOOP_KEY = (_e: React.KeyboardEvent) => {};
 const NOOP_MOVE_RANGE = (_row: number, _col: number, _copy: boolean) => {};
-const NOOP_DROP_TEXT = (_row: number, _col: number, _text: string) => {};
 
 export interface UseDataGridInteractionParams<T> {
   items: T[];
@@ -74,6 +73,8 @@ export interface UseDataGridInteractionParams<T> {
   scrollToIndexRef?: RefObject<ScrollToRowIndex | null>;
   /** Custom keydown handler  -  called before grid default. preventDefault() suppresses grid handling. */
   onKeyDown?: (event: React.KeyboardEvent) => void;
+  /** Optional row reorder shortcut, routed through keyboard isolation/interception. */
+  onRowReorderKeyDown?: (event: React.KeyboardEvent) => boolean;
   /** Called when reading the system clipboard fails on paste. */
   onClipboardError?: (error: unknown) => void;
   /** When true, enables formula-aware clipboard and fill handle. */
@@ -432,46 +433,37 @@ export function useDataGridInteraction<T>(
     return { sheetRows, flatCols };
   }, [moveFormulaOptions, selectionRange, visibleCols, flatColIndexById]);
 
-  const applyCellEdits = useCallback(
-    (events: ICellValueChangedEvent<T>[]) => {
-      if (events.length === 0) return;
-      const many = events.length > 1;
-      if (many) undoRedo.beginBatch();
-      for (const event of events) onCellValueChanged?.(event);
-      if (many) undoRedo.endBatch();
+  const applyDragEdits = useCallback(
+    (generate: () => ICellValueChangedEvent<T>[]) => {
+      if (!editable) return;
+      undoRedo.beginBatch();
+      try {
+        // Generation may write formulas; those and all value changes share
+        // one history entry even if a parser or consumer callback throws.
+        for (const event of generate()) onCellValueChanged?.(event);
+      } finally {
+        undoRedo.endBatch();
+      }
     },
-    [onCellValueChanged, undoRedo.beginBatch, undoRedo.endBatch],
+    [editable, onCellValueChanged, undoRedo.beginBatch, undoRedo.endBatch],
   );
 
   const moveRangeTo = useCallback(
     (targetRow: number, targetCol: number, copy: boolean) => {
       if (!selectionRange) return;
-      const events = moveCellRange({
-        items,
-        visibleCols,
-        source: selectionRange,
-        targetRow,
-        targetCol,
-        copy,
-        formulaOptions: moveFormulaOptions,
-        formulaSource: moveFormulaSource,
+      applyDragEdits(() => moveCellRange({
+        items, visibleCols, source: selectionRange, targetRow, targetCol, copy,
+        formulaOptions: moveFormulaOptions, formulaSource: moveFormulaSource,
         isCoveredCell: isCoveredMergeCell,
-      });
-      applyCellEdits(events);
+      }));
     },
-    [selectionRange, items, visibleCols, moveFormulaOptions, moveFormulaSource, isCoveredMergeCell, applyCellEdits],
+    [selectionRange, items, visibleCols, moveFormulaOptions, moveFormulaSource, isCoveredMergeCell, applyDragEdits],
   );
 
   const dropTextAt = useCallback(
     (rowIndex: number, colIndex: number, text: string) => {
-      const parsed = parseTsvClipboard(text);
-      if (parsed.length === 0) return;
-      const events = applyPastedValues(
-        parsed,
-        rowIndex,
-        colIndex,
-        items,
-        visibleCols,
+      applyDragEdits(() => applyPastedValues(
+        parseTsvClipboard(text), rowIndex, colIndex, items, visibleCols,
         moveFormulaOptions && {
           colOffset: moveFormulaOptions.colOffset,
           flatColumns: moveFormulaOptions.flatColumns,
@@ -479,10 +471,9 @@ export function useDataGridInteraction<T>(
           formulaRow: moveFormulaOptions.formulaRow,
         },
         isCoveredMergeCell,
-      );
-      applyCellEdits(events);
+      ));
     },
-    [items, visibleCols, moveFormulaOptions, isCoveredMergeCell, applyCellEdits],
+    [items, visibleCols, moveFormulaOptions, isCoveredMergeCell, applyDragEdits],
   );
 
   const handleCellMouseDown = useCallback(
@@ -541,7 +532,7 @@ export function useDataGridInteraction<T>(
     data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId, mergeLayout },
     state: { activeCell, selectionRange, editingCell, selectedRowIds },
     handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopyEvent, handleCutEvent, handlePasteEvent, armPasteValues, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch, setPendingEditorValue: params.setPendingEditorValue },
-    features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, scrollToIndexRef, onKeyDown, fillDown, fillRight },
+    features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, scrollToIndexRef, onKeyDown, onRowReorderKeyDown: params.onRowReorderKeyDown, fillDown, fillRight },
   });
 
   const hasCellSelection = selectionRange != null || activeCell != null;
@@ -568,7 +559,7 @@ export function useDataGridInteraction<T>(
     copyRange: cellSelection ? copyRange : null,
     clearClipboardRanges: cellSelection ? clearClipboardRanges : NOOP,
     moveRangeTo: cellSelection ? moveRangeTo : (NOOP_MOVE_RANGE as typeof moveRangeTo),
-    dropTextAt: cellSelection ? dropTextAt : (NOOP_DROP_TEXT as typeof dropTextAt),
+    dropTextAt,
     canUndo,
     canRedo,
     onUndo: undo,

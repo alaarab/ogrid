@@ -32,6 +32,7 @@ export interface UseDataGridStateParams<T> {
   props: IOGridDataGridProps<T>;
   wrapperRef: RefObject<HTMLDivElement | null>;
   scrollToIndexRef?: RefObject<UseVirtualScrollResult['scrollToIndex'] | null>;
+  onRowReorderKeyDown?: (event: React.KeyboardEvent) => boolean;
 }
 
 // --- Grouped sub-interfaces ---
@@ -488,6 +489,7 @@ export function useDataGridState<T>(
     wrapperRef,
     scrollToIndexRef,
     onKeyDown,
+    onRowReorderKeyDown: params.onRowReorderKeyDown,
     onClipboardError,
     formulas: props.formulas,
     flatColumns,

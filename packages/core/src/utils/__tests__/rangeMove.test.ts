@@ -112,4 +112,24 @@ describe('moveCellRange', () => {
     });
     expect(events.find((e) => e.rowIndex === 1)?.newValue).toBe('X');
   });
+  it.each([
+    { name: 'read-only destination', targetRow: 1, targetCol: 1, endRow: 0, readOnly: true },
+    { name: 'clipped rows', targetRow: 2, targetCol: 0, endRow: 1 },
+    { name: 'clipped columns', targetRow: 1, targetCol: 1, endRow: 0, endCol: 1 },
+    { name: 'rejected parser', targetRow: 1, targetCol: 1, endRow: 0, rejected: true },
+    { name: 'covered destination', targetRow: 1, targetCol: 1, endRow: 0, covered: true },
+  ])('preserves values and formulas for a $name', ({ targetRow, targetCol, endRow, endCol = 0, readOnly, rejected, covered }) => {
+    const setFormula = jest.fn();
+    const events = moveCellRange({
+      items, visibleCols: [cols[0], { ...cols[1], editable: !readOnly,
+        valueParser: rejected ? () => undefined : undefined }],
+      source: { startRow: 0, startCol: 0, endRow, endCol }, targetRow, targetCol,
+      formulaOptions: { colOffset: 0, flatColumns: cols, hasFormula: (_c, r) => !rejected && r === 0,
+        getFormula: () => '=1+2', setFormula },
+      isCoveredCell: covered ? (r, c) => r === 1 && c === 1 : undefined,
+    });
+    expect(events).toEqual([]);
+    expect(setFormula).not.toHaveBeenCalled();
+  });
+
 });

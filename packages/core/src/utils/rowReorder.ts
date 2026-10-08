@@ -33,7 +33,7 @@ function indexOfId<T>(data: readonly T[], id: RowId, getRowId: (row: T) => RowId
 /**
  * Move the rows at `fromIndices` so the block lands before display index
  * `insertIndex` (the gap the drop indicator marks). `insertIndex` is measured
- * in the current array; indices inside the moved block are a no-op.
+ * in the current array; gaps within a contiguous moved block are a no-op.
  *
  * @returns The reordered array and the block's final index. `changed` is false
  *          when the move leaves the order unchanged (a drop on the block).
@@ -48,7 +48,7 @@ export function moveRows<T>(
   const first = Math.min(...fromIndices);
   const last = Math.max(...fromIndices);
   // Dropping on or immediately around the dragged block changes nothing.
-  if (insertIndex >= first && insertIndex <= last + 1) {
+  if (isRowMoveNoop(fromIndices, insertIndex)) {
     return { data: [...rows], toIndex: first, changed: false };
   }
   const block: T[] = [];
@@ -60,7 +60,7 @@ export function moveRows<T>(
   const removedBefore = fromIndices.filter((i) => i < insertIndex).length;
   const toIndex = Math.max(0, Math.min(insertIndex - removedBefore, keep.length));
   const data = [...keep.slice(0, toIndex), ...block, ...keep.slice(toIndex)];
-  return { data, toIndex, changed: true };
+  return { data, toIndex, changed: data.some((row, i) => row !== rows[i]) };
 }
 
 /**
@@ -136,5 +136,5 @@ export function isRowMoveNoop(fromIndices: readonly number[], insertIndex: numbe
   if (fromIndices.length === 0) return true;
   const first = Math.min(...fromIndices);
   const last = Math.max(...fromIndices);
-  return insertIndex >= first && insertIndex <= last + 1;
+  return new Set(fromIndices).size === last - first + 1 && insertIndex >= first && insertIndex <= last + 1;
 }
