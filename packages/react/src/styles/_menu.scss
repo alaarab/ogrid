@@ -8,10 +8,12 @@
   background: var(--ogrid-bg);
   font-size: 13px;
   line-height: 20px;
+  &[data-ogrid-menu-keyboard='false'] [role='menuitem']:focus-visible { outline: none; }
 }
 
 %item {
   @include surface.focus-ring;
+  outline: none;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -22,7 +24,7 @@
   font: inherit;
   line-height: 20px;
   white-space: nowrap;
-  &:hover:not(:disabled), &:focus-visible { background: var(--ogrid-bg-hover); }
+  &:hover:not(:disabled), &:focus, &[data-highlighted]:not(:disabled) { background: var(--ogrid-bg-hover); }
   &:active:not(:disabled) { background: var(--ogrid-active-bg); }
   &:disabled { opacity: 0.5; cursor: default; }
   &[data-ogrid-menu-action^='delete'] {

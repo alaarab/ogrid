@@ -130,7 +130,9 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
     [freeze]
   );
 
-  const { onKeyDown } = useMenuKeyboardNav(ref, { active: true, onClose });
+  // Cell menus open by right-click or touch long-press; the focused cell may
+  // still match :focus-visible from earlier keyboard navigation.
+  const { onKeyDown } = useMenuKeyboardNav(ref, { active: true, onClose, initialFocusVisible: false });
 
   React.useEffect(() => {
     // Handle both mouse and touch click-outside to close the menu

@@ -6,7 +6,7 @@ interface Row { id: number; product: string; quantity: number; status: string }
 const initial: Row[] = [{ id: 1, product: 'Notebook', quantity: 4, status: 'Open' }, { id: 2, product: 'Pencil', quantity: 50, status: 'Closed' }, { id: 3, product: 'Folder', quantity: 2, status: 'Free text' }];
 const columns: IColumnDef<Row>[] = [{ columnId: 'product', name: 'Product', editable: true }, { columnId: 'quantity', name: 'Quantity', editable: true, type: 'numeric' }, { columnId: 'status', name: 'Status', editable: true }];
 const initialRules: IDataValidationRule<Row>[] = [
-  { type: 'whole', columnIds: ['quantity'], operator: 'between', value: 1, value2: 10, inputMessage: { title: 'Quantity', text: 'Enter a whole number from 1 to 10.' }, errorAlert: { style: 'stop', title: 'Quantity', message: 'Choose a whole number from 1 to 10.' } },
+  { type: 'whole', columnIds: ['quantity'], operator: 'between', value: 1, value2: 10, allowBlank: false, inputMessage: { title: 'Quantity', text: 'Enter a whole number from 1 to 10.' }, errorAlert: { style: 'stop', title: 'Quantity', message: 'Choose a whole number from 1 to 10.' } },
   { type: 'list', columnIds: ['status'], rows: { start: 0, end: 1 }, values: ['Open', 'Closed'], errorAlert: { style: 'warning', title: 'Status', message: 'This status is outside the list. Keep it?' } },
 ];
 function ValidationGrid({ kit }: { kit: 'radix' | 'fluent' }) {
