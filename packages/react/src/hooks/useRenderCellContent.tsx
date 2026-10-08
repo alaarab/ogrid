@@ -110,13 +110,17 @@ export function useRenderCellContent<T>(
           false, // the <td> is the roving focus target (useGridCellFocus)
         );
 
+        // The fill handle is a sibling of the cell content (positioned against the
+        // <td>) so the content box can clip overflowing text like Excel does.
         content = (
-          <div
-            className={cellClassNames}
-            {...interactionProps}
-            style={descriptor.canEditAny ? CURSOR_CELL_STYLE : undefined}
-          >
-            {displayNode}
+          <>
+            <div
+              className={cellClassNames}
+              {...interactionProps}
+              style={descriptor.canEditAny ? CURSOR_CELL_STYLE : undefined}
+            >
+              {displayNode}
+            </div>
             {descriptor.canEditAny && descriptor.isSelectionEndCell && (
               // biome-ignore lint/a11y/useAriaPropsSupportedByRole: the fill handle is a pointer-only drag affordance; the label is intentional and relied on as a stable hook
               <div
@@ -125,7 +129,7 @@ export function useRenderCellContent<T>(
                 aria-label="Fill handle"
               />
             )}
-          </div>
+          </>
         );
       }
 
