@@ -94,6 +94,14 @@ All notable changes to OGrid will be documented in this file.
   default 64px when unset) instead of a fixed 120px, and numbers show in
   Excel's General format when a cell has no number format (`0.3`, not
   `0.30000000000000004`).
+- `@alaarab/ogrid-react-xlsx`: the formatting toolbar is redesigned as a
+  compact spreadsheet toolbar: inline SVG icons, grouped sections, a
+  strikethrough toggle, palette popovers for fill and font color (theme and
+  standard colors, No fill / Automatic, custom color) with the active cell's
+  color shown under the icon, and a themed number format menu. Toggles and
+  alignment show the active cell's style (`aria-pressed`), formatting buttons
+  are disabled until a cell is selected, arrow keys move between controls,
+  and colors follow the `--ogrid-*` theme variables in light and dark mode.
 - Cells merged away in the source file read as empty instead of repeating the
   merged block's value.
 - Merged cells and frozen rows are passed to OGrid as `mergedCells` and
