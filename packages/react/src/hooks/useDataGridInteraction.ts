@@ -3,7 +3,9 @@ import type { RefObject } from 'react';
 import type { RowId, IColumnDef, ICellValueChangedEvent } from '../types';
 import type { IFillFormulaOptions } from '../utils';
 import type { ScrollToRowIndex } from '../utils/scrollCellIntoView';
-import { formatCellReference, getCellValue } from '../utils';
+import { formatCellReference, getCellValue, expandRangeToMerges, isCoveredCell } from '../utils';
+import type { IMergeLayout } from '../utils';
+import type { ISelectionRange } from '../types';
 import { useCellSelection } from './useCellSelection';
 import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
@@ -87,6 +89,8 @@ export interface UseDataGridInteractionParams<T> {
   formulaRow?: (rowIndex: number) => number;
   /** Formula hooks for the undo history (engine coordinates). */
   formulaCells?: UseUndoRedoFormulaCells<T>;
+  /** Merged cells in the current view: selection grows to whole merges, copy/paste and keys treat each as one cell. */
+  mergeLayout?: IMergeLayout | null;
 }
 
 export interface UseDataGridInteractionResult<T> {
@@ -200,6 +204,16 @@ export function useDataGridInteraction<T>(
   } = params;
 
   const onFormulaInsertReferenceRef = useLatestRef(onFormulaInsertReference);
+  const mergeLayout = params.mergeLayout ?? null;
+  const mergeLayoutRef = useLatestRef(mergeLayout);
+  const expandRange = useCallback(
+    (range: ISelectionRange) => expandRangeToMerges(range, mergeLayoutRef.current),
+    [mergeLayoutRef]
+  );
+  const isCoveredMergeCell = useCallback(
+    (row: number, col: number) => isCoveredCell(mergeLayoutRef.current, row, col),
+    [mergeLayoutRef]
+  );
   const visibleColsRef = useLatestRef(visibleCols);
   const formulaColRef = useLatestRef(params.formulaCol);
   const formulaRowRef = useLatestRef(params.formulaRow);
@@ -315,6 +329,7 @@ export function useDataGridInteraction<T>(
     setActiveCell,
     wrapperRef,
     activeCell,
+    expandRange,
   });
 
   const { handleCopy, handleCut, handleCopyEvent, handleCutEvent, handlePaste, handlePasteEvent, cutRange, copyRange, clearClipboardRanges } = useClipboard({
@@ -334,6 +349,7 @@ export function useDataGridInteraction<T>(
     getFormula: viewFormulas?.getFormula,
     hasFormula: viewFormulas?.hasFormula,
     setFormula: viewFormulas?.setFormula,
+    isCoveredCell: isCoveredMergeCell,
   });
 
   const handleCellMouseDown = useCallback(
@@ -388,7 +404,7 @@ export function useDataGridInteraction<T>(
   });
 
   const { handleGridKeyDown, handleGridPaste, handleGridCopy, handleGridCut } = useKeyboardNavigation({
-    data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
+    data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId, mergeLayout },
     state: { activeCell, selectionRange, editingCell, selectedRowIds },
     handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopyEvent, handleCutEvent, handlePasteEvent, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
     features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, scrollToIndexRef, onKeyDown, fillDown },

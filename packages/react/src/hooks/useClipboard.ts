@@ -30,6 +30,8 @@ export interface UseClipboardParams<T> {
   hasFormula?: (col: number, row: number) => boolean;
   /** Sets or clears a formula for a flat column + row. */
   setFormula?: (col: number, row: number, formula: string | null) => void;
+  /** Cells covered by a merged cell (not its anchor): copied as empty, skipped on paste. */
+  isCoveredCell?: (row: number, col: number) => boolean;
 }
 
 /** The parts of a native or React `ClipboardEvent` the paste handler reads. */
@@ -122,6 +124,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const getFormulaRef = useLatestRef(params.getFormula);
   const hasFormulaRef = useLatestRef(params.hasFormula);
   const setFormulaRef = useLatestRef(params.setFormula);
+  const isCoveredCellRef = useLatestRef(params.isCoveredCell);
 
   const getRowIdRef = useLatestRef(params.getRowId);
   const onClipboardErrorRef = useLatestRef(params.onClipboardError);
@@ -171,11 +174,11 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
           hasFormula: hasFormulaRef.current,
         }
       : undefined;
-    const tsv = formatSelectionAsTsv(itemsRef.current, visibleColsRef.current, norm, formulaOptions);
+    const tsv = formatSelectionAsTsv(itemsRef.current, visibleColsRef.current, norm, formulaOptions, isCoveredCellRef.current);
     internalClipboardRef.current = tsv;
     markCopied(norm);
     return tsv;
-  }, [getEffectiveRange, itemsRef, visibleColsRef, formulasRef, flatColumnsRef, getFormulaRef, hasFormulaRef, colOffset, markCopied]);
+  }, [getEffectiveRange, itemsRef, visibleColsRef, formulasRef, flatColumnsRef, getFormulaRef, hasFormulaRef, colOffset, markCopied, isCoveredCellRef]);
 
   /** Copy, then register the range as a pending cut. Returns the TSV, or null when cut is not allowed. */
   const cutSelection = useCallback((): string | null => {
@@ -234,7 +237,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
       : undefined;
     beginBatch?.();
     try {
-      const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols, formulaOptions);
+      const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols, formulaOptions, isCoveredCellRef.current);
       for (const evt of pasteEvents) onCellValueChanged(evt);
       const cut = takePendingCut();
       if (cut) {
@@ -244,7 +247,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     } finally {
       endBatch?.();
     }
-  }, [getEffectiveRange, activeCellRef, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset, rowKeyOf, takePendingCut]);
+  }, [getEffectiveRange, activeCellRef, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset, rowKeyOf, takePendingCut, isCoveredCellRef]);
 
   const handlePaste = useCallback(async () => {
     if (editableRef.current === false) return;

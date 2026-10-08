@@ -31,6 +31,8 @@ export interface UseDataGridEditingParams<T> {
   hasFormula?: (col: number, row: number) => boolean;
   /** All flat columns (for mapping columnId  to  column index). */
   flatColumns?: IColumnDef<T>[];
+  /** Row the active cell moves to after an Enter commit (default rowIndex + 1). */
+  rowBelow?: (rowIndex: number, dataColIndex: number) => number;
 }
 
 export interface UseDataGridEditingResult<T> {
@@ -87,6 +89,16 @@ export function useDataGridEditing<T>(
   const onFormulaCellChangedRef = useLatestRef(onFormulaCellChanged);
   const flatColumnsRef = useLatestRef(flatColumns);
 
+  const rowBelowRef = useLatestRef(params.rowBelow);
+  // Enter-commit moves to the cell below (below the whole block for a merged cell).
+  const advanceBelow = useCallback((rowIndex: number, globalColIndex: number) => {
+    const localCol = globalColIndex - colOffset;
+    const newRow = rowBelowRef.current ? rowBelowRef.current(rowIndex, localCol) : rowIndex + 1;
+    if (newRow <= rowIndex || newRow > itemsLengthRef.current - 1) return;
+    setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });
+    setSelectionRange({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
+  }, [colOffset, rowBelowRef, itemsLengthRef, setActiveCell, setSelectionRange]);
+
   const commitCellEdit = useCallback(
     (
       item: T,
@@ -108,12 +120,7 @@ export function useDataGridEditing<T>(
           setPopoverAnchorEl(null);
           setPendingEditorValue(undefined);
           // Advance to next row
-          if (!options?.skipAdvance && rowIndex < itemsLengthRef.current - 1) {
-            const newRow = rowIndex + 1;
-            const localCol = globalColIndex - colOffset;
-            setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });
-            setSelectionRange({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
-          }
+          if (!options?.skipAdvance) advanceBelow(rowIndex, globalColIndex);
           return;
         }
       }
@@ -140,12 +147,7 @@ export function useDataGridEditing<T>(
         setEditingCell(null);
         setPopoverAnchorEl(null);
         setPendingEditorValue(undefined);
-        if (!options?.skipAdvance && rowIndex < itemsLengthRef.current - 1) {
-          const newRow = rowIndex + 1;
-          const localCol = globalColIndex - colOffset;
-          setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });
-          setSelectionRange({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
-        }
+        if (!options?.skipAdvance) advanceBelow(rowIndex, globalColIndex);
         return;
       }
 
@@ -169,14 +171,9 @@ export function useDataGridEditing<T>(
       setPopoverAnchorEl(null);
       setPendingEditorValue(undefined);
       // Advance to next row for inline editors (skip for checkbox — toggling shouldn't move selection)
-      if (!options?.skipAdvance && rowIndex < itemsLengthRef.current - 1) {
-        const newRow = rowIndex + 1;
-        const localCol = globalColIndex - colOffset;
-        setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });
-        setSelectionRange({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
-      }
+      if (!options?.skipAdvance) advanceBelow(rowIndex, globalColIndex);
     },
-    [formulas, setEditingCell, setPendingEditorValue, setActiveCell, setSelectionRange, colOffset, visibleColsRef, itemsLengthRef, onCellValueChangedRef, setFormulaRef, onFormulaCellChangedRef, flatColumnsRef, hasFormulaRef]
+    [formulas, setEditingCell, setPendingEditorValue, advanceBelow, visibleColsRef, onCellValueChangedRef, setFormulaRef, onFormulaCellChangedRef, flatColumnsRef, hasFormulaRef]
   );
 
   const cancelPopoverEdit = useCallback(() => {

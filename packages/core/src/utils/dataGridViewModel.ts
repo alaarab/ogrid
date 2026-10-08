@@ -12,6 +12,9 @@ import type { RowId, UserLike, IFilters, FilterValue } from '../types/dataGridTy
 import { getCellValue, isColumnEditable } from './cellValue';
 import { isInSelectionRange } from '../types/dataGridTypes';
 import { isFilterConfig } from './ogridHelpers';
+import { isSingleMergeRange } from './mergedCells';
+import type { IMergeLayout } from './mergedCells';
+import type { ISelectionRange } from '../types/dataGridTypes';
 import { FormulaError } from '../formula/types';
 
 // ---------------------------------------------------------------------------
@@ -169,6 +172,32 @@ export interface CellRenderDescriptorInput<T> {
   getFormula?: (col: number, row: number) => string | undefined;
   /** Monotonic counter incremented on each formula recalculation  -  used for cache invalidation. */
   formulaVersion?: number;
+  /**
+   * Merged cells in the current view (displayed rows, visible data columns).
+   * A selection that is exactly one merge counts as a single cell, and the
+   * merge's anchor carries the fill handle when the selection ends inside it.
+   */
+  mergeLayout?: IMergeLayout | null;
+}
+
+/** Stable per-layout id for the descriptor cache version (a new layout object is a new id). */
+const mergeLayoutIds = new WeakMap<IMergeLayout, number>();
+let nextMergeLayoutId = 1;
+function mergeLayoutId(layout: IMergeLayout | null | undefined): string {
+  if (!layout) return '';
+  let id = mergeLayoutIds.get(layout);
+  if (id === undefined) {
+    id = nextMergeLayoutId++;
+    mergeLayoutIds.set(layout, id);
+  }
+  return String(id);
+}
+
+/** The selection's end cell is (row, col), or lies in the merge anchored at (row, col). */
+function isSelectionEnd(range: ISelectionRange, row: number, col: number, layout: IMergeLayout | null | undefined): boolean {
+  if (row === range.endRow && col === range.endCol) return true;
+  const m = layout?.mergeAt(range.endRow, range.endCol);
+  return m != null && m.startRow === row && m.startCol === col;
 }
 
 function isCustomCellEditor(cellEditor: unknown): boolean {
@@ -194,6 +223,8 @@ export interface CellRenderDescriptor {
   displayValue?: unknown;
   /** The column's declared type (text, numeric, date, boolean). */
   columnType?: 'text' | 'numeric' | 'date' | 'boolean';
+  /** For a merged cell's anchor: the merge's last row and last global column index. */
+  mergeEnd?: { row: number; col: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -274,7 +305,9 @@ export class CellDescriptorCache {
       '\x01' +
       (input.formulaVersion ?? 0) +
       '\x01' +
-      input.colOffset
+      input.colOffset +
+      '\x01' +
+      mergeLayoutId(input.mergeLayout)
     );
   }
 
@@ -431,10 +464,13 @@ function computeCellDescriptor<T>(
     !input.isDragging &&
     input.activeCell?.rowIndex === rowIndex &&
     input.activeCell?.columnIndex === globalColIndex;
+  const mergeLayout = input.mergeLayout;
+  const merge = mergeLayout?.mergeAt(rowIndex, colIdx);
   const isSingleCellRange =
     input.selectionRange != null &&
-    input.selectionRange.startRow === input.selectionRange.endRow &&
-    input.selectionRange.startCol === input.selectionRange.endCol;
+    ((input.selectionRange.startRow === input.selectionRange.endRow &&
+      input.selectionRange.startCol === input.selectionRange.endCol) ||
+      isSingleMergeRange(input.selectionRange, mergeLayout));
   const isInRange =
     input.selectionRange != null &&
     !isSingleCellRange &&
@@ -450,8 +486,7 @@ function computeCellDescriptor<T>(
     input.copyRange == null &&
     input.cutRange == null &&
     input.selectionRange != null &&
-    rowIndex === input.selectionRange.endRow &&
-    colIdx === input.selectionRange.endCol;
+    isSelectionEnd(input.selectionRange, rowIndex, colIdx, mergeLayout);
 
   const isPinned = col.pinned != null;
   const pinnedSide = col.pinned ?? undefined;
@@ -515,6 +550,9 @@ function computeCellDescriptor<T>(
     rowIndex,
     displayValue: formulaDisplay !== undefined ? formulaDisplay : cellValue,
     columnType: col.type,
+    mergeEnd: merge && merge.startRow === rowIndex && merge.startCol === colIdx
+      ? { row: merge.endRow, col: merge.endCol + input.colOffset }
+      : undefined,
   };
 }
 

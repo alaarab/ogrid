@@ -738,3 +738,28 @@
     animation: none;
   }
 }
+
+// ---- Frozen top rows & merged cells ----
+// Frozen rows stick below the header (position/top/z-index are inline, see
+// BaseGridRow); the last one draws a divider over the scrolling rows. An inset
+// shadow, not a border: it moves with the sticky cells.
+.dataTable tbody tr.frozenRowLast > td {
+  box-shadow: inset 0 -2px 0 var(--ogrid-frozen-divider, var(--ogrid-border-strong, rgba(0, 0, 0, 0.24)));
+}
+
+.dataTable tbody tr.frozenRowLast > td.pinnedColLeft {
+  box-shadow:
+    inset 0 -2px 0 var(--ogrid-frozen-divider, var(--ogrid-border-strong, rgba(0, 0, 0, 0.24))),
+    2px 0 4px -1px var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.1));
+}
+
+.dataTable tbody tr.frozenRowLast > td.pinnedColRight {
+  box-shadow:
+    inset 0 -2px 0 var(--ogrid-frozen-divider, var(--ogrid-border-strong, rgba(0, 0, 0, 0.24))),
+    -2px 0 4px -1px var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.1));
+}
+
+// A merged cell's content sits in the middle of its block.
+.dataTable tbody td.mergedCell {
+  vertical-align: middle;
+}

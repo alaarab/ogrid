@@ -39,6 +39,7 @@ export type {
   IStatusBarProps,
   IActiveCell,
   ISelectionRange,
+  IMergedCell,
   SideBarPanelId,
   ISideBarDef,
   ISheetDef,

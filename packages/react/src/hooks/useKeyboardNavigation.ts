@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { getSelectAllRange, isColumnEditable } from '@alaarab/ogrid-core';
+import { getSelectAllRange, isColumnEditable, expandRangeToMerges, isCoveredCell, rangesEqual } from '@alaarab/ogrid-core';
+import type { IMergeLayout } from '@alaarab/ogrid-core';
 import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow, getOppositeCorner, booleanParser, parseValue } from '../utils';
 import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
 import { scrollCellIntoView, type ScrollToRowIndex } from '../utils/scrollCellIntoView';
@@ -25,6 +26,8 @@ export interface UseKeyboardNavigationParams<T> {
     hasCheckboxCol: boolean;
     visibleColumnCount: number;
     getRowId: (item: T) => RowId;
+    /** Merged cells: arrows and Tab step over a merge as one cell. */
+    mergeLayout?: IMergeLayout | null;
   };
   state: {
     activeCell: IActiveCell | null;
@@ -143,7 +146,7 @@ export function useKeyboardNavigation<T>(
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const { data, state, handlers, features } = paramsRef.current;
-      const { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId } = data;
+      const { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId, mergeLayout } = data;
       const { activeCell, selectionRange, editingCell, selectedRowIds } = state;
       const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, setContextMenu, onUndo, onRedo, clearClipboardRanges, beginBatch, endBatch } = handlers;
       const { editable, onCellValueChanged, rowSelection, wrapperRef, scrollToIndexRef, onKeyDown, fillDown } = features;
@@ -167,7 +170,13 @@ export function useKeyboardNavigation<T>(
       // Moves the active cell one step in Tab order. Returns false at the grid's
       // first/last cell so Tab can carry focus out of the grid (no keyboard trap).
       const moveByTab = (from: IActiveCell, backward: boolean): boolean => {
-        const next = computeTabNavigation(from.rowIndex, from.columnIndex, maxRowIndex, maxColIndex, colOffset, backward);
+        let next = computeTabNavigation(from.rowIndex, from.columnIndex, maxRowIndex, maxColIndex, colOffset, backward);
+        // Cells covered by a merge are not tab stops; the merge's anchor is.
+        while (mergeLayout && isCoveredCell(mergeLayout, next.rowIndex, next.columnIndex - colOffset)) {
+          const after = computeTabNavigation(next.rowIndex, next.columnIndex, maxRowIndex, maxColIndex, colOffset, backward);
+          if (after.rowIndex === next.rowIndex && after.columnIndex === next.columnIndex) return false;
+          next = after;
+        }
         if (next.rowIndex === from.rowIndex && next.columnIndex === from.columnIndex) return false;
         const nextDataCol = next.columnIndex - colOffset;
         setSelectionRange({ startRow: next.rowIndex, startCol: nextDataCol, endRow: next.rowIndex, endCol: nextDataCol });
@@ -254,6 +263,8 @@ export function useKeyboardNavigation<T>(
         }
       }
       const isEmptyAt = (r: number, c: number): boolean => {
+        // A merged cell's covered cells read as empty (Excel).
+        if (mergeLayout && isCoveredCell(mergeLayout, r, c)) return true;
         const row = items[r];
         const col = visibleCols[c];
         if (row === undefined || col === undefined) return true;
@@ -295,11 +306,11 @@ export function useKeyboardNavigation<T>(
           // Shift+Arrow: the active cell is the anchor and stays put (Excel);
           // the far corner of the range is the end that moves.
           const extent = shift ? getOppositeCorner(selectionRange, rowIndex, dataColIndex) : null;
-          const { newRowIndex, newColumnIndex, newRange } = computeArrowNavigation({
+          const step = (fromRow: number, fromCol: number) => computeArrowNavigation({
             direction: e.key as 'ArrowDown' | 'ArrowUp' | 'ArrowLeft' | 'ArrowRight',
-            rowIndex: extent ? extent.row : rowIndex,
-            columnIndex: extent ? extent.col + colOffset : columnIndex,
-            dataColIndex: extent ? extent.col : dataColIndex,
+            rowIndex: fromRow,
+            columnIndex: fromCol + colOffset,
+            dataColIndex: fromCol,
             colOffset,
             maxRowIndex, maxColIndex,
             visibleColCount: visibleCols.length,
@@ -309,6 +320,26 @@ export function useKeyboardNavigation<T>(
             isEmptyAt,
             anchor: { rowIndex, dataColIndex },
           });
+          let nav = step(extent ? extent.row : rowIndex, extent ? extent.col : dataColIndex);
+          if (mergeLayout) {
+            // A merge is one cell: a step that lands back in the same merge (the
+            // active cell's, or one the range already holds) keeps going.
+            const current = selectionRange ? expandRangeToMerges(selectionRange, mergeLayout) : null;
+            const progressed = (n: typeof nav): boolean => {
+              if (shift) return current == null || !rangesEqual(expandRangeToMerges(n.newRange, mergeLayout), current);
+              const m = mergeLayout.mergeAt(n.newRowIndex, n.newDataColIndex);
+              const row = m ? m.startRow : n.newRowIndex;
+              const col = m ? m.startCol : n.newDataColIndex;
+              return row !== rowIndex || col !== dataColIndex;
+            };
+            const maxSteps = items.length + visibleCols.length;
+            for (let i = 0; i < maxSteps && !progressed(nav); i++) {
+              const next = step(nav.newRowIndex, nav.newDataColIndex);
+              if (next.newRowIndex === nav.newRowIndex && next.newDataColIndex === nav.newDataColIndex) break;
+              nav = next;
+            }
+          }
+          const { newRowIndex, newColumnIndex, newRange } = nav;
           setSelectionRange(newRange);
           if (shift) {
             if (wrapperRef.current) scrollCellIntoView(wrapperRef.current, newRowIndex, newColumnIndex, scrollToIndexRef?.current);

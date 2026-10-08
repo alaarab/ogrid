@@ -100,6 +100,8 @@ export type { ISortState } from './sortHelpers';
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './columnAutosize';
 export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner } from './keyboardNavigation';
 export type { ArrowNavigationContext, ArrowNavigationResult } from './keyboardNavigation';
+export { resolveMergedCells, isCoveredCell, expandRangeToMerges, isSingleMergeRange } from './mergedCells';
+export type { IResolvedMerge, IMergeLayout, ResolveMergedCellsParams } from './mergedCells';
 export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, computeAutoScrollDelta, getSelectAllRange, applyRangeRowSelection, computeRowSelectionState } from './selectionHelpers';
 export {
   formatCellValueForTsv,

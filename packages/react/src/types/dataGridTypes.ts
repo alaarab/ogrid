@@ -24,6 +24,7 @@ export type {
   IStatusBarProps,
   IActiveCell,
   ISelectionRange,
+  IMergedCell,
   SideBarPanelId,
   ISideBarDef,
   ISheetDef,
@@ -47,6 +48,7 @@ import type {
   ISideBarDef,
   ISheetDef,
   IVirtualScrollConfig,
+  IMergedCell,
 } from '@alaarab/ogrid-core';
 
 // --- OGrid / useOGrid ---
@@ -121,6 +123,21 @@ interface IOGridBaseProps<T> {
 
   /** When true (default), header row sticks to the top of the scroll container. */
   stickyHeader?: boolean;
+  /**
+   * Merged cells (Excel "Merge Cells"). Each anchor cell spans `rowSpan`
+   * displayed rows and `colSpan` visible columns; covered cells are not
+   * rendered. Navigation, selection, copy and editing treat the block as one
+   * cell (the anchor). Merges that no longer fit the view (anchor filtered out
+   * or on another page, span past the end, across pinned columns or frozen
+   * rows) are clipped or dropped rather than misdrawn.
+   */
+  mergedCells?: IMergedCell[];
+  /**
+   * Keep the first N displayed rows visible below the header while the body
+   * scrolls vertically (Excel "Freeze Top Rows"). Works with pinned columns
+   * and virtual scrolling. Default: 0.
+   */
+  frozenRows?: number;
 
   /** When true, shows a fullscreen toggle button in the toolbar. Default: false. */
   fullScreen?: boolean;
@@ -290,6 +307,21 @@ export interface IOGridDataGridProps<T> {
   suppressHorizontalScroll?: boolean;
   /** When true (default), header row sticks to the top of the scroll container. */
   stickyHeader?: boolean;
+  /**
+   * Merged cells (Excel "Merge Cells"). Each anchor cell spans `rowSpan`
+   * displayed rows and `colSpan` visible columns; covered cells are not
+   * rendered. Navigation, selection, copy and editing treat the block as one
+   * cell (the anchor). Merges that no longer fit the view (anchor filtered out
+   * or on another page, span past the end, across pinned columns or frozen
+   * rows) are clipped or dropped rather than misdrawn.
+   */
+  mergedCells?: IMergedCell[];
+  /**
+   * Keep the first N displayed rows visible below the header while the body
+   * scrolls vertically (Excel "Freeze Top Rows"). Works with pinned columns
+   * and virtual scrolling. Default: 0.
+   */
+  frozenRows?: number;
   isLoading?: boolean;
   loadingMessage?: string;
   editable?: boolean;

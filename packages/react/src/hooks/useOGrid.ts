@@ -62,6 +62,7 @@ export function useOGrid<T>(
     emptyState, entityLabelPlural = 'items', layoutMode = 'fill', suppressHorizontalScroll,
     editable, cellSelection, canUndo, canRedo, rowSelection = 'none', statusBar, pageSizeOptions,
     stickyHeader, columnReorder, responsiveColumns, virtualScroll, rowHeight, density = 'normal',
+    mergedCells, frozenRows,
     'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
   } = props;
 
@@ -211,6 +212,7 @@ export function useOGrid<T>(
     ...dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader: stickyHeader ?? true, columnReorder, responsiveColumns,
     virtualScroll, rowHeight, density, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
+    mergedCells, frozenRows,
     emptyState: dgEmptyState,
     ...dgFormulaProps,
   }), [
@@ -224,7 +226,7 @@ export function useOGrid<T>(
     isWindowed, page, pageSize, displayTotalCount, statusBarConfig,
     isLoadingResolved, dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
-    rowHeight, density, ariaLabel, ariaLabelledBy,
+    rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows,
     dgEmptyState, dgFormulaProps,
   ]);
 

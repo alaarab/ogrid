@@ -39,6 +39,9 @@ export {
   findCtrlArrowTarget,
   computeTabNavigation,
   rangesEqual,
+  resolveMergedCells,
+  expandRangeToMerges,
+  isCoveredCell,
   clampSelectionToBounds,
   computeAutoScrollSpeed,
   formatCellValueForTsv,
@@ -79,6 +82,8 @@ export type {
   ColumnHeaderMenuHandlers,
   ArrowNavigationContext,
   ArrowNavigationResult,
+  IMergeLayout,
+  IResolvedMerge,
   IFillFormulaOptions,
 } from '@alaarab/ogrid-core';
 

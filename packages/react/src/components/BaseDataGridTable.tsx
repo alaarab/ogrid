@@ -6,6 +6,7 @@ import { useColumnMeta } from '../hooks/useColumnMeta';
 import { useRenderCellContent } from '../hooks/useRenderCellContent';
 import { usePortalTheme } from '../hooks/usePortalTheme';
 import { useGridCellFocus } from '../hooks/useGridCellFocus';
+import { useFrozenRowOffsets } from '../hooks/useFrozenRowOffsets';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
 import {
   GRID_ROOT_STYLE,
@@ -132,6 +133,8 @@ export function BaseDataGridTableInner<T>(
     rowCount: windowed ? windowed.rowCount : items.length,
     colCount: gridProps.cellSelection === false ? 0 : visibleCols.length,
   });
+  const { mergeLayout, frozenRows } = o.viewModels;
+  useFrozenRowOffsets(tableContainerRef, frozenRows, o.stickyHeader, windowed ?? items);
   // Windowed placeholders are aria-hidden; announce loading once for the grid instead.
   let windowedLoading = false;
   if (windowed) {
@@ -245,6 +248,8 @@ export function BaseDataGridTableInner<T>(
                     formulaVersion={gridProps.formulaVersion}
                     pinnedColumns={pinning.pinnedColumns}
                     rowNumWidth={hasRowNumbersCol ? (columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH) : undefined}
+                    mergeLayout={mergeLayout}
+                    frozenRows={frozenRows}
                     styles={styles}
                     primitives={primitives}
                   />
