@@ -412,6 +412,60 @@ export function createDragDropTests(OGrid: React.ComponentType<IOGridProps<Row>>
     else expect(bodyCell(container, 2, 1).textContent).toBe('b1');
   });
 
+
+  it.each(['source', 'destination', 'external drop'] as const)('protects a spill child at the %s with frozen panes', async (kind) => {
+    const { container, onEdit } = await renderGrid({
+      data: rows.map(row => ({ ...row, a: '', b: row.id === 3 ? 'value' : '' })),
+      formulas: true, initialFormulas: [{ col: 0, row: 0, formula: '=SEQUENCE(2)' }],
+      rangeMove: true, cellDrop: true, frozenRows: 1, frozenColumns: 1,
+    });
+    await waitFor(() => expect(bodyCell(container, 1, 0).textContent).toBe('2'));
+    const child = bodyCell(container, 1, 0);
+    const plain = bodyCell(container, 2, 1);
+    if (kind === 'external drop') {
+      fireEvent.drop(child, { dataTransfer: makeDataTransfer({ 'text/plain': 'overwrite' }) });
+    } else {
+      fireEvent.pointerDown(kind === 'source' ? child : plain);
+      const handle = await waitFor(() => {
+        const el = container.querySelector<HTMLElement>('[data-ogrid-range-move-handle]');
+        expect(el).toBeInTheDocument();
+        return el!;
+      });
+      const dt = makeDataTransfer();
+      fireEvent.dragStart(handle, { dataTransfer: dt });
+      fireEvent.drop(kind === 'source' ? plain : child, { dataTransfer: dt });
+    }
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(bodyCell(container, 1, 0).textContent).toBe('2');
+    expect(bodyCell(container, 2, 1).textContent).toBe('value');
+  });
+
+  it('moves a spill anchor across frozen panes and restores its spill with one undo', async () => {
+    const { container, grid } = await renderGrid({
+      data: rows.map(row => ({ ...row, a: '', b: '' })),
+      formulas: true, initialFormulas: [{ col: 0, row: 0, formula: '=SEQUENCE(2)' }],
+      rangeMove: true, frozenRows: 1, frozenColumns: 1,
+    });
+    await waitFor(() => expect(bodyCell(container, 1, 0).textContent).toBe('2'));
+    fireEvent.pointerDown(bodyCell(container, 0, 0));
+    const handle = await waitFor(() => {
+      const el = container.querySelector<HTMLElement>('[data-ogrid-range-move-handle]');
+      expect(el).toBeInTheDocument();
+      return el!;
+    });
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(handle, { dataTransfer: dt });
+    fireEvent.drop(bodyCell(container, 2, 1), { dataTransfer: dt });
+    await waitFor(() => expect(bodyCell(container, 3, 1).textContent).toBe('2'));
+    expect(bodyCell(container, 1, 0).textContent).toBe('');
+    fireEvent.keyDown(grid, { key: 'z', ctrlKey: true });
+    await waitFor(() => expect(bodyCell(container, 1, 0).textContent).toBe('2'));
+    expect(bodyCell(container, 3, 1).textContent).toBe('');
+    fireEvent.keyDown(grid, { key: 'y', ctrlKey: true });
+    await waitFor(() => expect(bodyCell(container, 3, 1).textContent).toBe('2'));
+    expect(bodyCell(container, 1, 0).textContent).toBe('');
+  });
+
   describe('cell range move', () => {
     it('moves a selected range and undoes it', async () => {
       const { container, grid, onEdit } = await renderGrid({ rangeMove: true });

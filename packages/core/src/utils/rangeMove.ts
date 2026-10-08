@@ -16,6 +16,7 @@ import {
   parseTsvClipboard,
 } from './clipboardHelpers';
 import type { IPasteFormulaSource } from './clipboardHelpers';
+import { isColumnEditable } from './cellValue';
 
 /** Formula-aware options shared by the TSV read and the paste write. */
 export interface RangeMoveFormulaOptions<T> {
@@ -69,6 +70,19 @@ export function moveCellRange<T>(params: MoveCellRangeParams<T>): ICellValueChan
   if (norm.endRow < norm.startRow || norm.endCol < norm.startCol) return [];
   // A move onto its own origin changes nothing.
   if (!copy && targetRow === norm.startRow && targetCol === norm.startCol) return [];
+
+  // Moving must clear every source cell. Reject protected sources before
+  // planning any destination writes, including read-only spill children.
+  if (!copy) {
+    for (let row = norm.startRow; row <= norm.endRow; row++) {
+      const item = items[row];
+      if (item === undefined) return [];
+      for (let col = norm.startCol; col <= norm.endCol; col++) {
+        const column = visibleCols[col];
+        if (!column || !isColumnEditable(column, item)) return [];
+      }
+    }
+  }
 
   const text = formatSelectionAsTsv(
     items,
