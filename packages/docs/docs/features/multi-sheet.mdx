@@ -20,6 +20,10 @@ OGrid can render an Excel-style **sheet tab bar** along the bottom of the grid s
 | `activeSheet` | `string` | The id of the currently active sheet. |
 | `onSheetChange` | `(sheetId: string) => void` | Called when the user clicks a different tab. |
 | `onSheetAdd` | `() => void` | Called when the user clicks the **+** button. Omit to hide it. |
+| `onSheetRename` | `(sheetId: string, name: string) => void` | Rename a sheet inline. Omit to turn renaming off. |
+| `onSheetReorder` | `(sheetIds: string[]) => void` | Reorder sheets by dragging tabs. Receives every sheet id in the new order. |
+| `onSheetDelete` | `(sheetId: string) => void` | Adds **Delete** to the tab menu. Not offered for the last sheet. |
+| `onSheetColorChange` | `(sheetId: string, color: string \| undefined) => void` | Adds tab colors to the tab menu; `undefined` means "No color". |
 
 `ISheetDef` is a small shape from `@alaarab/ogrid-core`:
 
@@ -76,6 +80,33 @@ When [formulas](./formulas) are enabled, the `sheets` prop registers other sheet
   /* ...sheet props as above... */
   formulas
   sheets={{ Q2: q2Accessor, FY: fyAccessor }}
+/>
+```
+
+## Renaming, reordering, deleting and tab colors
+
+Each of these is turned on by passing its callback. The grid only reports the
+change; you update `sheetDefs` (and drop a deleted sheet's data) in your state.
+
+- **Rename:** double-click a tab, or focus it and press **F2**. Type the name,
+  then **Enter** (or click away) to commit, **Escape** to cancel. An empty or
+  unchanged name is ignored.
+- **Reorder:** drag a tab and drop it on the left or right half of another.
+- **Tab menu:** right-click a tab, or focus it and press **Shift+F10** (or the
+  context-menu key). It offers Rename, Move left / Move right, Delete, the tab
+  colors and No color, depending on which callbacks you pass. Arrow keys move
+  through it and Escape closes it.
+
+```tsx
+<OGrid
+  {...gridProps}
+  sheetDefs={sheets}
+  activeSheet={activeSheet}
+  onSheetChange={setActiveSheet}
+  onSheetRename={(id, name) => setSheets((s) => s.map((x) => (x.id === id ? { ...x, name } : x)))}
+  onSheetReorder={(ids) => setSheets((s) => ids.map((id) => s.find((x) => x.id === id)!))}
+  onSheetDelete={(id) => setSheets((s) => s.filter((x) => x.id !== id))}
+  onSheetColorChange={(id, color) => setSheets((s) => s.map((x) => (x.id === id ? { ...x, color } : x)))}
 />
 ```
 

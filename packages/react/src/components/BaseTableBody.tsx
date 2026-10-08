@@ -8,7 +8,7 @@ import type { RowMergePlan, MergedCellRender } from './BaseGridRow';
 import type { useColumnMeta } from '../hooks/useColumnMeta';
 import type { GridRowProps } from './createOGrid';
 import type { IColumnDef, WindowedDataState } from '../types';
-import type { IVisibleColumnRange, IMergeLayout } from '@alaarab/ogrid-core';
+import type { IVisibleColumnRange, IMergeLayout, IHiddenGaps } from '@alaarab/ogrid-core';
 import type { DataGridStyles, DataGridPrimitives } from './BaseDataGridTable.types';
 
 export interface BaseTableBodyProps<T> {
@@ -61,6 +61,9 @@ export interface BaseTableBodyProps<T> {
   onRowResizeStart?: (e: React.PointerEvent, rowId: string | number) => void;
   /** Pointer down on a row number cell: select the whole row. */
   onRowHeaderPointerDown?: (e: React.PointerEvent, rowIndex: number) => void;
+  /** Where hidden rows sit (`allowHiding`); with `onUnhideRows`, row numbers show gap markers. */
+  hiddenRowGaps?: IHiddenGaps<string | number> | null;
+  onUnhideRows?: (rowIds: (string | number)[]) => void;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
 }
@@ -133,6 +136,8 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     editingCell, tabStopCell, registerTabStop, popoverAnchorEl, pendingEditorValue, formulaVersion,
     pinnedColumns, rowNumWidth, mergeLayout, getRowHeight, onRowResizeStart, styles, primitives, onRowHeaderPointerDown,
   } = props;
+  // Hidden-row markers need a row-number gutter to sit in.
+  const rowGaps = hasRowNumbersCol && props.onUnhideRows ? props.hiddenRowGaps : null;
   const { Tbody } = primitives;
   const rowCount = windowed ? windowed.rowCount : items.length;
   const frozenCount = Math.max(0, Math.min(props.frozenRows ?? 0, rowCount));
@@ -238,6 +243,9 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         customRowHeight={getRowHeight?.(rowIdStr)}
         onRowResizeStart={onRowResizeStart}
         onRowHeaderPointerDown={onRowHeaderPointerDown}
+        hiddenRowsBefore={rowGaps?.before.get(rowIdStr)}
+        hiddenRowsAfter={rowGaps && rowGaps.lastShown === rowIdStr ? rowGaps.after : undefined}
+        onUnhideRows={rowGaps ? props.onUnhideRows : undefined}
         styles={styles}
         primitives={primitives}
       />

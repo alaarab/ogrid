@@ -90,6 +90,23 @@ describe('SUBTOTAL', () => {
     expect(errorType(evalFormula('=SUBTOTAL(9,1,2)', data))).toBe('#VALUE!');
   });
 
+  it('101-111 skip rows the accessor reports hidden; 1-11 still count them', () => {
+    const hidden = new Set([1, 3]);
+    const accessor: IGridDataAccessor = { ...createAccessor(columnA(2, 4, 'x', 6)), isRowHidden: (row) => hidden.has(row) };
+    const engine = new FormulaEngine();
+    engine.setFormula(1, 0, '=SUBTOTAL(109,A1:A4)', accessor);
+    engine.setFormula(1, 1, '=SUBTOTAL(9,A1:A4)', accessor);
+    engine.setFormula(1, 2, '=SUBTOTAL(102,A1:A4)', accessor);
+    engine.setFormula(1, 3, '=SUBTOTAL(109,A2)', accessor);
+    expect(engine.getValue(1, 0)).toBe(2);
+    expect(engine.getValue(1, 1)).toBe(12);
+    expect(engine.getValue(1, 2)).toBe(1);
+    expect(engine.getValue(1, 3)).toBe(0);
+    hidden.clear();
+    engine.recalcAll(accessor);
+    expect(engine.getValue(1, 0)).toBe(12);
+  });
+
   it('skips cells holding their own SUBTOTAL so nested subtotals are not double counted', () => {
     const accessor = createAccessor(columnA(1, 2, null, 4));
     const engine = new FormulaEngine();

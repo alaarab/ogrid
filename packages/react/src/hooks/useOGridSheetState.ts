@@ -5,13 +5,14 @@ import type { UseOGridPaginationState } from './useOGridPagination';
 import type { UseOGridRowSelectionState } from './useOGridRowSelection';
 import type { UseOGridColumnLayoutState } from './useOGridColumnLayout';
 import type { UseOGridColumnVisibilityState } from './useOGridColumnVisibility';
+import type { UseOGridHiddenRowsState } from './useOGridHiddenRows';
 import type { SheetScopedGridState } from './useOGrid.types';
 import type { IOGridProps, RowId } from '../types';
 
 /** The props whose presence makes a sheet-scoped slot controlled (never written on a sheet switch). */
 export type SheetStateControlProps = Pick<
   IOGridProps<unknown>,
-  'visibleColumns' | 'sort' | 'filters' | 'page' | 'selectedRows' | 'columnOrder'
+  'visibleColumns' | 'sort' | 'filters' | 'page' | 'selectedRows' | 'columnOrder' | 'hiddenRowIds'
 >;
 
 /** The raw (non-notifying) setters a sheet switch writes through. */
@@ -22,6 +23,7 @@ export interface SheetStateSlices {
   pagination: Pick<UseOGridPaginationState, 'setInternalPage'>;
   selection: Pick<UseOGridRowSelectionState<unknown>, 'setInternalSelectedRows'>;
   columnLayout: Pick<UseOGridColumnLayoutState, 'setInternalColumnOrder' | 'setColumnWidthOverrides' | 'setPinnedOverrides'>;
+  hiddenRows?: Pick<UseOGridHiddenRowsState, 'setInternalHiddenRowIds'>;
 }
 
 /** State for a sheet seen for the first time: its own defaults, nothing inherited. */
@@ -35,6 +37,7 @@ export function sheetStateDefaults(defaultSort: SortState): SheetScopedGridState
     columnOrder: undefined,
     columnWidths: {},
     pinned: undefined,
+    hiddenRowIds: [],
   };
 }
 
@@ -56,6 +59,7 @@ export function applySheetState(state: SheetScopedGridState, props: SheetStateCo
   if (props.columnOrder === undefined) s.columnLayout.setInternalColumnOrder(state.columnOrder);
   s.columnLayout.setColumnWidthOverrides(state.columnWidths);
   if (state.pinned !== undefined) s.columnLayout.setPinnedOverrides(state.pinned);
+  if (props.hiddenRowIds === undefined) s.hiddenRows?.setInternalHiddenRowIds(state.hiddenRowIds ?? []);
 }
 
 /**

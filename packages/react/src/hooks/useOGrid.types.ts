@@ -72,6 +72,8 @@ export interface SheetScopedGridState {
   columnOrder: string[] | undefined;
   columnWidths: Record<string, number>;
   pinned: Record<string, 'left' | 'right'> | undefined;
+  /** Hidden row ids (uncontrolled `hiddenRowIds`). */
+  hiddenRowIds?: RowId[];
 }
 
 export interface UseOGridResult<T> {

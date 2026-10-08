@@ -245,6 +245,64 @@
   }
 }
 
+// ---- Hidden row/column markers (`allowHiding`) ----
+// A double line where hidden columns or rows sit, like a spreadsheet's. Each is
+// a button: clicking it unhides them.
+
+.hiddenColumnsMarker,
+.hiddenRowsMarker {
+  position: absolute;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0 solid var(--ogrid-hidden-marker-color, var(--ogrid-fg-secondary, #8a8a8a));
+  cursor: pointer;
+  z-index: calc(var(--ogrid-z-resize-handle, 1) + 1);
+
+  &:hover {
+    border-color: var(--ogrid-accent, #0078d4);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: 1px;
+  }
+}
+
+.hiddenColumnsMarker {
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-left-width: 1px;
+  border-right-width: 1px;
+
+  &[data-hidden-gap='before'] {
+    left: 0;
+  }
+
+  // Clear of the column resize handle on the right edge.
+  &[data-hidden-gap='after'] {
+    right: 6px;
+  }
+}
+
+.hiddenRowsMarker {
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-top-width: 1px;
+  border-bottom-width: 1px;
+
+  &[data-hidden-gap='before'] {
+    top: 0;
+  }
+
+  // Clear of the row resize handle on the bottom edge.
+  &[data-hidden-gap='after'] {
+    bottom: 4px;
+  }
+}
+
 // ---- Column resize handle ----
 
 .resizeHandle {

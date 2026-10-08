@@ -606,6 +606,10 @@ export class FormulaEngine {
         const key = toCellKey(addr.col, addr.row, addr.sheet);
         return this.formulas.get(key);
       },
+      isRowHidden: (row: number, sheet?: string): boolean => {
+        const rowAccessor = sheet ? this.sheetAccessors.get(sheet) : accessor;
+        return rowAccessor?.isRowHidden?.(row) ?? false;
+      },
     };
     return context;
   }

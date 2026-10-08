@@ -118,6 +118,8 @@ export function useOGridFormulas<T>(
   columns: IColumnDef<T>[],
   formulaRowMap: IFormulaRowMap | undefined,
   nameBox?: Pick<UseOGridNameBoxResult, 'navigate'>,
+  /** Whether a sheet row is hidden (SUBTOTAL 101-111). */
+  isRowHidden?: (row: number) => boolean,
 ) {
   const { formulas, initialFormulas, onFormulaRecalc, formulaFunctions, namedRanges, formulaLimits, sheets } = props;
   const [formulaVersion, setFormulaVersion] = useState(0);
@@ -136,6 +138,7 @@ export function useOGridFormulas<T>(
     formulaLimits,
     sheets,
     formulasFromData: formulasFollowData(props.onUndo != null),
+    isRowHidden,
   });
 
   const activeCell = useOGridActiveCell();

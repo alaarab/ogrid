@@ -115,7 +115,11 @@ export {
   getContextMenuHandlers,
   getColumnHeaderMenuItems,
   getStructureMenuItems,
+  getHidingMenuItems,
   formatShortcut,
+  computeHiddenGaps,
+  hiddenKeysInSpan,
+  hiddenKeysAround,
 } from './utils';
 export type {
   GridContextMenuItem,
@@ -124,6 +128,8 @@ export type {
   ColumnHeaderMenuInput,
   ColumnHeaderMenuHandlers,
   StructureMenuInput,
+  HidingMenuInput,
+  IHiddenGaps,
 } from './utils';
 
 // Utils  -  valueParsers

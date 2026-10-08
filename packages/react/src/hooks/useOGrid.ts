@@ -21,6 +21,8 @@ import { useOGridChrome } from './useOGridChrome';
 import { useOGridStructureEdits } from './useOGridStructureEdits';
 import { useOGridCellApi } from './useOGridCellApi';
 import { useOGridNameBox } from './useOGridNameBox';
+import { useOGridHiddenRows } from './useOGridHiddenRows';
+import { useLatestRef } from './useLatestRef';
 import { useSortFilterColumns } from './useSortFilterColumns';
 import {
   buildStatusBarConfig,
@@ -31,7 +33,7 @@ import {
   resolveSelectionKnownItems,
   resolveSpreadsheetChrome,
 } from './ogridDerivations';
-import type { IOGridProps, IOGridDataGridProps, IOGridApi, IGridEditBridge } from '../types';
+import type { IOGridProps, IOGridDataGridProps, IOGridApi, IGridEditBridge, IGridHidingActions } from '../types';
 import type { UseOGridColumnChooser, UseOGridFilters, UseOGridPagination, UseOGridResult } from './useOGrid.types';
 
 export type {
@@ -104,12 +106,18 @@ export function useOGrid<T>(
     controlledFilters, onFiltersChange: props.onFiltersChange, setPage,
     columns: sortFilterColumns, displayData, dataSource, dataSourceKey,
   });
+  const hiddenRows = useOGridHiddenRows({
+    controlledHiddenRowIds: props.hiddenRowIds,
+    defaultHiddenRowIds: props.defaultHiddenRowIds,
+    onHiddenRowIdsChange: props.onHiddenRowIdsChange,
+  });
   const structureVersionRef = useRef(0);
   const dataFetchingState = useOGridDataFetching({
     isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, structureVersionRef, columns: sortFilterColumns,
     stableFilters: filtersState.stableFilters, sort: sortingState.sort, sortVersion: sortingState.sortVersion,
     page, pageSize, paginate: !fullyVirtualized,
     onError: props.onError, onFirstDataRendered: props.onFirstDataRendered, workerSort: props.workerSort,
+    hiddenRowIds: hiddenRows.hiddenRowSet,
   });
   const { displayItems, windowed, displayTotalCount } = dataFetchingState;
   // A windowed (lazy) source virtual-scrolls all rows: no pages, no pager.
@@ -140,10 +148,34 @@ export function useOGrid<T>(
   useOGridSheetState(props, {
     visibleColumns, sort: sortingState.sort, filters: filtersState.filters, page,
     selectedRows: effectiveSelectedRows, columnOrder: effectiveColumnOrder,
-    columnWidths: columnWidthOverrides, pinned: pinnedOverrides,
+    columnWidths: columnWidthOverrides, pinned: pinnedOverrides, hiddenRowIds: hiddenRows.hiddenRowIds,
   }, defaultSortField, defaultSortDirection, {
-    visibility, sorting: sortingState, filters: filtersState, pagination: paginationState, selection, columnLayout,
+    visibility, sorting: sortingState, filters: filtersState, pagination: paginationState, selection, columnLayout, hiddenRows,
   });
+
+  // --- Hide/unhide from the menus and gap markers (allowHiding) ---
+  const { allowHiding } = props;
+  const visibleColumnsRef = useLatestRef(visibleColumns);
+  const { hideRows, unhideRows } = hiddenRows;
+  const { hiddenRowGaps } = dataFetchingState;
+  const hidingActions = useMemo<IGridHidingActions | undefined>(() => {
+    if (!allowHiding) return undefined;
+    return {
+      hideColumns: (columnIds) => {
+        const drop = new Set(columnIds);
+        const next = new Set([...visibleColumnsRef.current].filter((id) => !drop.has(id)));
+        // Like Excel, the last visible column can't be hidden.
+        if (next.size > 0 && next.size !== visibleColumnsRef.current.size) setVisibleColumns(next);
+      },
+      unhideColumns: (columnIds) => {
+        const next = new Set(visibleColumnsRef.current);
+        for (const id of columnIds) next.add(id);
+        if (next.size !== visibleColumnsRef.current.size) setVisibleColumns(next);
+      },
+      // A windowed source streams rows by index, so it can't leave rows out.
+      ...(isWindowed ? {} : { hideRows, unhideRows, hiddenRowGaps: hiddenRowGaps ?? undefined }),
+    };
+  }, [allowHiding, visibleColumnsRef, setVisibleColumns, isWindowed, hideRows, unhideRows, hiddenRowGaps]);
 
   useOGridPageClamp(
     resolvePageClampTarget(page, pageSize, displayTotalCount, controlledPage !== undefined, fullyVirtualized || isWindowed),
@@ -166,8 +198,16 @@ export function useOGrid<T>(
     chrome.spreadsheetMode, isServerSide, displayData, dataFetchingState, paginationState, getRowId,
   );
   const nameBox = useOGridNameBox(props.namedRanges);
+  const { hiddenRowSet } = hiddenRows;
+  const isSheetRowHidden = useMemo(() => {
+    if (!hiddenRowSet || !props.formulas) return undefined;
+    return (row: number) => {
+      const item = sheetItems[row];
+      return item !== undefined && hiddenRowSet.has(getRowId(item));
+    };
+  }, [hiddenRowSet, props.formulas, sheetItems, getRowId]);
   const { dgFormulaProps, formulaBarEl, activeCellRef, onActiveCellChange, formulaEngine, formulasFollowData } =
-    useOGridFormulas(props, sheetItems, columns, formulaRowMap, nameBox);
+    useOGridFormulas(props, sheetItems, columns, formulaRowMap, nameBox, isSheetRowHidden);
 
   // --- Cell API and structure edits (through the table's edit path and undo history) ---
   const gridEditBridgeRef = useRef<IGridEditBridge<T> | null>(null);
@@ -244,7 +284,7 @@ export function useOGrid<T>(
     layoutMode, suppressHorizontalScroll, stickyHeader: stickyHeader ?? true, columnReorder, responsiveColumns,
     virtualScroll, rowHeight, density, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     mergedCells, frozenRows,
-    rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef,
+    rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef, hidingActions,
     findReplace, findRows, onFindPageChange: findRows ? setPage : undefined,
     cellNavigatorRef: nameBox.cellNavigatorRef,
     emptyState: dgEmptyState,
@@ -261,7 +301,7 @@ export function useOGrid<T>(
     isLoadingResolved, dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows,
-    rowResize, rowHeights, onRowResized, structureActions,
+    rowResize, rowHeights, onRowResized, structureActions, hidingActions,
     findReplace, findRows, setPage,
     nameBox.cellNavigatorRef, dgEmptyState, dgFormulaProps,
   ]);

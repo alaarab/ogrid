@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { processClientSideData } from '../utils';
 import {
+  computeHiddenGaps,
   processClientSideDataAsync,
   shouldUseWorkerSort,
   isWindowedDataSource,
@@ -10,14 +11,38 @@ import { useLatestRef } from './useLatestRef';
 import { useDataSourceVersion } from './useDataSourceVersion';
 import { applySnapshot, createResortTracker, createSnapshot, trackResort } from './rowOrderSnapshot';
 import type { ResortInputs, ResortTracker, RowOrderSnapshot } from './rowOrderSnapshot';
-import type { IFilters, IDataSource, WindowedDataState } from '../types';
-import type { IColumnDef as ICoreColumnDef, WindowedRow, PageSize } from '@alaarab/ogrid-core';
+import type { IFilters, IDataSource, WindowedDataState, RowId } from '../types';
+import type { IColumnDef as ICoreColumnDef, WindowedRow, PageSize, IHiddenGaps } from '@alaarab/ogrid-core';
 
 /** One page of rows; `'all'` yields the entire (filtered, sorted) dataset. */
 function pageWindow<T>(rows: T[], page: number, pageSize: PageSize): T[] {
   if (pageSize === 'all') return rows;
   const start = (page - 1) * pageSize;
   return rows.slice(start, start + pageSize);
+}
+
+/** Rows left after hiding, and where the hidden ones sat (null when nothing was hidden). */
+interface HiddenApplied<T> {
+  rows: T[];
+  gaps: IHiddenGaps<RowId> | null;
+}
+
+/** Drops hidden rows from an ordered row list, recording the gaps they leave. */
+function applyHiddenRows<T>(
+  rows: T[],
+  hidden: ReadonlySet<RowId> | null | undefined,
+  getRowId: ((row: T) => unknown) | undefined,
+): HiddenApplied<T> {
+  if (!hidden || hidden.size === 0 || !getRowId) return { rows, gaps: null };
+  const ids = rows.map((row) => getRowId(row) as RowId);
+  let anyHidden = false;
+  const shown: T[] = [];
+  for (let i = 0; i < rows.length; i++) {
+    if (hidden.has(ids[i] as RowId)) anyHidden = true;
+    else shown.push(rows[i] as T);
+  }
+  if (!anyHidden) return { rows, gaps: null };
+  return { rows: shown, gaps: computeHiddenGaps(ids, (id) => hidden.has(id)) };
 }
 
 // WindowedDataState is defined alongside IOGridDataGridProps in ../types (the
@@ -84,6 +109,12 @@ export interface UseOGridDataFetchingParams<T> {
   onFirstDataRendered?: () => void;
   /** Worker sort mode: true=always, 'auto'=when data > 5000 rows, false=sync. */
   workerSort?: boolean | 'auto';
+  /**
+   * Hidden rows (needs `getRowId`). They are dropped after filtering and
+   * sorting, before paging, so counts and pages exclude them. Server-side they
+   * are dropped from each fetched page. Windowed sources ignore this.
+   */
+  hiddenRowIds?: ReadonlySet<RowId> | null;
 }
 
 export interface UseOGridDataFetchingState<T> {
@@ -107,6 +138,8 @@ export interface UseOGridDataFetchingState<T> {
    * mirrors `windowed.rowCount`.
    */
   windowed: WindowedDataState<T> | null;
+  /** Where hidden rows sit among the ordered rows (`null` when none are hidden). */
+  hiddenRowGaps: IHiddenGaps<RowId> | null;
 }
 
 /**
@@ -123,7 +156,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const {
     isServerSide, dataSource, dataSourceKey, displayData, getRowId, columns, stableFilters,
     sort, sortVersion, page, pageSize, paginate = true, onError, onFirstDataRendered, workerSort,
-    editVersionRef, structureVersionRef,
+    editVersionRef, structureVersionRef, hiddenRowIds,
   } = params;
   const editVersion = editVersionRef?.current ?? 0;
   const structureVersion = structureVersionRef?.current ?? 0;
@@ -195,16 +228,18 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       snapshotRef.current = createSnapshot(displayData, orderedRows, getRowIdRef.current);
     }
 
-    const total = orderedRows.length;
+    // Hidden rows leave the ordered set before paging (the snapshot keeps them).
+    const { rows: shownRows, gaps } = applyHiddenRows(orderedRows, hiddenRowIds, getRowIdRef.current);
+    const total = shownRows.length;
     // Full-dataset virtualization (paginate=false): return every row so the
     // grid virtual-scrolls the whole dataset instead of a single page.
     if (!paginate) {
-      return { items: orderedRows, totalCount: total, all: orderedRows };
+      return { items: shownRows, totalCount: total, all: shownRows, gaps };
     }
-    return { items: pageWindow(orderedRows, page, pageSize), totalCount: total, all: orderedRows };
+    return { items: pageWindow(shownRows, page, pageSize), totalCount: total, all: shownRows, gaps };
     // Note: sortVersion is implicitly tracked via trackResort / snapshotRef.current === null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, filterRows, getRowIdRef]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, filterRows, getRowIdRef, hiddenRowIds]);
 
   // Stabilize callback refs so inline dataSource/onError don't cause infinite re-fetches.
   const dataSourceRef = useLatestRef(dataSource);
@@ -215,7 +250,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const onErrorRef = useLatestRef(onError);
 
   // --- Client-side filtering & sorting (async worker path) ---
-  const [asyncItems, setAsyncItems] = useState<{ items: T[]; totalCount: number; all: T[] } | null>(null);
+  const [asyncItems, setAsyncItems] = useState<{ items: T[]; totalCount: number; all: T[]; gaps: IHiddenGaps<RowId> | null } | null>(null);
   const asyncIdRef = useRef(0);
   const asyncSnapshotRef = useRef<RowOrderSnapshot<T> | null>(null);
   const asyncResortTrackerRef = useRef<ResortTracker<T>>(createResortTracker<T>());
@@ -234,13 +269,14 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
 
     const id = ++asyncIdRef.current;
 
-    const commitRows = (rows: T[]) => {
+    const commitRows = (orderedRows: T[]) => {
+      const { rows, gaps } = applyHiddenRows(orderedRows, hiddenRowIds, getRowIdRef.current);
       const total = rows.length;
       if (!paginate) {
-        setAsyncItems({ items: rows, totalCount: total, all: rows });
+        setAsyncItems({ items: rows, totalCount: total, all: rows, gaps });
         return;
       }
-      setAsyncItems({ items: pageWindow(rows, page, pageSize), totalCount: total, all: rows });
+      setAsyncItems({ items: pageWindow(rows, page, pageSize), totalCount: total, all: rows, gaps });
     };
 
     // Preserve order: re-apply the snapshot to the current row objects (sync,
@@ -276,7 +312,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, onErrorRef, filterRows]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, onErrorRef, filterRows, hiddenRowIds]);
 
   // --- Server-side data fetching ---
   const [serverItems, setServerItems] = useState<T[]>([]);
@@ -429,8 +465,14 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWindowed, windowedRowCount, windowedTick, getWindowedRow, requestWindow, retryWindowedRow]);
 
+  // Server-side: hidden rows drop out of the fetched page (the source's total stays as reported).
+  const serverShown = useMemo(
+    () => applyHiddenRows(serverItems, isWindowed ? null : hiddenRowIds, getRowIdRef.current),
+    [serverItems, isWindowed, hiddenRowIds, getRowIdRef],
+  );
   const clientResult = clientItemsAndTotal ?? asyncItems;
-  const displayItems = isClientSide && clientResult ? clientResult.items : serverItems;
+  const displayItems = isClientSide && clientResult ? clientResult.items : serverShown.rows;
+  const hiddenRowGaps = isClientSide ? (clientResult?.gaps ?? null) : serverShown.gaps;
   const allFilteredItems = isClientSide && clientResult ? clientResult.all : EMPTY_ROWS as T[];
   const displayTotalCount = isWindowed
     ? windowedRowCount
@@ -458,5 +500,6 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     workerPending: isClientSide && useWorker && clientResult === null,
     refreshData,
     windowed,
+    hiddenRowGaps,
   };
 }

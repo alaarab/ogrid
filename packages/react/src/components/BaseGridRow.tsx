@@ -79,8 +79,41 @@ export interface BaseGridRowProps extends GridRowProps {
   onRowResizeStart?: (e: React.PointerEvent, rowId: string | number) => void;
   /** Pointer down on the row number cell: select the whole row (stable identity). */
   onRowHeaderPointerDown?: (e: React.PointerEvent, rowIndex: number) => void;
+  /** Hidden rows right above this row: a double-line marker on its row number unhides them. */
+  hiddenRowsBefore?: (string | number)[];
+  /** Hidden rows right below this row (the last shown row). */
+  hiddenRowsAfter?: (string | number)[];
+  /** Unhide rows from a marker (stable identity). */
+  onUnhideRows?: (rowIds: (string | number)[]) => void;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
+}
+
+/** Double line on a row number where hidden rows sit; clicking it unhides them. */
+function HiddenRowsMarker(props: {
+  side: 'before' | 'after';
+  rowIds: (string | number)[];
+  onUnhide: (rowIds: (string | number)[]) => void;
+  className?: string;
+}) {
+  const { side, rowIds, onUnhide, className } = props;
+  const label = `Unhide ${rowIds.length === 1 ? 'hidden row' : `${rowIds.length} hidden rows`}`;
+  return (
+    <button
+      type="button"
+      className={className}
+      data-hidden-gap={side}
+      aria-label={label}
+      title={label}
+      tabIndex={-1}
+      onPointerDown={STOP_PROPAGATION}
+      onMouseDown={STOP_PROPAGATION}
+      onClick={(e) => {
+        e.stopPropagation();
+        onUnhide(rowIds);
+      }}
+    />
+  );
 }
 
 function GridRowInner(props: BaseGridRowProps) {
@@ -90,7 +123,7 @@ function GridRowInner(props: BaseGridRowProps) {
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumber, ariaRowIndexBase,
     leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
     selectionRange, activeCell, cutRange, tabStopColumn = -1, registerTabStop, mergePlan, frozen,
-    customRowHeight, onRowResizeStart, styles, primitives,
+    customRowHeight, onRowResizeStart, hiddenRowsBefore, hiddenRowsAfter, onUnhideRows, styles, primitives,
     onRowHeaderPointerDown,
   } = props;
   const { Tr, Td, renderRowCheckbox } = primitives;
@@ -173,6 +206,12 @@ function GridRowInner(props: BaseGridRowProps) {
               aria-hidden
               onPointerDown={(e) => onRowResizeStart(e, rowId)}
             />
+          )}
+          {onUnhideRows && hiddenRowsBefore && hiddenRowsBefore.length > 0 && (
+            <HiddenRowsMarker side="before" rowIds={hiddenRowsBefore} onUnhide={onUnhideRows} className={styles.hiddenRowsMarker} />
+          )}
+          {onUnhideRows && hiddenRowsAfter && hiddenRowsAfter.length > 0 && (
+            <HiddenRowsMarker side="after" rowIds={hiddenRowsAfter} onUnhide={onUnhideRows} className={styles.hiddenRowsMarker} />
           )}
         </Td>
       )}

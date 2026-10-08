@@ -61,10 +61,15 @@ export interface BaseTableHeaderProps<T> {
   sortDirection: IOGridDataGridProps<T>['sortDirection'];
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
+  /** Unhide columns from a hidden-gap marker (`allowHiding`); omit to hide the markers. */
+  onUnhideColumns?: (columnIds: string[]) => void;
 }
 
+/** Stops a marker press from starting a column drag or a header click. */
+const stopPointer = (e: React.PointerEvent) => e.stopPropagation();
+
 export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactElement {
-  const { o, columnMeta, sortBy, sortDirection, styles, primitives } = props;
+  const { o, columnMeta, sortBy, sortDirection, styles, primitives, onUnhideColumns } = props;
   const {
     wrapperRef, interaction,
     handleResizeStart, handleResizeDoubleClick, handleResizeFocus, handleResizeKeyDown,
@@ -94,6 +99,32 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
   const placeholderBg: React.CSSProperties = { background: 'var(--ogrid-header-bg, #f5f5f5)' };
   // The row-number column is grid chrome with no IColumnDef; this stand-in gives the
   // resize hook its id, label and default width.
+  // Hidden-column gap markers: a double line where hidden columns sit; clicking it unhides them.
+  const hiddenGaps = onUnhideColumns ? o.layout.hiddenColumnGaps : null;
+  const { flatColumns } = o.layout;
+  const renderHiddenMarker = (side: 'before' | 'after', ids: string[] | undefined) => {
+    if (!ids || ids.length === 0 || !onUnhideColumns) return null;
+    const names = ids.map((id) => flatColumns.find((c) => c.columnId === id)?.name ?? id).join(', ');
+    const label = `Unhide ${ids.length === 1 ? 'hidden column' : `${ids.length} hidden columns`}: ${names}`;
+    return (
+      <button
+        type="button"
+        className={styles.hiddenColumnsMarker}
+        data-hidden-gap={side}
+        aria-label={label}
+        title={label}
+        onPointerDown={stopPointer}
+        onKeyDown={(e) => {
+          // The button owns Enter/Space; keep them from the grid's key handler.
+          if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onUnhideColumns(ids);
+        }}
+      />
+    );
+  };
   const rowNumberCol = React.useMemo(
     () => ({ columnId: ROW_NUMBER_COLUMN_ID, name: '#', defaultWidth: ROW_NUMBER_COLUMN_WIDTH }) as IColumnDef<T>,
     [],
@@ -262,6 +293,8 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                   }}
                   onDoubleClick={(e) => handleResizeDoubleClick(e, col)}
                 />
+                {hiddenGaps && renderHiddenMarker('before', hiddenGaps.before.get(col.columnId))}
+                {hiddenGaps && col.columnId === hiddenGaps.lastShown && renderHiddenMarker('after', hiddenGaps.after)}
               </primitives.Th>
             );
           })}

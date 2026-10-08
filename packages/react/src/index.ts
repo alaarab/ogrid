@@ -60,6 +60,7 @@ export type {
   IColumnsChangeEvent,
   IGridStructureActions,
   IGridCellNavigator,
+  IGridHidingActions,
 } from './types';
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './types';
 
@@ -252,14 +253,14 @@ export {
 } from './components/BaseInlineCellEditor';
 export type { BaseInlineCellEditorProps } from './components/BaseInlineCellEditor';
 export { GridContextMenu } from './components/GridContextMenu';
-export type { GridContextMenuProps, GridContextMenuClassNames, GridContextMenuStructure } from './components/GridContextMenu';
+export type { GridContextMenuProps, GridContextMenuClassNames, GridContextMenuStructure, GridContextMenuHiding } from './components/GridContextMenu';
 export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export type { MarchingAntsOverlayProps } from './components/MarchingAntsOverlay';
 export { FormulaBar } from './components/FormulaBar';
 export type { FormulaBarProps } from './components/FormulaBar';
 export { FormulaRefOverlay } from './components/FormulaRefOverlay';
 export type { FormulaRefOverlayProps } from './components/FormulaRefOverlay';
-export { SheetTabs } from './components/SheetTabs';
+export { SheetTabs, SHEET_TAB_COLORS, moveSheetId } from './components/SheetTabs';
 export type { SheetTabsProps } from './components/SheetTabs';
 export { SideBar } from './components/SideBar';
 export type { SideBarProps, SideBarFilterColumn } from './components/SideBar';
@@ -353,6 +354,10 @@ export {
   getContextMenuHandlers,
   getColumnHeaderMenuItems,
   getStructureMenuItems,
+  getHidingMenuItems,
+  computeHiddenGaps,
+  hiddenKeysInSpan,
+  hiddenKeysAround,
   formatShortcut,
   getPaginationViewModel,
   PAGE_SIZE_OPTIONS,
@@ -421,6 +426,8 @@ export type {
   GetGridCellSurfaceStateParams,
   IColumnHeaderMenuItem,
   ColumnHeaderMenuInput,
+  HidingMenuInput,
+  IHiddenGaps,
   ColumnHeaderMenuHandlers,
   BooleanCellSelectHandlers,
 } from './utils';

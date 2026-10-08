@@ -67,6 +67,34 @@ export function getStructureMenuItems(input: StructureMenuInput): GridContextMen
   return items;
 }
 
+/** Input for the hide/unhide section of the grid context menu (`allowHiding`). */
+export interface HidingMenuInput {
+  /** Selected rows "Hide rows" applies to; 0 hides the item. */
+  rowCount: number;
+  /** Selected columns "Hide columns" applies to; 0 hides the item. */
+  columnCount: number;
+  /** Hidden rows inside the selection: shows "Unhide rows". */
+  canUnhideRows?: boolean;
+  /** Hidden columns inside the selection: shows "Unhide columns". */
+  canUnhideColumns?: boolean;
+}
+
+/**
+ * Context menu items for hiding and unhiding rows and columns (opt-in via
+ * `allowHiding`). Labels count the selected rows/columns ("Hide 3 rows").
+ */
+export function getHidingMenuItems(input: HidingMenuInput): GridContextMenuItem[] {
+  const { rowCount, columnCount, canUnhideRows = false, canUnhideColumns = false } = input;
+  const items: GridContextMenuItem[] = [];
+  if (rowCount > 0) items.push({ id: 'hideRows', label: rowCount === 1 ? 'Hide row' : `Hide ${rowCount} rows` });
+  if (canUnhideRows) items.push({ id: 'unhideRows', label: 'Unhide rows' });
+  if (columnCount > 0) items.push({ id: 'hideColumns', label: columnCount === 1 ? 'Hide column' : `Hide ${columnCount} columns` });
+  if (canUnhideColumns) items.push({ id: 'unhideColumns', label: 'Unhide columns' });
+  const first = items[0];
+  if (first) items[0] = { ...first, dividerBefore: true };
+  return items;
+}
+
 /** Returns the shortcut string with Ctrl swapped to ⌘ on Mac. */
 export function formatShortcut(shortcut: string): string {
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -152,6 +180,10 @@ export interface ColumnHeaderMenuInput {
   isResizable?: boolean;
   /** Show insert/delete column items (`allowStructureEdits`). */
   canEditStructure?: boolean;
+  /** Show "Hide column" (`allowHiding`). */
+  canHide?: boolean;
+  /** Show "Unhide columns": hidden columns sit next to this one (`allowHiding`). */
+  canUnhide?: boolean;
 }
 
 /**
@@ -159,7 +191,10 @@ export interface ColumnHeaderMenuInput {
  * Returns pinning, sorting, and sizing options.
  */
 export function getColumnHeaderMenuItems(input: ColumnHeaderMenuInput): IColumnHeaderMenuItem[] {
-  const { canPinLeft, canPinRight, canUnpin, currentSort, isSortable = true, isResizable = true, canEditStructure = false } = input;
+  const {
+    canPinLeft, canPinRight, canUnpin, currentSort, isSortable = true, isResizable = true,
+    canEditStructure = false, canHide = false, canUnhide = false,
+  } = input;
 
   const items: IColumnHeaderMenuItem[] = [];
 
@@ -208,6 +243,14 @@ export function getColumnHeaderMenuItems(input: ColumnHeaderMenuInput): IColumnH
     );
   }
 
+  // Visibility section
+  if (canHide || canUnhide) {
+    const last = items[items.length - 1];
+    if (last) items[items.length - 1] = { ...last, divider: true };
+    if (canHide) items.push({ id: 'hideColumn', label: 'Hide column' });
+    if (canUnhide) items.push({ id: 'unhideColumns', label: 'Unhide columns' });
+  }
+
   return items;
 }
 
@@ -224,5 +267,7 @@ export interface ColumnHeaderMenuHandlers {
   onInsertColumnLeft?: () => void;
   onInsertColumnRight?: () => void;
   onDeleteColumn?: () => void;
+  onHideColumn?: () => void;
+  onUnhideColumns?: () => void;
   onClose: () => void;
 }

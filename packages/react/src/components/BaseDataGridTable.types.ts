@@ -138,6 +138,7 @@ export interface DataGridPrimitives {
     onPasteValues?: () => void;
     onSelectAll: () => void; onClose: () => void;
     structure?: import('./GridContextMenu').GridContextMenuStructure;
+    hiding?: import('./GridContextMenu').GridContextMenuHiding;
   }>;
   /** Empty-state component. */
   EmptyState: React.ComponentType<{ emptyState: NonNullable<ReturnType<typeof useDataGridTableOrchestration>['emptyState']> }>;

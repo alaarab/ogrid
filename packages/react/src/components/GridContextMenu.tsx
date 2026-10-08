@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, getStructureMenuItems, formatShortcut } from '../utils';
+import { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, getStructureMenuItems, getHidingMenuItems, formatShortcut } from '../utils';
 import type { GridContextMenuHandlerProps } from '../utils';
 import { useMenuKeyboardNav } from '../hooks/useMenuKeyboardNav';
 
@@ -23,6 +23,18 @@ export interface GridContextMenuStructure {
   onAction: (id: string) => void;
 }
 
+/** Hide/unhide section of the context menu (`allowHiding`). */
+export interface GridContextMenuHiding {
+  /** Selected rows "Hide rows" applies to; 0 hides the item. */
+  rowCount: number;
+  /** Selected columns "Hide columns" applies to; 0 hides the item. */
+  columnCount: number;
+  canUnhideRows: boolean;
+  canUnhideColumns: boolean;
+  /** Runs a hiding item: hideRows, unhideRows, hideColumns, unhideColumns. */
+  onAction: (id: string) => void;
+}
+
 export interface GridContextMenuProps extends GridContextMenuHandlerProps {
   x: number;
   y: number;
@@ -31,11 +43,13 @@ export interface GridContextMenuProps extends GridContextMenuHandlerProps {
   canRedo: boolean;
   /** Insert/delete row and column items. Omit to hide them. */
   structure?: GridContextMenuStructure;
+  /** Hide/unhide row and column items. Omit to hide them. */
+  hiding?: GridContextMenuHiding;
   classNames?: GridContextMenuClassNames;
 }
 
 export function GridContextMenu(props: GridContextMenuProps): React.ReactElement {
-  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, structure, classNames } = props;
+  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, structure, hiding, classNames } = props;
   const ref = React.useRef<HTMLDivElement>(null);
   const handlers = React.useMemo(
     () => getContextMenuHandlers({ onCopy, onCut, onPaste, onPasteValues, onSelectAll, onUndo, onRedo, onClose }),
@@ -65,6 +79,18 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
     [structure]
   );
 
+  const hidingItems = React.useMemo(
+    () => (hiding
+      ? getHidingMenuItems({
+        rowCount: hiding.rowCount,
+        columnCount: hiding.columnCount,
+        canUnhideRows: hiding.canUnhideRows,
+        canUnhideColumns: hiding.canUnhideColumns,
+      })
+      : []),
+    [hiding]
+  );
+
   const { onKeyDown } = useMenuKeyboardNav(ref, { active: true, onClose });
 
   React.useEffect(() => {
@@ -86,13 +112,13 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
   // Compute viewport-aware menu position to prevent overflow on small screens
   const menuStyle = React.useMemo((): React.CSSProperties => {
     const menuWidth = 200;
-    const menuHeight = (GRID_CONTEXT_MENU_ITEMS.length + structureItems.length) * 44 + 16; // approx
+    const menuHeight = (GRID_CONTEXT_MENU_ITEMS.length + structureItems.length + hidingItems.length) * 44 + 16; // approx
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const left = x + menuWidth > vw ? Math.max(0, vw - menuWidth - 8) : x;
     const top = y + menuHeight > vh ? Math.max(0, vh - menuHeight - 8) : y;
     return { left, top };
-  }, [x, y, structureItems.length]);
+  }, [x, y, structureItems.length, hidingItems.length]);
 
   return (
     <div
@@ -133,6 +159,23 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
             className={classNames?.contextMenuItem}
             onClick={() => {
               structure?.onAction(item.id);
+              onClose();
+            }}
+          >
+            <span className={classNames?.contextMenuItemLabel}>{item.label}</span>
+          </button>
+        </React.Fragment>
+      ))}
+      {hidingItems.map((item) => (
+        <React.Fragment key={item.id}>
+          {item.dividerBefore && <div className={classNames?.contextMenuDivider} />}
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className={classNames?.contextMenuItem}
+            onClick={() => {
+              hiding?.onAction(item.id);
               onClose();
             }}
           >

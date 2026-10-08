@@ -92,6 +92,10 @@ See [Structure Editing](../features/structure-editing).
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
 | `allowStructureEdits` | `boolean` | `false` | Adds "Insert row above/below", "Delete row", "Insert column left/right" and "Delete column" to the cell context menu, and the column items to the column header menu. The structure methods on the [grid API](./grid-api#structure-methods) work without it. |
+| `allowHiding` | `boolean` | `false` | Adds "Hide column" / "Unhide columns" to the column header menu, "Hide row(s)" / "Unhide rows" (and "Hide columns" for a whole-column or multi-column selection) to the cell context menu, and a clickable double-line marker where hidden columns or rows sit. See [Hiding Rows and Columns](../features/hiding). |
+| `hiddenRowIds` | `RowId[]` | `undefined` | Hidden rows (controlled). Hidden rows are left out of the display, navigation, copy, aggregations, counts, paging and `SUBTOTAL` 101-111, with or without `allowHiding`. |
+| `defaultHiddenRowIds` | `RowId[]` | `undefined` | Initially hidden rows when `hiddenRowIds` isn't controlled. |
+| `onHiddenRowIdsChange` | `(rowIds: RowId[]) => void` | `undefined` | Called with the full new list when the user hides or unhides rows. |
 | `onRowsChange` | `(event: IRowsChangeEvent<T>) => void` | `undefined` | Fired when rows are inserted or deleted (menu, API, undo/redo). `event.data` is the complete new array: `onRowsChange={(e) => setData(e.data)}`. Required to change rows when you pass `data`. |
 | `onColumnsChange` | `(event: IColumnsChangeEvent<T>) => void` | `undefined` | Fired when a column is inserted or deleted. `event.columns` is the complete new `columns` value. Required for column structure edits. |
 | `createRow` | `(index: number) => T` | `undefined` | Builds a blank row (with a new unique id) for "Insert row" and `insertRows(index)` without rows. The insert-row menu items need it. |
@@ -185,6 +189,10 @@ Excel-style sheet tabs along the bottom of the grid.
 | `activeSheet` | `string` | `undefined` | The currently active sheet id. |
 | `onSheetChange` | `(sheetId: string) => void` | `undefined` | Called when the user switches sheets. |
 | `onSheetAdd` | `() => void` | `undefined` | Called when the user clicks the add-sheet button. |
+| `onSheetRename` | `(sheetId: string, name: string) => void` | `undefined` | Enables renaming: double-click a tab (or F2, or "Rename" in the tab menu). |
+| `onSheetReorder` | `(sheetIds: string[]) => void` | `undefined` | Enables reordering by dragging tabs (or "Move left/right" in the tab menu). Receives every sheet id in the new order. |
+| `onSheetDelete` | `(sheetId: string) => void` | `undefined` | Adds "Delete" to the tab menu (disabled for the last sheet). |
+| `onSheetColorChange` | `(sheetId: string, color: string \| undefined) => void` | `undefined` | Adds tab colors and "No color" to the tab menu. |
 
 See [Multi-Sheet](../features/multi-sheet).
 

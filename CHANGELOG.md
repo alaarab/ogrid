@@ -31,6 +31,25 @@ All notable changes to OGrid will be documented in this file.
   pasting into Excel, Google Sheets or a document keeps a table; paste reads
   `text/html` when there is no plain text. Core: `formatTsvAsHtmlTable`,
   `parseHtmlClipboard`, `htmlClipboardToTsv`.
+- Hide and unhide rows and columns: `allowHiding` adds "Hide column" /
+  "Unhide columns" to the column header menu, "Hide row(s)" / "Unhide rows"
+  (and "Hide columns" for a whole-column or multi-column selection) to the
+  cell context menu, and a clickable double-line marker in the header and the
+  row numbers where hidden columns or rows sit. Columns hide through the
+  existing `visibleColumns` / `onVisibleColumnsChange` state. Rows hide through
+  new `hiddenRowIds` / `defaultHiddenRowIds` / `onHiddenRowIdsChange` props
+  (hidden with or without `allowHiding`): hidden rows leave the display,
+  navigation, copy, aggregations, counts and paging. Server-side they're
+  dropped from each fetched page; windowed sources can't hide rows.
+- `SUBTOTAL` codes 101-111 skip hidden rows. The formula engine reads
+  visibility from an optional `IGridDataAccessor.isRowHidden(row)`.
+- Sheet tabs: `onSheetRename` (double-click a tab or F2 to rename inline),
+  `onSheetReorder` (drag tabs; receives the new id order), `onSheetDelete` and
+  `onSheetColorChange`, plus a tab menu (right-click or Shift+F10) with Rename,
+  Move left/right, Delete and tab colors. Each is opt-in by its callback.
+- Core exports `computeHiddenGaps`, `hiddenKeysInSpan`, `hiddenKeysAround` and
+  `getHidingMenuItems`; `@alaarab/ogrid-react` exports `SHEET_TAB_COLORS` and
+  `moveSheetId`.
 
 - Merged cells: `mergedCells?: IMergedCell[]` on `OGrid` and `DataGridTable`
   (`{ rowId, columnId, rowSpan?, colSpan? }`, spans counted over displayed rows
@@ -57,9 +76,8 @@ All notable changes to OGrid will be documented in this file.
   `CEILING.MATH`, `FLOOR.MATH` and `LET`. `LET` names bound to a range stay
   ranges, so `=LET(r, A1:A10, SUM(r))` works. Some behavior differs from
   Excel: `TEXTSPLIT` returns its first piece because formula cells don't spill,
-  `SUBTOTAL` codes 101-111 work like 1-11 because the engine can't see hidden
-  rows, and `XMATCH`'s binary search modes run as a linear search. The
-  formulas page lists the details.
+  `SUBTOTAL` doesn't skip filtered-out rows, and `XMATCH`'s binary search
+  modes run as a linear search. The formulas page lists the details.
 - The formula AST has a new `NameNode` (`kind: 'name'`) for `LET` names.
   Exhaustive `switch` statements over `ASTNode` need a case for it.
 - `@alaarab/ogrid-react-xlsx`: import → edit → export keeps the workbook's
