@@ -12,6 +12,17 @@
    provider, because the provider re-declares the variables on itself: set
    custom --ogrid-* values on the provider or on a wrapper around the grid. */
 :global(:where(.fui-FluentProvider)) {
+  --ogrid-primary: var(--colorBrandBackground, #0f6cbd);
+  --ogrid-primary-fg: var(--colorNeutralForegroundOnBrand, #fff);
+  --ogrid-primary-hover: var(--colorBrandBackgroundHover, #115ea3);
+  --ogrid-muted: var(--colorNeutralForeground3, #616161);
+  --ogrid-bg-hover: var(--colorNeutralBackground1Hover, #f5f5f5);
+  --ogrid-control-border: var(--colorNeutralStrokeAccessible, #616161);
+  --ogrid-danger: var(--colorPaletteRedForeground1, #b10e1c);
+  --ogrid-radius: var(--borderRadiusMedium, 4px);
+  --ogrid-radius-xl: var(--borderRadiusXLarge, 8px);
+  --ogrid-shadow: var(--shadow16, 0 8px 24px rgba(0, 0, 0, 0.14));
+  --ogrid-ring: var(--colorBrandStroke1, #0f6cbd);
   --ogrid-bg: var(--colorNeutralBackground1, #ffffff);
   --ogrid-fg: var(--colorNeutralForeground1, rgba(0, 0, 0, 0.87));
   --ogrid-fg-secondary: var(--colorNeutralForeground2, rgba(0, 0, 0, 0.6));

@@ -4,9 +4,13 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Polished Radix and Fluent spreadsheet surfaces in light and dark themes: validation dialogs and prompts, find/replace, notes, formula assistance, cell/column/sheet menus, condition filters, XLSX formatting and streaming controls, and drag feedback. Added consistent spacing, theme-aware contrast, focus rings, and reduced-motion styling without changing grid behavior or JavaScript loading boundaries. Modal-only styles load with the validation dialog.
+
 ### Fixed
 
-- Both React kits ship all lazy component styles in one `index.css` (also available at `styles/index.css`), while keeping JavaScript split. Radix validation uses themed buttons, fields and a modal backdrop; input messages use themed, collision-aware portals so they clear invalid circles and grid clipping. Built docs and consumer examples now check computed styles in both themes and kits.
+- Both React kits ship grid and popover styles in one `index.css` (also available at `styles/index.css`), while keeping JavaScript split. Modal styles travel with the lazy validation dialog and need no additional CSS import. Radix validation uses themed buttons, fields and a modal backdrop; input messages use themed, collision-aware portals so they clear invalid circles and grid clipping. Built docs and consumer examples now check computed styles in both themes and kits.
 
 - Validation now checks paste, fill, and moves against their proposed values and formulas, including cleared cut sources and array/spill reads. Spill children appear in range-backed list dropdowns, and Find & Replace reports accepted and skipped writes after validation decisions.
 - XLSX structural commands shift validation once with one undo step; named validation sources follow the edited workbook and undo. Prompt-only rules and suppressed dropdowns survive import, editing, worker handover, and export.

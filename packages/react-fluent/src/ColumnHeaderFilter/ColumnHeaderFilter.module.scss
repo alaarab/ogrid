@@ -1,3 +1,4 @@
+@use '../../../react/src/styles/surface' as surface;
 // ColumnHeaderFilter styles
 // Using CSS custom properties that map to Fluent UI 9 design tokens
 
@@ -161,7 +162,7 @@
 }
 
 .popoverHeader {
-  padding: 10px 14px;
+  padding: 12px 16px;
   font-size: 12px;
   font-weight: 600;
   color: var(--colorNeutralForeground2, #616161);
@@ -309,7 +310,7 @@
 }
 
 .personOption {
-  padding: 8px 12px;
+  padding: 12px 16px;
   cursor: pointer;
   transition: background-color 0.1s ease;
 
@@ -524,3 +525,32 @@
     border-color: var(--colorBrandStroke1, #0f6cbd);
   }
 }
+
+// Shared native controls retain the same semantics in both kit popovers.
+.filterPopover :global([data-ogrid-condition]) {
+  select, input {
+    @include surface.control;
+    width: 100%;
+    font-size: 13px;
+    border-bottom-color: var(--colorNeutralStrokeAccessible, var(--ogrid-control-border));
+    border-radius: var(--borderRadiusMedium, 4px);
+    &::placeholder { color: var(--colorNeutralForeground3, var(--ogrid-muted)); }
+  }
+}
+.filterPopover :global([data-ogrid-condition-join]) {
+  align-self: flex-start;
+  padding: 4px;
+  border-radius: var(--ogrid-radius, 6px);
+  background: var(--ogrid-bg-subtle, #f3f3f3);
+  label {
+    position: relative;
+    padding: 4px 12px;
+    border-radius: var(--ogrid-radius-sm, 4px);
+    cursor: pointer;
+    &:has(input:checked) { background: var(--ogrid-bg, #fff); box-shadow: var(--ogrid-shadow-sm, 0 1px 3px rgba(0,0,0,0.12)); font-weight: 600; }
+    &:has(input:focus-visible) { outline: 2px solid var(--ogrid-ring, #217346); outline-offset: 2px; }
+    input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  }
+}
+.clearButton, .applyButton { @include surface.focus-ring; min-height: 32px; font: inherit; font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .clearButton, .applyButton { transition: none; } }

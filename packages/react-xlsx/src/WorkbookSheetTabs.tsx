@@ -24,6 +24,7 @@ export function WorkbookSheetTabs({ sheetNames, active, onSelect, idBase, tabCol
   if (sheetNames.length < 2) return null;
   return (
     <div role="tablist" aria-label="Workbook sheets" style={tabsStyle}>
+      <style>{WORKBOOK_TABS_CSS}</style>
       {sheetNames.map((name, index) => {
         const isActive = name === active;
         return (
@@ -31,6 +32,7 @@ export function WorkbookSheetTabs({ sheetNames, active, onSelect, idBase, tabCol
             key={name}
             ref={(el) => { if (el) tabRefs.current.set(name, el); else tabRefs.current.delete(name); }}
             id={`${idBase}-tab-${index}`}
+            className="ogrid-workbook-tab"
             type="button"
             role="tab"
             aria-selected={isActive}
@@ -51,10 +53,10 @@ export function WorkbookSheetTabs({ sheetNames, active, onSelect, idBase, tabCol
 
 const tabsStyle: React.CSSProperties = {
   display: 'flex',
-  gap: 2,
-  padding: '6px 8px 0',
-  background: 'var(--bg-3, #1b2330)',
-  borderBottom: '1px solid var(--border, #1f2a3a)',
+  gap: 4,
+  padding: '4px 8px 0',
+  background: 'var(--ogrid-header-bg, #f5f5f5)',
+  borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
   overflowX: 'auto',
   flex: '0 0 auto',
 };
@@ -62,22 +64,25 @@ const tabsStyle: React.CSSProperties = {
 const tabBase: React.CSSProperties = {
   borderWidth: '1px 1px 0',
   borderStyle: 'solid',
-  borderColor: 'var(--border, #1f2a3a)',
+  borderColor: 'var(--ogrid-border, #e0e0e0)',
   borderRadius: '4px 4px 0 0',
   padding: '4px 12px',
-  fontSize: 12,
+  fontSize: 13,
+  minHeight: 32,
   cursor: 'pointer',
   whiteSpace: 'nowrap',
   fontFamily: 'inherit',
 };
 const tabStyle: React.CSSProperties = {
   ...tabBase,
-  background: 'var(--bg-2, #121821)',
-  color: 'var(--fg-dim, #8a96a6)',
+  background: 'transparent',
+  color: 'var(--ogrid-muted, #616161)',
 };
 const tabActiveStyle: React.CSSProperties = {
   ...tabBase,
-  background: 'var(--bg, #0b1014)',
-  color: 'var(--accent, #3cb87a)',
-  borderColor: 'var(--accent, #3cb87a)',
+  background: 'var(--ogrid-bg, #fff)',
+  color: 'var(--ogrid-primary, #217346)',
+  borderColor: 'var(--ogrid-primary, #217346)',
 };
+
+const WORKBOOK_TABS_CSS = `.ogrid-workbook-tab:focus-visible{outline:2px solid var(--ogrid-ring);outline-offset:-2px}.ogrid-workbook-tab:hover{box-shadow:inset 0 0 0 32px var(--ogrid-hover-bg)}`;

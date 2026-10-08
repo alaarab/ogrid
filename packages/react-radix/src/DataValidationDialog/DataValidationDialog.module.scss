@@ -1,0 +1,53 @@
+@use '../../../react/src/styles/surface' as surface;
+@use '../../../react/src/styles/validation-form' as form;
+
+.dialog {
+  @include surface.elevated;
+  @include form.content;
+  box-sizing: border-box;
+  width: min(488px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  overflow: auto;
+  color: var(--ogrid-fg, #242424);
+  background: var(--ogrid-bg, #fff);
+  font-size: 13px;
+  line-height: 20px;
+  &::backdrop { background: rgba(0, 0, 0, 0.4); animation: backdrop-enter 140ms ease; }
+  @media (prefers-reduced-motion: reduce) { &::backdrop { animation: none; } }
+}
+.title { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; font-size: 20px; font-weight: 600; line-height: 28px; letter-spacing: -0.02em; }
+.dialog[data-alert-style] .title::before {
+  content: '!' / '';
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ogrid-danger, #c42b2f) 12%, var(--ogrid-bg, #fff));
+  color: var(--ogrid-danger, #c42b2f);
+  font-size: 18px;
+}
+.dialog[data-alert-style='warning'] .title::before { color: var(--ogrid-fg, #242424); background: color-mix(in srgb, #d99a00 24%, var(--ogrid-bg, #fff)); }
+.message { margin: 0 0 24px; line-height: 1.6; }
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; padding: 4px; border-radius: var(--ogrid-radius-lg, 8px); background: var(--ogrid-bg-subtle, #f3f3f3); }
+.tab {
+  @include surface.focus-ring;
+  flex: 1;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--ogrid-radius, 6px);
+  background: transparent;
+  color: var(--ogrid-muted, #616161);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover { color: var(--ogrid-fg, #242424); }
+  &[aria-selected='true'] { background: var(--ogrid-bg, #fff); color: var(--ogrid-fg, #242424); box-shadow: var(--ogrid-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12)); }
+}
+.footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--ogrid-border, #e0e0e0); }
+.clear { margin-right: auto; border-color: transparent; color: var(--ogrid-muted, #616161); background: transparent; }
+@keyframes backdrop-enter { from { opacity: 0; } to { opacity: 1; } }

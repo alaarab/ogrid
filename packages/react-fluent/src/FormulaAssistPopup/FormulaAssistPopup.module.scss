@@ -1,10 +1,12 @@
+@use '../../../react/src/styles/surface' as surface;
 // OGrid Fluent – formula autocomplete list + argument hint (portaled, fixed-positioned).
 // Fluent v9 tokens first; the portal carries the grid's --ogrid-* tokens as the fallback.
 
 .popup {
+  @include surface.elevated;
   box-sizing: border-box;
-  min-width: 220px;
-  max-width: 360px;
+  min-width: 260px;
+  max-width: 400px;
   color: var(--colorNeutralForeground1, var(--ogrid-fg, #242424));
   font-family: var(--fontFamilyBase, inherit);
   font-size: var(--fontSizeBase200, 12px);
@@ -12,7 +14,7 @@
   text-align: left;
   background: var(--colorNeutralBackground1, var(--ogrid-bg, #fff));
   border: 1px solid var(--colorNeutralStroke1, var(--ogrid-border, #d1d1d1));
-  border-radius: var(--borderRadiusMedium, 4px);
+  border-radius: var(--borderRadiusXLarge, 8px);
   box-shadow: var(--shadow16, 0 6.4px 14.4px rgba(0, 0, 0, 0.13), 0 1.2px 3.6px rgba(0, 0, 0, 0.11));
   overflow: hidden;
 }
@@ -20,10 +22,13 @@
 .list {
   max-height: 200px;
   overflow-y: auto;
-  padding: var(--spacingVerticalXXS, 2px) 0;
+  padding: 4px;
 }
 
 .option {
+  min-height: 32px;
+  box-sizing: border-box;
+  border-radius: var(--ogrid-radius, 6px);
   display: flex;
   align-items: center;
   gap: var(--spacingHorizontalS, 8px);
@@ -40,7 +45,10 @@
   flex: 0 0 auto;
   min-width: 16px;
   font-size: var(--fontSizeBase100, 10px);
-  font-style: italic;
+  font-style: normal;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: var(--ogrid-bg-subtle, #f3f3f3);
   color: var(--colorNeutralForeground3, var(--ogrid-muted, #616161));
   text-align: center;
 }
@@ -50,17 +58,18 @@
 }
 
 .details {
-  padding: var(--spacingVerticalXS, 4px) var(--spacingHorizontalS, 8px) var(--spacingVerticalS, 8px);
+  padding: 12px;
   border-top: 1px solid var(--colorNeutralStroke2, var(--ogrid-border, #e0e0e0));
 }
 
 .signature {
   font-family: var(--fontFamilyMonospace, Consolas, 'Courier New', monospace);
-  font-size: var(--fontSizeBase100, 10px);
+  font-size: var(--fontSizeBase200, 12px);
   overflow-wrap: anywhere;
 }
 
 .description {
+  margin-top: 4px;
   color: var(--colorNeutralForeground2, var(--ogrid-muted, #424242));
   white-space: normal;
 }

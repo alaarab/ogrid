@@ -129,11 +129,12 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
   } as unknown as IOGridProps<unknown>;
   return (
     <div style={{ height, width: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: 8, alignItems: 'center' }}>
-        {loading && <><span role="status">Loading… {percent}%</span><progress aria-label="Workbook loading" max={100} value={percent} style={{ width: 140, height: 8, accentColor: 'var(--ogrid-selection-color, #217346)' }} /><button type="button" style={STREAM_BUTTON_STYLE} onClick={cancel}>Cancel</button></>}
-        {preparing && <><span role="status">Preparing editable workbook…</span><button type="button" style={STREAM_BUTTON_STYLE} onClick={cancel}>Cancel</button></>}
-        {editable && !preparing && <button type="button" style={{ ...STREAM_BUTTON_STYLE, opacity: loading || !result ? 0.5 : 1 }} disabled={loading || !result} onClick={() => { void enableEditing(); }}>Enable editing</button>}
-        {exportFileName && <button type="button" style={{ ...STREAM_BUTTON_STYLE, opacity: loading || !result || preparing ? 0.5 : 1 }} disabled={loading || !result || preparing} onClick={() => { if (result) void result.toBlob().then((saved) => triggerBlobDownload(saved, exportFileName)).catch((reason) => setError(String(reason))); }}>Export</button>}
+      <style>{STREAM_CSS}</style>
+      <div className="ogrid-stream-toolbar">
+        {loading && <><span role="status">Loading… {percent}%</span><progress aria-label="Workbook loading" max={100} value={percent} style={{ width: 140, height: 8, accentColor: 'var(--ogrid-selection-color, #217346)' }} /><button type="button" className="ogrid-stream-button" style={STREAM_BUTTON_STYLE} onClick={cancel}>Cancel</button></>}
+        {preparing && <><span role="status">Preparing editable workbook…</span><button type="button" className="ogrid-stream-button" style={STREAM_BUTTON_STYLE} onClick={cancel}>Cancel</button></>}
+        {editable && !preparing && <button type="button" className="ogrid-stream-button" style={{ ...STREAM_BUTTON_STYLE, color: 'var(--ogrid-primary-fg, #fff)', background: 'var(--ogrid-primary, #217346)', borderColor: 'transparent', opacity: loading || !result ? 0.5 : 1 }} disabled={loading || !result} onClick={() => { void enableEditing(); }}>Enable editing</button>}
+        {exportFileName && <button type="button" className="ogrid-stream-button" style={{ ...STREAM_BUTTON_STYLE, opacity: loading || !result || preparing ? 0.5 : 1 }} disabled={loading || !result || preparing} onClick={() => { if (result) void result.toBlob().then((saved) => triggerBlobDownload(saved, exportFileName)).catch((reason) => setError(String(reason))); }}>Export</button>}
         {!loading && !preparing && <span>{rowCount.toLocaleString()} rows loaded{selected?.truncated ? ' (load limit reached)' : ''}</span>}
       </div>
       <WorkbookSheetTabs sheetNames={sheetNames} active={active} idBase={idBase} onSelect={(name) => { setActive(name); callbacks.current.onSheetChange?.(name); }} />
@@ -147,10 +148,17 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
 
 // These themed styles travel with the lazy preview, like the sheet tabs.
 const STREAM_BUTTON_STYLE: React.CSSProperties = {
-  padding: '4px 12px', font: 'inherit', cursor: 'pointer',
+  padding: '4px 12px', minHeight: 32, font: 'inherit', fontWeight: 500, cursor: 'pointer',
   color: 'var(--ogrid-fg, #242424)', background: 'var(--ogrid-bg, #fff)',
   border: '1px solid var(--ogrid-border, #ccc)', borderRadius: 'var(--ogrid-radius, 4px)',
 };
+
+const STREAM_CSS = `
+.ogrid-stream-toolbar { display:flex; flex-wrap:wrap; gap:12px; padding:12px 16px; align-items:center; font:13px/20px var(--ogrid-font); font-variant-numeric:tabular-nums; color:var(--ogrid-fg); background:var(--ogrid-bg-subtle); border-bottom:1px solid var(--ogrid-border); }
+.ogrid-stream-button:focus-visible { outline:2px solid var(--ogrid-ring); outline-offset:2px; }
+.ogrid-stream-button:hover:not(:disabled) { box-shadow:inset 0 0 0 1px var(--ogrid-muted); }
+.ogrid-stream-button:disabled { cursor:default; }
+`;
 
 function previewColumns(sheet: XlsxStreamSheet, options: import('./streamingTypes').XlsxStreamOptions) {
   const workbook = new ExcelJS.Workbook();

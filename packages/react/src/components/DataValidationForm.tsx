@@ -15,8 +15,6 @@ export interface DataValidationFormProps {
 const TYPES = ['any', 'list', 'whole', 'decimal', 'date', 'time', 'textLength', 'custom'] as const;
 const OPERATORS: DataValidationOperator[] = ['between', 'notBetween', 'equal', 'notEqual', 'greaterThan', 'lessThan', 'greaterThanOrEqual', 'lessThanOrEqual'];
 const LABELS: Record<string, string> = { any: 'Any value', whole: 'Whole number', decimal: 'Decimal', date: 'Date', time: 'Time', textLength: 'Text length', list: 'List', custom: 'Custom formula', between: 'Between', notBetween: 'Not between', equal: 'Equal to', notEqual: 'Not equal to', greaterThan: 'Greater than', lessThan: 'Less than', greaterThanOrEqual: 'Greater than or equal to', lessThanOrEqual: 'Less than or equal to' };
-const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, marginBlock: 12 };
-const controlStyle: React.CSSProperties = { font: 'inherit', padding: 6, color: 'inherit', background: 'var(--ogrid-bg, white)', border: '1px solid var(--ogrid-border, #aaa)', borderRadius: 3 };
 /** Loaded only when an adapter opens its editor. */
 export function DataValidationForm({ rule, formulaOffset, onApply, renderTabs, renderActions }: DataValidationFormProps) {
   const shift = (value: string) => value.startsWith('=') && formulaOffset ? adjustFormulaReferences(value, formulaOffset.col, formulaOffset.row) : value;
@@ -51,35 +49,60 @@ export function DataValidationForm({ rule, formulaOffset, onApply, renderTabs, r
     onApply(result);
   };
   return (
-    <form onSubmit={submit} style={{ width: 'min(420px, 80vw)' }}>
+    <form onSubmit={submit} data-ogrid-validation-form="">
       {renderTabs(tab, setTab)}
       <div hidden={tab !== 'settings'}>
-        <label style={fieldStyle}>Allow<select aria-label="Allow" style={controlStyle} value={type} onChange={(e) => setType(e.target.value as typeof type)}>{TYPES.map((t) => <option key={t} value={t}>{LABELS[t]}</option>)}</select></label>
+        <label>Allow<select aria-label="Allow"  value={type} onChange={(e) => setType(e.target.value as typeof type)}>{TYPES.map((t) => <option key={t} value={t}>{LABELS[t]}</option>)}</select></label>
         <label><input type="checkbox" checked={allowBlank} onChange={(e) => setAllowBlank(e.target.checked)} /> Ignore blank</label>
         {type === 'list' && <>
-          <label style={fieldStyle}>Source type<select style={controlStyle} value={sourceKind} onChange={(e) => setSourceKind(e.target.value)}><option value="values">Values separated by commas</option><option value="formula">Range, formula, or named range</option></select></label>
+          <label>Source type<select value={sourceKind} onChange={(e) => setSourceKind(e.target.value)}><option value="values">Values separated by commas</option><option value="formula">Range, formula, or named range</option></select></label>
           <label><input type="checkbox" checked={dropdown} onChange={(e) => setDropdown(e.target.checked)} /> In-cell dropdown</label>
         </>}
-        {(type === 'list' || type === 'custom') && <label style={fieldStyle}>{type === 'custom' ? 'Formula' : 'Source'}<input style={controlStyle} value={source} onChange={(e) => setSource(e.target.value)} /></label>}
+        {(type === 'list' || type === 'custom') && <label>{type === 'custom' ? 'Formula' : 'Source'}<input value={source} onChange={(e) => setSource(e.target.value)} /></label>}
         {type !== 'any' && type !== 'list' && type !== 'custom' && <>
-          <label style={fieldStyle}>Data<select style={controlStyle} value={operator} onChange={(e) => setOperator(e.target.value as DataValidationOperator)}>{OPERATORS.map((op) => <option key={op} value={op}>{LABELS[op]}</option>)}</select></label>
-          <label style={fieldStyle}>{operator === 'between' || operator === 'notBetween' ? 'Minimum' : 'Value'}<input style={controlStyle} value={value} onChange={(e) => setValue(e.target.value)} /></label>
-          {(operator === 'between' || operator === 'notBetween') && <label style={fieldStyle}>Maximum<input style={controlStyle} value={value2} onChange={(e) => setValue2(e.target.value)} /></label>}
+          <label>Data<select value={operator} onChange={(e) => setOperator(e.target.value as DataValidationOperator)}>{OPERATORS.map((op) => <option key={op} value={op}>{LABELS[op]}</option>)}</select></label>
+          <label>{operator === 'between' || operator === 'notBetween' ? 'Minimum' : 'Value'}<input value={value} onChange={(e) => setValue(e.target.value)} /></label>
+          {(operator === 'between' || operator === 'notBetween') && <label>Maximum<input value={value2} onChange={(e) => setValue2(e.target.value)} /></label>}
         </>}
       </div>
       <div hidden={tab !== 'input'}>
         <label><input type="checkbox" checked={inputShow} onChange={(e) => setInputShow(e.target.checked)} /> Show input message when cell is selected</label>
-        <label style={fieldStyle}>Title<input style={controlStyle} value={inputTitle} onChange={(e) => setInputTitle(e.target.value)} /></label>
-        <label style={fieldStyle}>Input message<textarea style={controlStyle} rows={4} value={inputText} onChange={(e) => setInputText(e.target.value)} /></label>
+        <label>Title<input value={inputTitle} onChange={(e) => setInputTitle(e.target.value)} /></label>
+        <label>Input message<textarea rows={4} value={inputText} onChange={(e) => setInputText(e.target.value)} /></label>
       </div>
       <div hidden={tab !== 'error'}>
         <label><input type="checkbox" checked={errorShow} onChange={(e) => setErrorShow(e.target.checked)} /> Show error alert after invalid data is entered</label>
-        <label style={fieldStyle}>Style<select style={controlStyle} value={errorStyle} onChange={(e) => setErrorStyle(e.target.value as DataValidationAlertStyle)}><option value="stop">Stop</option><option value="warning">Warning</option><option value="information">Information</option></select></label>
-        <label style={fieldStyle}>Title<input style={controlStyle} value={errorTitle} onChange={(e) => setErrorTitle(e.target.value)} /></label>
-        <label style={fieldStyle}>Error message<textarea style={controlStyle} rows={4} value={errorMessage} onChange={(e) => setErrorMessage(e.target.value)} /></label>
+        <label>Style<select value={errorStyle} onChange={(e) => setErrorStyle(e.target.value as DataValidationAlertStyle)}><option value="stop">Stop</option><option value="warning">Warning</option><option value="information">Information</option></select></label>
+        <label>Title<input value={errorTitle} onChange={(e) => setErrorTitle(e.target.value)} /></label>
+        <label>Error message<textarea rows={4} value={errorMessage} onChange={(e) => setErrorMessage(e.target.value)} /></label>
       </div>
       {error && <p role="alert">{error}</p>}
       {renderActions(() => onApply(undefined))}
     </form>
   );
+}
+
+/** @internal Leave an inert visual snapshot on dismiss; callbacks stay synchronous. */
+export function useValidationDialogMotion(ref: React.RefObject<HTMLElement | null>): void {
+  React.useLayoutEffect(() => {
+    const node = ref.current;
+    return () => {
+      if (!node?.isConnected || !node.animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const ghost = node.cloneNode(true) as HTMLElement;
+      ghost.inert = true;
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.removeAttribute('id');
+      for (const child of ghost.querySelectorAll('[id]')) child.removeAttribute('id');
+      const rect = node.getBoundingClientRect();
+      const computed = getComputedStyle(node);
+      Object.assign(ghost.style, { position: 'fixed', margin: '0', left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px`, zIndex: '2147483647', animation: 'none', pointerEvents: 'none' });
+      for (let i = 0; i < computed.length; i++) {
+        const name = computed.item(i);
+        if (name.startsWith('--')) ghost.style.setProperty(name, computed.getPropertyValue(name));
+      }
+      document.body.appendChild(ghost);
+      const remove = () => ghost.remove();
+      ghost.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(0.98)' }], { duration: 120, easing: 'ease-out' }).finished.then(remove, remove);
+    };
+  }, [ref]);
 }

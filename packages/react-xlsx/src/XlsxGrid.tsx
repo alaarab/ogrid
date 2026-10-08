@@ -76,6 +76,12 @@ const ROW_HEIGHT_BY_DENSITY: Record<NonNullable<XlsxGridProps['density']>, numbe
   comfortable: 44,
 };
 
+const TRUNCATION_NOTICE_STYLE: React.CSSProperties = {
+  padding: '12px 16px', fontSize: 13, lineHeight: '20px',
+  color: 'var(--ogrid-fg, #242424)', background: 'var(--ogrid-bg-subtle, #f5f5f5)',
+  borderBottom: '1px solid var(--ogrid-border, #e0e0e0)', borderLeft: '3px solid #d99a00',
+};
+
 // Filled cells cover the cell's range tint; this paints the tint back on top.
 const FILL_OVERLAY_CSS =
   '[data-in-range="true"]>span[style*="--ogrid-xlsx-fill"]::after{content:"";position:absolute;inset:0;' +
@@ -370,13 +376,13 @@ export function XlsxGrid({
         />
       )}
       {truncated && (
-        <div role="status" style={{ padding: '4px 8px', fontSize: 12, opacity: 0.8 }}>
+        <div role="status" style={TRUNCATION_NOTICE_STYLE}>
           Showing {rows.length.toLocaleString()} of {truncated.rowCount.toLocaleString()} rows and{' '}
           {columns.length.toLocaleString()} of {truncated.columnCount.toLocaleString()} columns (sheet too large to load in full).
         </div>
       )}
       {parseTruncated && (
-        <div role="status" style={{ padding: '4px 8px', fontSize: 12, opacity: 0.8 }}>
+        <div role="status" style={TRUNCATION_NOTICE_STYLE}>
           CSV parsing stopped at the configured load limits.
         </div>
       )}

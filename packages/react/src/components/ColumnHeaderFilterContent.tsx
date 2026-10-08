@@ -45,9 +45,9 @@ export interface IColumnHeaderFilterProps {
 
 // ---- Condition Filter Content ----
 
-const conditionContainerStyle: React.CSSProperties = { padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 220 };
+const conditionContainerStyle: React.CSSProperties = { padding: '16px', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 220 };
 const conditionRowStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 };
-const conditionOperandsStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 };
+const conditionOperandsStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 };
 const conditionInputStyle: React.CSSProperties = { flex: 1, minWidth: 0 };
 const conditionJoinStyle: React.CSSProperties = { display: 'flex', gap: 12, fontSize: 12 };
 const conditionJoinLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 4 };
@@ -168,7 +168,7 @@ export const ConditionFilterContent: React.FC<ConditionFilterContentProps> = ({
     <>
       <div style={conditionContainerStyle}>
         {renderRow(0)}
-        <div style={conditionJoinStyle} role="radiogroup" aria-label={`${prefix} join`}>
+        <div data-ogrid-condition-join="" style={conditionJoinStyle} role="radiogroup" aria-label={`${prefix} join`}>
           <label style={conditionJoinLabelStyle}>
             <input type="radio" name={groupId} checked={join === 'and'} onChange={() => onJoinChange('and')} />
             And
@@ -211,8 +211,8 @@ export function getConditionFilterContentProps(
 
 // ---- Date Filter Content ----
 
-const dateContainerStyle: React.CSSProperties = { padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 };
-const dateLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 };
+const dateContainerStyle: React.CSSProperties = { padding: '16px', display: 'flex', flexDirection: 'column', gap: 6 };
+const dateLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 };
 const dateInputFlexStyle: React.CSSProperties = { flex: 1 };
 
 export interface DateFilterContentProps {

@@ -140,21 +140,21 @@ OGrid measurements bundle each package's full entry point with its dependencies 
 |---------|--------|--------|
 | core | 29.96 kB | 31.2 kB |
 | formula assist (lazy) | 5.34 kB | 5.4 kB |
-| react | 147.44 kB | 152 kB |
-| react-radix | 184.70 kB | 184.8 kB |
-| react-fluent | 224.27 kB | 226.1 kB |
-| react-xlsx | 507.07 kB | 509.7 kB |
+| react | 147.49 kB | 152 kB |
+| react-radix | 184.76 kB | 184.8 kB |
+| react-fluent | 224.47 kB | 226.1 kB |
+| react-xlsx | 506.91 kB | 509.7 kB |
 | XLSX streaming reader (lazy) | 12.11 kB | 14 kB |
-| react-xlsx-browser | 505.65 kB | 505.8 kB |
-| React validation form (lazy) | 6.38 kB | 6.7 kB |
-| Radix validation dialog (lazy) | 8.72 kB | 29.7 kB |
-| Fluent validation dialog (lazy) | 54.27 kB | 56.4 kB |
-| Browser validation dialog (lazy) | 8.41 kB | 29.3 kB |
+| react-xlsx-browser | 505.32 kB | 505.8 kB |
+| React validation form (lazy) | 6.66 kB | 6.7 kB |
+| Radix validation dialog (lazy) | 9.68 kB | 29.7 kB |
+| Fluent validation dialog (lazy) | 55.14 kB | 56.4 kB |
+| Browser validation dialog (lazy) | 9.39 kB | 29.3 kB |
 
 Size-limit bundles each entry with code splitting disabled, so it normally
 counts dynamic imports too. The main entries exclude the validation dialog
 chunks; each deferred form/dialog is budgeted with its own dependency graph.
-The existing formula-assist and XLSX streaming-reader exclusions remain.
+The existing formula-assist and XLSX streaming-reader exclusions remain. Modal-only CSS travels with the validation dialog; the documented main stylesheet import stays sufficient. Compact private CSS module names and class maps keep these budgets unchanged.
 Only core (validation rules and enforcement utilities) and React (edit-path
 validation, batch decisions, rule state and invalid-cell rendering) need larger
 main budgets: each is measured size plus about 4%. Kit and XLSX main budgets
