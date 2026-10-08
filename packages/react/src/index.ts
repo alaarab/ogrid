@@ -472,3 +472,29 @@ export type { IPaginationControlsProps } from './components/PaginationControlsPr
 export { cellNoteKey, indexCellNotes, upsertCellNote, removeCellNote, setCellNote, getCellNoteMenuItems } from './utils';
 export type { CellNotePopoverRenderProps } from './components/BaseDataGridTable.types';
 export type { GridContextMenuNotes } from './components/GridContextMenu';
+// Conditional formatting
+export {
+  createConditionalFormatter,
+  conditionalFormatCellStyle,
+  conditionalFormatTextStyle,
+  getConditionalFormatIcon,
+  CONDITIONAL_FORMAT_STYLES,
+  COLOR_SCALES,
+} from '@alaarab/ogrid-core';
+export type {
+  IConditionalFormatRule,
+  IConditionalFormatStyle,
+  IConditionalFormatValueBound,
+  IColorScaleStop,
+  ICellConditionalFormat,
+  ICellDataBar,
+  ICellIcon,
+  ConditionalFormatOperator,
+  ConditionalFormatTextOperator,
+  ConditionalFormatDatePeriod,
+  ConditionalFormatIconSet,
+  IConditionalFormatContext,
+  IConditionalFormatter,
+} from '@alaarab/ogrid-core';
+export { useConditionalFormatting } from './hooks/useConditionalFormatting';
+export type { UseConditionalFormattingParams } from './hooks/useConditionalFormatting';

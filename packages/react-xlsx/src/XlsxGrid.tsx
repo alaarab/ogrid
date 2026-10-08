@@ -10,6 +10,7 @@ import { OGrid, type IOGridProps, type ICellValueChangedEvent } from '@alaarab/o
 import type { ICellNote, IColumnDef } from '@alaarab/ogrid-core';
 import type { IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { styleToCss, themePaletteOf, type CssStyle, type ThemePalette, type XlsxCellStyle } from './cellStyles';
+import { conditionalFormatsOf } from './conditionalFormats';
 import { FormatToolbar } from './FormatToolbar';
 import { gridLayoutProps, readSelection } from './gridAdapter';
 import { formatWithNumFmt } from './numFmt';
@@ -151,6 +152,15 @@ export function XlsxGrid({
   const state = doc.sheet(sheetName);
   const palette = useMemo(() => themePaletteOf(workbook), [workbook]);
   const columns = useStyledColumns(state, palette, editable);
+  const sheetSource = state?.source;
+  const conditionalFormats = useMemo(
+    () => sheetSource && conditionalFormatsOf(workbook.getWorksheet(sheetName), {
+      headerPromoted: sheetSource.formatting.headerPromoted,
+      columnCount: sheetSource.columns.length,
+      rowCount: sheetSource.rows.length,
+    }, palette),
+    [workbook, sheetName, sheetSource, palette],
+  );
   const sheets = useMemo(() => doc.sheetAccessors(), [doc]);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -217,6 +227,8 @@ export function XlsxGrid({
     // Excel notes: shown read-only, editable (undoable, exported) with the grid.
     cellNotes: state.notes,
     ...(editable ? { onCellNotesChange } : {}),
+    // Excel conditional formats, read from the sheet; export writes the originals back untouched.
+    ...(conditionalFormats?.length ? { conditionalFormats } : {}),
     // Merged cells and frozen rows: passed through for the grid props landing upstream.
     ...gridLayoutProps({ mergedCells: state.merges, frozenRows: source.formatting.frozen.rows }),
     // Show the sheet in its real row order. OGrid otherwise defaults its

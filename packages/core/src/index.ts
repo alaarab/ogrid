@@ -268,6 +268,44 @@ export type {
   IReplacePlan,
   IPlanReplaceParams,
 } from './utils';
+// Conditional formatting
+export {
+  createConditionalFormatter,
+  conditionalFormatCellStyle,
+  conditionalFormatTextStyle,
+  getConditionalFormatIcon,
+  interpolateColor,
+  parseCssColor,
+  CONDITIONAL_FORMAT_STYLES,
+  COLOR_SCALES,
+} from './utils';
+export type { IConditionalFormatContext, IConditionalFormatter, ConditionalFormatCellStyleOptions } from './utils';
+export type {
+  IConditionalFormatStyle,
+  ConditionalFormatOperator,
+  ConditionalFormatTextOperator,
+  ConditionalFormatDatePeriod,
+  ConditionalFormatIconSet,
+  IConditionalFormatValueBound,
+  IColorScaleStop,
+  IConditionalFormatRuleBase,
+  IConditionalFormatCellValueRule,
+  IConditionalFormatTextRule,
+  IConditionalFormatDateRule,
+  IConditionalFormatDuplicateRule,
+  IConditionalFormatTopBottomRule,
+  IConditionalFormatAverageRule,
+  IConditionalFormatBlankRule,
+  IConditionalFormatFormulaRule,
+  IConditionalFormatPredicateRule,
+  IConditionalFormatColorScaleRule,
+  IConditionalFormatDataBarRule,
+  IConditionalFormatIconSetRule,
+  IConditionalFormatRule,
+  ICellDataBar,
+  ICellIcon,
+  ICellConditionalFormat,
+} from './types';
 
 // Utils  -  clipboardHelpers
 export {

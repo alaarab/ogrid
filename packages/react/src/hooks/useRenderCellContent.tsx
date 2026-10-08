@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { booleanParser } from '@alaarab/ogrid-core';
+import { booleanParser, conditionalFormatTextStyle, getConditionalFormatIcon } from '@alaarab/ogrid-core';
+import type { ICellConditionalFormat, ICellIcon } from '@alaarab/ogrid-core';
 import { useCallback } from 'react';
 import {
   getCellRenderDescriptor,
@@ -16,6 +17,24 @@ import type { UseDataGridTableOrchestrationResult } from './useDataGridTableOrch
 import type { InlineCellEditorProps } from '../components/createOGrid';
 import type { DataGridStyles, DataGridPrimitives } from '../components/BaseDataGridTable.types';
 import type { IColumnDef, ICellEditorProps } from '../types';
+
+/** Column cell style with a conditional format's text style on top. */
+function withConditionalFormat(base: React.CSSProperties | undefined, cf: ICellConditionalFormat): React.CSSProperties | undefined {
+  const text = conditionalFormatTextStyle(cf);
+  // A cell-level fill (e.g. an imported xlsx fill layer) would hide the conditional fill or bar on the cell.
+  const coversCell = base?.background !== undefined && (cf.style.background !== undefined || cf.dataBar !== undefined);
+  if (!text && !coversCell) return base;
+  return { ...base, ...(coversCell ? { background: 'transparent' } : undefined), ...text };
+}
+
+function renderConditionalIcon(icon: ICellIcon): React.ReactNode {
+  const { glyph, color, label } = getConditionalFormatIcon(icon.set, icon.index);
+  return (
+    <span data-cf-icon={label} aria-hidden style={{ color, marginRight: 4, fontSize: '0.85em' }}>
+      {glyph}
+    </span>
+  );
+}
 
 /** Marks the inline editor so the grid keydown handler leaves its keys alone. */
 const EDITOR_MARKER_PROPS = { [CELL_EDITOR_ATTR]: '' };
@@ -34,7 +53,7 @@ export function useRenderCellContent<T>(
   o: UseDataGridTableOrchestrationResult<T>,
   styles: DataGridStyles,
   primitives: DataGridPrimitives,
-): (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number) => React.ReactNode {
+): (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number, cf?: ICellConditionalFormat) => React.ReactNode {
   const {
     getRowId, editCallbacks, interactionHandlers, delegatedCellHandlers,
     cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef,
@@ -48,7 +67,7 @@ export function useRenderCellContent<T>(
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: editable, hasValueChangeHandler and the formula accessors are read through cellDescriptorInputRef; they are deps so the function identity (and so every row) changes with them
   return useCallback(
-    (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
+    (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number, cf?: ICellConditionalFormat): React.ReactNode => {
       const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current, cellDescriptorCacheRef.current);
       const rowId = getRowId(item);
 
@@ -98,8 +117,9 @@ export function useRenderCellContent<T>(
           });
         } else {
           const displayContent = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
-          const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
+          const cellStyle = cf ? withConditionalFormat(resolveCellStyle(col, item, descriptor.displayValue), cf) : resolveCellStyle(col, item, descriptor.displayValue);
           displayNode = cellStyle ? <span style={cellStyle}>{displayContent}</span> : displayContent;
+          if (cf?.icon) displayNode = <>{renderConditionalIcon(cf.icon)}{displayNode}</>;
         }
 
         const cellClassNames = `${styles.cellContent}${descriptor.isActive ? ` ${styles.activeCellContent}` : ''}${descriptor.isActive && descriptor.isInRange ? ` ${styles.inRange}` : ''}${descriptor.isInRange && !descriptor.isActive ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;

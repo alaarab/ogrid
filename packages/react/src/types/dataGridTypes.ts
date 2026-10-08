@@ -1,4 +1,4 @@
-import type { FilterOption } from '@alaarab/ogrid-core';
+import type { FilterOption, ICellConditionalFormat, IConditionalFormatRule } from '@alaarab/ogrid-core';
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
 import type { IFormulaFunction, IFormulaLimits, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap, ISheetReferenceRange, IHiddenGaps } from '@alaarab/ogrid-core';
@@ -220,6 +220,12 @@ interface IOGridBaseProps<T> {
    * read-only cells, and Replace all is one undo step. Default: false.
    */
   findReplace?: boolean;
+  /**
+   * Excel-style conditional formatting rules (highlight rules, color scales,
+   * data bars, icon sets). Statistics cover the full client-side data (the
+   * current page for server-side grids). `formula` rules need `formulas`.
+   */
+  conditionalFormats?: IConditionalFormatRule<T>[];
 
   /**
    * Excel-style cell notes (controlled). Each note sits on (`rowId`,
@@ -509,6 +515,11 @@ export interface IOGridDataGridProps<T> {
   cellNotesEditable?: boolean;
   /** Author stamped on notes the user creates. */
   cellNoteAuthor?: string;
+  /**
+   * Conditional format of a cell (see useConditionalFormatting). OGrid builds
+   * it from `conditionalFormats`; a new function repaints every row.
+   */
+  conditionalFormat?: (item: T, columnId: string) => ICellConditionalFormat | undefined;
   isLoading?: boolean;
   loadingMessage?: string;
   editable?: boolean;

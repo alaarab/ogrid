@@ -2,6 +2,7 @@ import * as React from 'react';
 import { forwardRef } from 'react';
 import { useOGrid } from '../hooks';
 import { OGridLayout } from './OGridLayout';
+import type { ICellConditionalFormat } from '@alaarab/ogrid-core';
 import type { IOGridProps, IOGridApi, IOGridDataGridProps } from '../types';
 import type { IColumnDef, IColumnDefinition } from '../types';
 import type { IColumnChooserProps } from './ColumnChooserProps';
@@ -27,7 +28,10 @@ export interface GridRowProps {
   isSelected: boolean;
   visibleCols: IColumnDef<unknown>[];
   columnMeta: { cellStyles: Record<string, React.CSSProperties>; cellClasses: Record<string, string> };
-  renderCellContent: (item: unknown, col: IColumnDef<unknown>, rowIndex: number, colIdx: number) => React.ReactNode;
+  /** Renders a data cell's content; `cf` is the cell's conditional format (text style, icon). */
+  renderCellContent: (item: unknown, col: IColumnDef<unknown>, rowIndex: number, colIdx: number, cf?: ICellConditionalFormat) => React.ReactNode;
+  /** Conditional format of a cell (fill, color scale, data bar, border, text style, icon). */
+  conditionalFormat?: (item: unknown, columnId: string) => ICellConditionalFormat | undefined;
   handleSingleRowClick: (e: React.MouseEvent<HTMLTableRowElement>) => void;
   handleRowCheckboxChange: (rowId: string | number, checked: boolean, rowIndex: number, shiftKey: boolean) => void;
   lastMouseShiftRef: React.MutableRefObject<boolean>;

@@ -17,3 +17,4 @@ export { createFindReplaceTests } from './findReplaceTestFactory';
 export { createExcelKeyboardTests } from './excelKeyboardTestFactory';
 export { createHidingTests } from './hidingTestFactory';
 export { createCellNotesTests } from './cellNotesTestFactory';
+export { createConditionalFormattingTests } from './conditionalFormattingTestFactory';

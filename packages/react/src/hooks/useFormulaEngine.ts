@@ -89,6 +89,12 @@ export interface UseFormulaEngineResult {
   getAllFormulas: () => Array<{ col: number; row: number; formula: string }>;
   /** Replace every formula with `formulas` and recalculate (structure edits and their undo). */
   loadFormulas: (formulas: Array<{ col: number; row: number; formula: string }>) => void;
+  /**
+   * An evaluator for formulas stored in no cell (conditional format rules),
+   * reading current values; see FormulaEngine.createDetachedEvaluator.
+   * Undefined when formulas are off.
+   */
+  createDetachedEvaluator: () => ((formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }) => unknown) | undefined;
   /** Whether formula support is active. */
   enabled: boolean;
 }
@@ -105,6 +111,7 @@ const NOOP_RESULT: UseFormulaEngineResult = {
   getAuditTrail: () => null,
   getAllFormulas: () => [],
   loadFormulas: () => {},
+  createDetachedEvaluator: () => undefined,
   enabled: false,
 };
 
@@ -404,6 +411,11 @@ export function useFormulaEngine<T>(
     report(engineRef.current.loadFormulas(list, createAccessor()));
   }, [createAccessor, report]);
 
+  const createDetachedEvaluator = useCallback(
+    () => engineRef.current?.createDetachedEvaluator(createAccessor()),
+    [createAccessor]
+  );
+
   // Memoized so consumers' memos keyed on the result don't rebuild every render.
   const result = useMemo<UseFormulaEngineResult>(() => ({
     getFormulaValue,
@@ -417,8 +429,9 @@ export function useFormulaEngine<T>(
     getAuditTrail,
     getAllFormulas,
     loadFormulas,
+    createDetachedEvaluator,
     enabled: true,
-  }), [getFormulaValue, hasFormula, getFormula, setFormula, onCellChanged, onCellsChanged, getPrecedents, getDependents, getAuditTrail, getAllFormulas, loadFormulas]);
+  }), [getFormulaValue, hasFormula, getFormula, setFormula, onCellChanged, onCellsChanged, getPrecedents, getDependents, getAuditTrail, getAllFormulas, loadFormulas, createDetachedEvaluator]);
 
   return formulas ? result : NOOP_RESULT;
 }

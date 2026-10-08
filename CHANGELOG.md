@@ -63,6 +63,28 @@ All notable changes to OGrid will be documented in this file.
   visible part of a block is drawn. Not applied to windowed data sources.
   `@alaarab/ogrid-core` exports `resolveMergedCells`, `expandRangeToMerges` and
   `isCoveredCell`.
+- Conditional formatting: `conditionalFormats?: IConditionalFormatRule[]` on
+  `OGrid`. Serializable Excel-style rules targeting `columnIds` (plus optional
+  `rows` span or `rowFilter`): cell value comparisons, text, dates occurring,
+  duplicate/unique values, top/bottom N or %, above/below average,
+  blanks/errors, `formula` rules evaluated per cell by the formula engine
+  (relative references shift, `$` stays), JS `predicate` rules, 2/3-color
+  scales, data bars (gradient/solid, negative axis) and 3-icon sets. Rules
+  apply by `priority` with per-property precedence and `stopIfTrue`.
+  Statistics are computed once per data/rule change over the full data. Fills,
+  scales, bars and borders paint under the selection tint and active-cell
+  outline; text styles merge over the column `cellStyle`. Built-in palettes
+  (`CONDITIONAL_FORMAT_STYLES`, `COLOR_SCALES`) follow the theme's new
+  `--ogrid-cf-*` variables in dark mode. `DataGridTable` takes the computed
+  `conditionalFormat` prop (from `useConditionalFormatting`);
+  `@alaarab/ogrid-core` exports `createConditionalFormatter`,
+  `conditionalFormatCellStyle`, `conditionalFormatTextStyle` and
+  `FormulaEngine.createDetachedEvaluator`.
+- `@alaarab/ogrid-react-xlsx`: sheets display their Excel conditional formats
+  (`cellIs`, `containsText`/`beginsWith`/`endsWith`, blanks/errors,
+  `timePeriod`, `top10`, `aboveAverage`, duplicate/unique values,
+  `expression`, color scales, data bars, 3-icon sets); export writes the
+  originals back unchanged. `conditionalFormatsOf` exposes the mapping.
 - Frozen top rows: `frozenRows?: number` keeps the first N displayed rows
   sticky below the header while the body scrolls, with a divider under the last
   one (`--ogrid-frozen-divider`). Works with pinned columns (sticky on both

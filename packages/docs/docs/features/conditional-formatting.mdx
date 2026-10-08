@@ -1,0 +1,100 @@
+---
+sidebar_position: 11.7
+title: Conditional Formatting
+description: Excel-style conditional formatting - highlight rules, top/bottom, averages, duplicates, formulas, color scales, data bars and icon sets
+---
+
+import ConditionalFormattingDemo from '@site/src/components/demos/ConditionalFormattingDemo';
+
+# Conditional Formatting
+
+Format cells from their values, like Excel's **Conditional Formatting**: highlight cells over a threshold, the top 10%, duplicates or dates in a period; shade a column with a color scale; draw in-cell data bars; or show icons. Rules are plain, serializable objects passed in the `conditionalFormats` prop.
+
+## Live Demo
+
+<ConditionalFormattingDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid, COLOR_SCALES, CONDITIONAL_FORMAT_STYLES } from '@alaarab/ogrid-react-radix';
+import type { IConditionalFormatRule } from '@alaarab/ogrid-react-radix';
+
+const rules: IConditionalFormatRule<Sale>[] = [
+  { type: 'dataBar', columnIds: ['revenue'] },
+  { type: 'topBottom', columnIds: ['revenue'], direction: 'top', rank: 10, percent: true,
+    style: CONDITIONAL_FORMAT_STYLES.greenFillDarkGreenText },
+  { type: 'colorScale', columnIds: ['margin'], stops: COLOR_SCALES.greenYellowRed },
+  { type: 'cellValue', columnIds: ['growth'], operator: 'greaterThan', value: 15,
+    style: { background: '#ffeb9c', color: '#9c5700', bold: true } },
+];
+
+<OGrid columns={columns} data={rows} getRowId={(r) => r.id} conditionalFormats={rules} />;
+```
+
+The same prop works on `@alaarab/ogrid-react-fluent`. Memoize the rules array: a new array recomputes every cell's format.
+
+## Rule kinds
+
+| `type` | Matches | Key fields |
+|---|---|---|
+| `cellValue` | Compare with one or two values (numbers, dates, text) | `operator`: `greaterThan`, `greaterThanOrEqual`, `lessThan`, `lessThanOrEqual`, `equal`, `notEqual`, `between`, `notBetween`; `value`, `value2` |
+| `text` | Text contains / does not contain / begins / ends with | `operator`, `text`, `caseSensitive` |
+| `dateOccurring` | A date in a period relative to today | `period`: `yesterday`, `today`, `tomorrow`, `last7Days`, `lastWeek`, `thisWeek`, `nextWeek`, `lastMonth`, `thisMonth`, `nextMonth` |
+| `duplicateValues` | Values occurring more than once (or exactly once with `unique: true`) | `unique` |
+| `topBottom` | Top or bottom N items or N percent (ties included) | `direction`, `rank`, `percent` |
+| `average` | Above or below the average, optionally by standard deviations | `direction`, `orEqual`, `stdDev` |
+| `blanks`, `noBlanks`, `errors`, `noErrors` | Empty (or whitespace) cells, formula errors such as `#DIV/0!` | |
+| `formula` | A formula evaluated per cell (needs `formulas`) | `formula` |
+| `predicate` | A JavaScript test, for grids without the formula engine | `test(value, row, sheetRow)` |
+| `colorScale` | Fill interpolated between 2 or 3 colors | `stops` |
+| `dataBar` | In-cell bar proportional to the value | `color`, `negativeColor`, `gradient`, `min`, `max`, `barOnly` |
+| `iconSet` | One of three icons (`3Arrows`, `3TrafficLights`, `3Symbols`) | `thresholds`, `thresholdType`, `reverse`, `iconOnly` |
+
+Highlight rules take a `style`: `background`, `color`, `bold`, `italic`, `underline`, `strikethrough` and `border` (a color, drawn as a 1px line inside each edge). Colors are any CSS color, including `var(...)`.
+
+Color scale stops and data bar ends are bounds: `{ type: 'min' | 'max' }`, `{ type: 'number', value }`, `{ type: 'percent', value }` (0-100 between min and max) or `{ type: 'percentile', value }`. Data bars default to Excel's automatic ends: bars start at 0, and negative values grow left from an axis.
+
+## Targeting
+
+Every rule has `columnIds`. Statistics (min, max, average, rank, duplicate counts) pool all targeted columns, as Excel does for a multi-column range. Narrow a rule to rows with:
+
+- `rows: { start, end }` - sheet row indexes (positions in the full data, end inclusive). Serializable.
+- `rowFilter(row, sheetRow)` - any predicate.
+
+Statistics cover the full client-side data, not just the current page, and are computed once per data or rule change, not per cell. Server-side grids compute them over the current page.
+
+## Priority and stop if true
+
+Rules apply in order: `priority` ascending, then array order. When two matching rules set the same property, the higher-priority one wins; other properties still come from lower rules (a fill from one rule and bold text from another combine). `stopIfTrue: true` skips lower-priority rules for cells the rule matches.
+
+## Formula rules
+
+With `formulas` on, a `formula` rule is written for the rule's first column and first row (sheet row 1, or `rows.start`). Relative references shift to each cell and `$` parts stay put, exactly like Excel applying a rule to a range:
+
+```tsx
+// Highlight the whole row (columns A-D) when column C exceeds column D.
+{ type: 'formula', columnIds: ['name', 'region', 'sales', 'target'], formula: '=$C1>$D1',
+  style: CONDITIONAL_FORMAT_STYLES.lightRedFillDarkRedText }
+```
+
+Without the formula engine, use a `predicate` rule instead: `{ type: 'predicate', columnIds: [...], test: (value, row) => row.sales > row.target, style }`.
+
+## Rendering
+
+- Fills, color scales, data bars and borders paint the cell's background, under the text. Selection tints (ranges, whole rows or columns from header clicks) draw on top of them, as do the [Find & Replace](./find-replace) match highlight and the active cell's outline.
+- Text style (color, bold, italic, decoration) is merged over the column's `cellStyle`.
+- Icons render before the value; `iconOnly` / `barOnly` hide the value visually (it stays in the DOM for screen readers and copy).
+- Pinned and frozen cells keep an opaque background under the format.
+
+### Dark mode
+
+The built-in styles (`CONDITIONAL_FORMAT_STYLES`) and the default data bar colors are CSS variables with light fallbacks; the OGrid theme redefines them for dark mode (`--ogrid-cf-bad-bg`, `--ogrid-cf-good-text`, `--ogrid-cf-bar`, ...). Color scales use concrete colors so they can be interpolated; in dark mode a `--ogrid-cf-scale-veil` layer dims them so light text stays readable. Override any of these variables to restyle.
+
+## Headless use
+
+`useConditionalFormatting({ rules, items, columns, formulaEngine })` returns the `(item, columnId) => format` function that `DataGridTable` takes as its `conditionalFormat` prop. The framework-agnostic core is `createConditionalFormatter` from `@alaarab/ogrid-core`, with `conditionalFormatCellStyle` and `conditionalFormatTextStyle` turning a result into CSS.
+
+## Excel files
+
+`XlsxGrid` and `XlsxWorkbookGrid` (`@alaarab/ogrid-react-xlsx`) display a sheet's conditional formats: cell value (`cellIs`), text (`containsText`, `beginsWith`, `endsWith`), blanks/errors, dates (`timePeriod`), `top10`, `aboveAverage`, duplicate/unique values, `expression` formulas, color scales, data bars and 3-icon sets. Rules it cannot model are not shown. Export writes the workbook's original conditional formats back unchanged. `conditionalFormatsOf(worksheet, layout)` exposes the mapping.

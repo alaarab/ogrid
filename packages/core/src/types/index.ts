@@ -57,3 +57,31 @@ export {
   normalizeSelectionRange,
   isWindowedDataSource,
 } from './dataGridTypes';
+
+// Conditional formatting types
+export type {
+  IConditionalFormatStyle,
+  ConditionalFormatOperator,
+  ConditionalFormatTextOperator,
+  ConditionalFormatDatePeriod,
+  ConditionalFormatIconSet,
+  IConditionalFormatValueBound,
+  IColorScaleStop,
+  IConditionalFormatRuleBase,
+  IConditionalFormatCellValueRule,
+  IConditionalFormatTextRule,
+  IConditionalFormatDateRule,
+  IConditionalFormatDuplicateRule,
+  IConditionalFormatTopBottomRule,
+  IConditionalFormatAverageRule,
+  IConditionalFormatBlankRule,
+  IConditionalFormatFormulaRule,
+  IConditionalFormatPredicateRule,
+  IConditionalFormatColorScaleRule,
+  IConditionalFormatDataBarRule,
+  IConditionalFormatIconSetRule,
+  IConditionalFormatRule,
+  ICellDataBar,
+  ICellIcon,
+  ICellConditionalFormat,
+} from './conditionalFormatTypes';

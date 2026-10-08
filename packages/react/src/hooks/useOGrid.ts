@@ -17,6 +17,7 @@ import { useOGridPageClamp } from './useOGridPageClamp';
 import { useOGridSideBar } from './useOGridSideBar';
 import { useOGridSheetCoordinates } from './useOGridSheetCoordinates';
 import { useOGridFormulas } from './useOGridFormulas';
+import { useConditionalFormatting } from './useConditionalFormatting';
 import { useOGridChrome } from './useOGridChrome';
 import { useOGridStructureEdits } from './useOGridStructureEdits';
 import { useOGridCellApi } from './useOGridCellApi';
@@ -209,6 +210,10 @@ export function useOGrid<T>(
   }, [hiddenRowSet, props.formulas, sheetItems, getRowId]);
   const { dgFormulaProps, formulaBarEl, activeCellRef, onActiveCellChange, formulaEngine, formulasFollowData } =
     useOGridFormulas(props, sheetItems, columns, formulaRowMap, nameBox, isSheetRowHidden);
+  // Stats cover hidden rows too (Excel semantics); hidden rows are simply not painted.
+  const conditionalFormat = useConditionalFormatting({
+    rules: props.conditionalFormats, items: sheetItems, columns, formulaEngine, formulaVersion: dgFormulaProps.formulaVersion,
+  });
 
   // --- Cell API and structure edits (through the table's edit path and undo history) ---
   const gridEditBridgeRef = useRef<IGridEditBridge<T> | null>(null);
@@ -285,7 +290,7 @@ export function useOGrid<T>(
     ...dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader: stickyHeader ?? true, columnReorder, responsiveColumns,
     virtualScroll, rowHeight, density, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
-    mergedCells, frozenRows,
+    mergedCells, frozenRows, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef, hidingActions,
     findReplace, findRows, onFindPageChange: findRows ? setPage : undefined,
     cellNavigatorRef: nameBox.cellNavigatorRef,
@@ -303,7 +308,7 @@ export function useOGrid<T>(
     isWindowed, page, pageSize, displayTotalCount, statusBarConfig,
     isLoadingResolved, dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
-    rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows,
+    rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, hidingActions, dgNoteProps,
     findReplace, findRows, setPage,
     nameBox.cellNavigatorRef, dgEmptyState, dgFormulaProps,
