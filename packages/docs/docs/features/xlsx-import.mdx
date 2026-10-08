@@ -11,7 +11,7 @@ import XlsxImportDemo from '@site/src/components/demos/XlsxImportDemo';
 
 # XLSX Import & Export
 
-Render any `.xlsx`, CSV, or TSV blob as a fully featured OGrid — and export grid data back out as a real `.xlsx` workbook. Multi-sheet workbooks get tabbed navigation, formulas evaluate live, and Excel-style cell references (A1, B2…) are on by default.
+Render any `.xlsx`, CSV, or TSV blob as a fully featured OGrid, edit and format it, and save it back out as a real `.xlsx` workbook. Multi-sheet workbooks get tabbed navigation, formulas evaluate live, cells show the workbook's own styles and number formats, and Excel-style cell references (A1, B2…) are on by default.
 
 <XlsxImportDemo />
 
@@ -72,6 +72,75 @@ function SingleSheet({ file }: { file: Blob }) {
 | `onSheetChange` | `(name: string) => void` | — | Fired when the user clicks a sheet tab. |
 | `headerRow` | `'auto' \| 'header' \| 'none'` | `'auto'` | Whether to promote row 1 to the header. `'auto'` detects strings-only top rows; `'header'` forces it; `'none'` uses A/B/C letters. |
 | `limits` | `{ maxRows?, maxCols?, maxCells? }` | 1,048,576 rows / 1,000 cols / 5,000,000 cells | Load caps per sheet. A small file can declare a huge used range; anything past the caps is dropped and a notice is shown above the grid. |
+| `editable` | `boolean` | `false` | Allow editing values and formulas. Off, the grid is a read-only preview. |
+| `toolbar` | `boolean` | `editable` | Show the formatting toolbar above the grid. |
+| `exportFileName` | `string` | — | Adds an **Export .xlsx** button to the toolbar that downloads the edited workbook under this name. |
+| `onDocument` | `(doc: XlsxWorkbookDocument) => void` | — | Receives the editable document once the workbook loads. Keep it to export from your own UI. |
+
+`XlsxGrid` takes the same `editable`, `toolbar` and `exportFileName` props, plus an optional `document` to share one `XlsxWorkbookDocument` between grids.
+
+## Editing, formatting and saving
+
+```tsx
+import { XlsxWorkbookGrid, type XlsxWorkbookDocument } from '@alaarab/ogrid-react-xlsx';
+
+function Editor({ file }: { file: Blob }) {
+  const docRef = useRef<XlsxWorkbookDocument | null>(null);
+  const save = async () => {
+    const blob = await docRef.current?.toBlob(); // or docRef.current?.download('book.xlsx')
+    if (blob) await upload(blob);
+  };
+  return (
+    <>
+      <button onClick={save}>Save</button>
+      <XlsxWorkbookGrid blob={file} editable onDocument={(doc) => { docRef.current = doc; }} />
+    </>
+  );
+}
+```
+
+With `editable`, cells take values and formulas (`=SUM(B1:B3)`; typed numbers become numbers, as in Excel). The toolbar applies to the selected range: bold, italic, underline, fill color, font color, left/center/right alignment, a number format menu (General, Number, Currency, Percent, Date), and merge/unmerge. Edits and formatting share one undo history per sheet (Ctrl+Z / Ctrl+Y or the toolbar buttons); edits made in one go, like a paste, undo as one step. Switching sheet tabs keeps each sheet's edits.
+
+`XlsxWorkbookDocument` is the editable model behind the grid. Build one yourself (`new XlsxWorkbookDocument(workbook, { headerRow })`) to drive edits from code: `setCellValues`, `applyStyle`, `mergeCells`, `unmergeCells`, `undo`, `redo`, then `toWorkbook()` / `toBlob()` / `download()`.
+
+Grid formulas count rows under the promoted header, so with a header row `B1` in the grid is `B2` in Excel. Export translates formulas back to sheet coordinates and adds the `_xlfn.` prefix Excel requires for newer functions such as `CONCAT` and `XLOOKUP`.
+
+### What round-trips
+
+Export starts from a copy of the source workbook and writes back only what changed, so anything the grid does not model is kept as ExcelJS read it.
+
+| Feature | Shown in the grid | Editable | Saved on export |
+|---|---|---|---|
+| Values (numbers, text, dates, booleans) | Yes | Yes | Yes |
+| Formulas, including cross-sheet references | Yes, evaluated live | Yes | Yes, with the latest result; Excel recalculates on open after edits |
+| Formulas the engine can't evaluate (unknown functions, references into the promoted header row) | Cached result | Overwrite only | Yes, original formula unchanged |
+| Font: bold, italic, underline, strikethrough, color, size, family | Yes | Bold, italic, underline, color | Yes |
+| Solid fill | Yes | Yes | Yes |
+| Pattern and gradient fills | Approximated by their main color | No | Yes |
+| Borders | Yes (style, width, color) | No | Yes |
+| Horizontal / vertical alignment, wrap text, indent | Yes | Left/center/right | Yes |
+| Number formats: decimals, thousands, currency, percent, dates and times, scientific, `[Red]` sections, conditions | Yes | General / Number / Currency / Percent / Date | Yes, any format string |
+| Theme and indexed colors | Yes, resolved against the workbook theme | — | Yes |
+| Other style properties (protection, text rotation, …) | No | No | Yes, kept when a cell's style is edited |
+| Column widths | Yes | Yes (resize) | Yes |
+| Hidden columns | Hidden | No | Yes |
+| Row heights | No, grid rows are uniform | No | Yes |
+| Merged cells | Pending the grid's `mergedCells` support | Merge / unmerge | Yes |
+| Frozen panes | Frozen columns as pinned columns; frozen rows pending the grid's `frozenRows` support | Pin via the column menu (not saved) | Yes, as in the file |
+| List data validation | Dropdown editor when one list rule covers every loaded row of a column | No | Yes, every validation kept |
+| Other data validation (number, date, length, custom) | No | No | Yes |
+| Every sheet, in order, with names and tab colors | Tabs with color | No | Yes |
+| Rich text, hyperlinks, comments, conditional formatting, defined names, print setup, images | Rich text and hyperlinks as plain text | Overwriting replaces with plain text | Yes, when not edited |
+| Header row (row 1) when promoted to column names | As column headers | No | Yes, unchanged |
+
+Known gaps:
+
+- The grid renders rows at one height, so tall or wrapped rows are clipped (their heights still save).
+- The toolbar reads the selection from the rendered cells. With row virtualization, a selection taller than the visible window only formats the rows on screen.
+- Sorting a column sorts formula cells by their formula text, not their result.
+- Text that starts with `=` in the source file is treated as a formula.
+- Sheets cut down by `limits` save the loaded part's edits; the rest of the sheet is kept as it was.
+- Excel's locale short date (`m/d/yyyy`, built-in format 14) displays as `YYYY-MM-DD`. Other number formats render in en-US style.
 
 ### Untrusted files
 
@@ -134,9 +203,9 @@ Returns an unmount function. Always call it before removing the host node — Re
 | You want tree-shaking and a single dependency graph. | You don't have (and don't want) a JS bundler. |
 | You're integrating into an existing React tree. | You want one `<script type="module">` import. |
 
-## Exporting
+## Exporting grid data
 
-`exportToXlsx` mirrors [`exportToCsv`](./csv-export)'s call shape — pass rows, lightweight column defs, a value accessor, and a filename:
+To save a workbook you imported, use the document's `toBlob()` (see above). To export any grid's rows as a new workbook, `exportToXlsx` mirrors [`exportToCsv`](./csv-export)'s call shape — pass rows, lightweight column defs, a value accessor, and a filename:
 
 ```tsx
 import { exportToXlsx } from '@alaarab/ogrid-react-xlsx';

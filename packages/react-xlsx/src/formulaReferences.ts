@@ -46,6 +46,48 @@ export function rebaseFormulaRows(formula: string, rowDelta: number, onRemovedRo
   }
 }
 
+/** Functions added after Excel 2007. The file format stores them with an
+ * `_xlfn.` prefix; without it Excel shows #NAME? until the cell is re-entered. */
+const FUTURE_FUNCTIONS = new Set([
+  'ACOT', 'ACOTH', 'AGGREGATE', 'ARABIC', 'ARRAYTOTEXT', 'BASE', 'BETA.DIST', 'BETA.INV', 'BINOM.DIST',
+  'BINOM.DIST.RANGE', 'BINOM.INV', 'BITAND', 'BITLSHIFT', 'BITOR', 'BITRSHIFT', 'BITXOR', 'BYCOL', 'BYROW',
+  'CEILING.MATH', 'CEILING.PRECISE', 'CHISQ.DIST', 'CHISQ.DIST.RT', 'CHISQ.INV', 'CHISQ.INV.RT', 'CHISQ.TEST',
+  'CHOOSECOLS', 'CHOOSEROWS', 'COMBINA', 'CONCAT', 'CONFIDENCE.NORM', 'CONFIDENCE.T', 'COT', 'COTH',
+  'COVARIANCE.P', 'COVARIANCE.S', 'CSC', 'CSCH', 'DAYS', 'DECIMAL', 'DROP', 'ERF.PRECISE', 'ERFC.PRECISE',
+  'EXPAND', 'EXPON.DIST', 'F.DIST', 'F.DIST.RT', 'F.INV', 'F.INV.RT', 'F.TEST', 'FLOOR.MATH', 'FLOOR.PRECISE',
+  'FORECAST.LINEAR', 'FORMULATEXT', 'GAMMA', 'GAMMA.DIST', 'GAMMA.INV', 'GAMMALN.PRECISE', 'GAUSS', 'HSTACK',
+  'IFNA', 'IFS', 'IMCOSH', 'IMCOT', 'IMCSC', 'IMCSCH', 'IMSEC', 'IMSECH', 'IMSINH', 'IMTAN', 'ISFORMULA',
+  'ISOMITTED', 'ISOWEEKNUM', 'LAMBDA', 'LET', 'LOGNORM.DIST', 'LOGNORM.INV', 'MAKEARRAY', 'MAP', 'MAXIFS',
+  'MINIFS', 'MODE.MULT', 'MODE.SNGL', 'MUNIT', 'NEGBINOM.DIST', 'NORM.DIST', 'NORM.INV', 'NORM.S.DIST',
+  'NORM.S.INV', 'NUMBERVALUE', 'PDURATION', 'PERCENTILE.EXC', 'PERCENTILE.INC', 'PERCENTRANK.EXC',
+  'PERCENTRANK.INC', 'PERMUTATIONA', 'PHI', 'POISSON.DIST', 'QUARTILE.EXC', 'QUARTILE.INC', 'RANDARRAY',
+  'RANK.AVG', 'RANK.EQ', 'REDUCE', 'RRI', 'SCAN', 'SEC', 'SECH', 'SEQUENCE', 'SHEET', 'SHEETS', 'SKEW.P',
+  'SORTBY', 'STDEV.P', 'STDEV.S', 'SWITCH', 'T.DIST', 'T.DIST.2T', 'T.DIST.RT', 'T.INV', 'T.INV.2T', 'T.TEST',
+  'TAKE', 'TEXTAFTER', 'TEXTBEFORE', 'TEXTJOIN', 'TEXTSPLIT', 'TOCOL', 'TOROW', 'UNICHAR', 'UNICODE', 'UNIQUE',
+  'VALUETOTEXT', 'VAR.P', 'VAR.S', 'VSTACK', 'WEIBULL.DIST', 'WRAPCOLS', 'WRAPROWS', 'XLOOKUP', 'XMATCH', 'XOR',
+  'Z.TEST',
+]);
+/** Dynamic-array functions that also carry the `_xlws.` namespace. */
+const WORKSHEET_FUNCTIONS = new Set(['FILTER', 'SORT']);
+
+/**
+ * The inverse of normalizeFormula for export: drop the leading "=" and give
+ * post-2007 functions their `_xlfn.` file-format prefix. String literals and
+ * quoted sheet names are left untouched.
+ */
+export function toFileFormula(formula: string): string {
+  const body = formula.startsWith('=') ? formula.slice(1) : formula;
+  return body.replace(
+    /"(?:[^"]|"")*"|'(?:[^']|'')*'|(?<![A-Za-z0-9_.])((?:_xlfn\.|_xlws\.)*)([A-Za-z][A-Za-z0-9_.]*)(?=\s*\()/g,
+    (match, prefix: string | undefined, name: string | undefined) => {
+      if (match.startsWith('"') || match.startsWith("'") || name === undefined || prefix) return match;
+      const upper = name.toUpperCase();
+      if (WORKSHEET_FUNCTIONS.has(upper)) return `_xlfn._xlws.${name}`;
+      return FUTURE_FUNCTIONS.has(upper) ? `_xlfn.${name}` : match;
+    },
+  );
+}
+
 export function normalizeFormula(formula: string): string {
   const normalized = formula.replace(
     /"(?:[^"]|"")*"|'(?:[^']|'')*'|(?:_xlfn\.|_xlws\.)+(?=[A-Za-z_][A-Za-z0-9_.]*\s*\()/gi,
