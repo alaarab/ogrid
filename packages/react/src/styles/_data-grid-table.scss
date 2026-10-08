@@ -415,6 +415,28 @@
   contain: none;
 }
 
+// Wrap Text (column `wrapText`): the text wraps at the column width, keeps its
+// line breaks and sits at the top of the cell. The row grows to fit.
+.cellContent.wrapText {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+
+// A row with a manual height (row resize, `rowHeights`) keeps it, like Excel:
+// taller content is clipped instead of growing the row. BaseGridRow sets the
+// variable on the <tr>; the 1px is the cell's bottom border.
+.dataTable tbody tr[data-custom-height] > td > .cellContent,
+.dataTable tbody tr[data-custom-height] > td > .editingCellContent {
+  max-height: calc(var(--ogrid-row-max-height) - 1px);
+}
+
+// A merged cell spans several rows, so one row's height doesn't bound it.
+.dataTable tbody tr[data-custom-height] > td.mergedCell > .cellContent {
+  max-height: none;
+}
+
 // Qualify with .tableWrapper to raise specificity above host-page focus resets
 // (e.g. Docusaurus `body:not(.navigation-with-keyboard) :not(input):focus { outline: none }`
 // has specificity (0,2,2). We need (0,3,0) or higher to beat it).

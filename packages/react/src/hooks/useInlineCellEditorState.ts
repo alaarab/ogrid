@@ -36,6 +36,12 @@ export interface UseInlineCellEditorStateResult {
   handleBlur: () => void;
   commit: (value: unknown, options?: InlineCellEditorCommitOptions) => void;
   cancel: () => void;
+  /**
+   * Caret position to restore after Alt+Enter inserted a line break (the text
+   * editor may switch from an input to a textarea). The editor reads and
+   * clears it after rendering; while set, a blur doesn't commit.
+   */
+  pendingCaretRef: { current: number | null };
 }
 
 /**
@@ -80,6 +86,7 @@ export function useInlineCellEditorState(
   // (focus moving as the editor closes) doesn't commit a second time or
   // commit a cancelled edit.
   const settledRef = useRef(false);
+  const pendingCaretRef = useRef<number | null>(null);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -106,6 +113,18 @@ export function useInlineCellEditorState(
         }
         return;
       }
+      // Alt+Enter (Option+Enter on macOS) starts a new line in the cell, as in Excel.
+      if (e.key === 'Enter' && e.altKey && editorType === 'text') {
+        e.preventDefault();
+        e.stopPropagation();
+        const field = e.target as HTMLInputElement | HTMLTextAreaElement;
+        const start = typeof field.selectionStart === 'number' ? field.selectionStart : localValue.length;
+        const end = typeof field.selectionEnd === 'number' ? field.selectionEnd : start;
+        pendingCaretRef.current = start + 1;
+        settledRef.current = false;
+        setLocalValue(`${localValue.slice(0, start)}\n${localValue.slice(end)}`);
+        return;
+      }
       if ((e.key === 'Enter' || e.key === 'Tab') && (editorType === 'text' || editorType === 'date')) {
         e.preventDefault();
         // Enter stops here so the grid doesn't re-open an editor; Tab bubbles on
@@ -124,7 +143,8 @@ export function useInlineCellEditorState(
   );
 
   const handleBlur = useCallback(() => {
-    if (settledRef.current) return;
+    // The input is being swapped for a textarea after Alt+Enter, not left.
+    if (settledRef.current || pendingCaretRef.current != null) return;
     if (editorType === 'text') {
       onCommit(localValue);
     } else if (editorType === 'date') {
@@ -149,5 +169,6 @@ export function useInlineCellEditorState(
     handleBlur,
     commit: onCommit,
     cancel: onCancel,
+    pendingCaretRef,
   };
 }

@@ -105,6 +105,9 @@ Double-click or press **F2** to open the editor. When you're done:
 - **Enter** — saves and moves focus down
 - **Tab** — saves and moves focus right
 - **Escape** — cancels, restores the original value
+- **Alt+Enter** (Option+Enter on macOS) — inserts a line break; the editor becomes a growing textarea
+
+Columns with `wrapText: true` wrap their text and grow the row to fit, and edit in a textarea from the start. See [Wrap Text](./wrap-text).
 
 ### Which editor should I use?
 
@@ -206,6 +209,7 @@ Paste follows Excel's rules:
 - **Repeat over a selection.** When the selection is larger than the pasted block and an exact multiple of it in both directions, the block repeats to fill it, so a single copied value fills every selected cell. Otherwise the block pastes once at the selection's top-left cell. A cut pastes once.
 - **Formulas move with the paste.** With `formulas` on, a formula copied inside the grid shifts its relative references by the distance from where it was copied to where it lands (`=A1` copied from B1 and pasted into C3 becomes `=B3`; `$A$1` stays). Text pasted from outside the grid is not shifted, and a cut moves formulas unchanged.
 - **Paste values only.** The context menu item and Ctrl+Shift+V paste the computed values of copied formulas, and text that starts with `=` is stored as text.
+- **Line breaks in a cell.** Copy quotes a cell that contains line breaks or tabs, and pasting a quoted cell keeps its line breaks in that one cell.
 - **Tables in and out.** Copy writes an HTML `<table>` (of the displayed values) next to the tab-separated text, so pasting into Excel, Google Sheets, Word or Google Docs keeps the table. When a paste carries only HTML (some apps), the first `<table>` in it is read.
 
 The keyboard shortcuts go through the browser's native clipboard events: Ctrl+C and Ctrl+X put the TSV on the `copy` / `cut` event's `clipboardData`, and Ctrl+V and Shift+Insert paste from the `paste` event. That works on plain http, where `navigator.clipboard` does not exist, and in Firefox and Safari, where `navigator.clipboard.readText` is denied by default. Only the context menu's Copy, Cut and Paste use the clipboard programmatically (`writeText` / `readText`); a rejected read there calls `onClipboardError` and pastes nothing.

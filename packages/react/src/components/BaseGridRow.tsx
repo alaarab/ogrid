@@ -75,6 +75,11 @@ export interface BaseGridRowProps extends GridRowProps {
   frozen?: 'inner' | 'last';
   /** Row height override in px (a resized row). */
   customRowHeight?: number;
+  /**
+   * Virtual scroll with variable row heights: ref callback (stable identity)
+   * that measures the row's real height. The row carries `data-index` for it.
+   */
+  measureRowRef?: (el: HTMLElement | null) => void;
   /** Pointer-down for the row-number resize handle (stable identity); omit to hide the handle. */
   onRowResizeStart?: (e: React.PointerEvent, rowId: string | number) => void;
   /** Pointer down on the row number cell: select the whole row (stable identity). */
@@ -127,7 +132,7 @@ function GridRowInner(props: BaseGridRowProps) {
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumber, ariaRowIndexBase,
     leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
     selectionRange, activeCell, cutRange, tabStopColumn = -1, registerTabStop, mergePlan, frozen,
-    customRowHeight, onRowResizeStart, hiddenRowsBefore, hiddenRowsAfter, onUnhideRows, getCellNote, noteIdPrefix, conditionalFormat, styles, primitives,
+    customRowHeight, measureRowRef, onRowResizeStart, hiddenRowsBefore, hiddenRowsAfter, onUnhideRows, getCellNote, noteIdPrefix, conditionalFormat, styles, primitives,
     onRowHeaderPointerDown,
   } = props;
   const { Tr, Td, renderRowCheckbox } = primitives;
@@ -147,13 +152,19 @@ function GridRowInner(props: BaseGridRowProps) {
 
   return (
     <Tr
+      ref={measureRowRef}
       className={rowClass || undefined}
       data-row-id={rowId}
+      data-index={measureRowRef ? rowIndex : undefined}
       data-frozen-row={frozen ? '' : undefined}
+      // A manual height wins over content (wrapped text is clipped, as in Excel).
+      data-custom-height={customRowHeight != null ? '' : undefined}
       onClick={handleSingleRowClick}
       aria-selected={isSelected || undefined}
       aria-rowindex={ariaRowIndexBase != null ? ariaRowIndexBase + rowIndex + 1 : undefined}
-      style={customRowHeight != null ? { height: customRowHeight } : undefined}
+      style={customRowHeight != null
+        ? { height: customRowHeight, ['--ogrid-row-max-height' as string]: `${customRowHeight}px` }
+        : undefined}
     >
       {hasCheckboxCol && (
         <Td

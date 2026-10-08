@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-core';
+import { getDateInputPlaceholder, DEFAULT_DATE_FORMAT, isCellWrapped } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 import { useInlineCellEditorState, useRichSelectState, useSelectState } from '../hooks';
 import type { InlineCellEditorCommitOptions } from '../hooks/useInlineCellEditorState';
@@ -45,6 +45,23 @@ export const editorInputStyle: React.CSSProperties = {
   lineHeight: 'inherit',
   outline: 'none',
   minWidth: 0,
+};
+
+/** Wrapper of the multi-line text editor: the textarea starts at the top, like wrapped text. */
+export const editorTextAreaWrapperStyle: React.CSSProperties = {
+  ...editorWrapperStyle,
+  alignItems: 'flex-start',
+};
+
+/** Multi-line text editor (wrapped cells, or text with line breaks); grows with its content. */
+export const editorTextAreaStyle: React.CSSProperties = {
+  ...editorInputStyle,
+  display: 'block',
+  margin: 0,
+  resize: 'none',
+  overflow: 'hidden',
+  whiteSpace: 'pre-wrap',
+  overflowWrap: 'anywhere',
 };
 
 export const richSelectWrapperStyle: React.CSSProperties = {
@@ -190,7 +207,7 @@ export interface BaseInlineCellEditorProps<T> {
 let editorIdCounter = 0;
 
 export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): React.ReactElement {
-  const { value, column, editorType, onCommit, onCancel, renderCheckbox, initialText } = props;
+  const { value, item, column, editorType, onCommit, onCancel, renderCheckbox, initialText } = props;
   const wrapperRef = React.useRef<HTMLDivElement>(null);
   const onCancelRef = React.useRef(onCancel);
   onCancelRef.current = onCancel;
@@ -199,7 +216,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   const dateFormat = column.cellEditorParams?.dateFormat ?? column.dateFormat ?? DEFAULT_DATE_FORMAT;
   const dateEditorType = column.cellEditorParams?.editorType ?? 'text';
 
-  const { localValue, setLocalValue, handleKeyDown, handleBlur, commit, cancel } =
+  const { localValue, setLocalValue, handleKeyDown, handleBlur, commit, cancel, pendingCaretRef } =
     useInlineCellEditorState({ value, editorType, onCommit, onCancel, dateFormat, dateEditorType, initialText });
   // Function autocomplete + argument hints for "=" formulas (active under a FormulaAssistContext).
   const assist = useFormulaAssist({
@@ -208,6 +225,36 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     getInput: () => wrapperRef.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea') ?? null,
     enabled: editorType === 'text',
   });
+
+  // Text edits in a textarea when the cell wraps or the text has line breaks
+  // (Alt+Enter adds one); Enter still commits.
+  const multiline = editorType === 'text' && (isCellWrapped(column, item) || localValue.includes('\n'));
+
+  // After Alt+Enter: focus the (possibly new) textarea with the caret after the line break.
+  React.useLayoutEffect(() => {
+    const caret = pendingCaretRef.current;
+    if (caret == null) return;
+    const field = wrapperRef.current?.querySelector('textarea');
+    if (field) {
+      field.focus({ preventScroll: true });
+      field.setSelectionRange(caret, caret);
+    }
+    pendingCaretRef.current = null;
+  });
+
+  // The textarea grows with its text, so the row grows with it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: localValue re-runs the measurement as the text changes
+  React.useLayoutEffect(() => {
+    if (!multiline) return;
+    const field = wrapperRef.current?.querySelector('textarea');
+    if (!field) return;
+    field.style.height = 'auto';
+    if (field.scrollHeight > 0) field.style.height = `${field.scrollHeight}px`;
+  }, [multiline, localValue]);
+  // Autocomplete keys first (an open list takes Enter/Tab), except Alt+Enter, which always adds a line break.
+  const assistedKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === 'Enter' && e.altKey) || !assist.handleKeyDown(e)) handleKeyDown(e);
+  };
   // Read once at mount: the focus effect below must not re-run (and re-select) as it changes.
   const seededRef = React.useRef(initialText !== undefined);
 
@@ -294,10 +341,10 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       wrapper.querySelector<HTMLElement>('button, input:not([aria-hidden="true"])')?.focus({ preventScroll: true });
       return;
     }
-    const input = wrapper.querySelector('input');
+    const input = wrapper.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
     if (input) {
       input.focus({ preventScroll: true });
-      if (seededRef.current && input.type === 'text') {
+      if (seededRef.current && (input.type === 'text' || input.type === 'textarea')) {
         // Type-to-replace: keep typing after the seeded character.
         const end = input.value.length;
         input.setSelectionRange(end, end);
@@ -477,6 +524,24 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   }
 
   // Text editor (default, shared across all frameworks)
+  if (multiline) {
+    return (
+      <div ref={wrapperRef} style={editorTextAreaWrapperStyle}>
+        <textarea
+          rows={1}
+          value={localValue}
+          onChange={(e) => setLocalValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={assistedKeyDown}
+          style={editorTextAreaStyle}
+          {...assist.inputProps}
+          // biome-ignore lint/a11y/noAutofocus: popup editor must receive focus on open
+          autoFocus
+        />
+        {assist.popup}
+      </div>
+    );
+  }
   return (
     <div ref={wrapperRef} style={editorWrapperStyle}>
       <input
@@ -484,7 +549,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         onBlur={handleBlur}
-        onKeyDown={(e) => { if (!assist.handleKeyDown(e)) handleKeyDown(e); }}
+        onKeyDown={assistedKeyDown}
         style={editorInputStyle}
         {...assist.inputProps}
         // biome-ignore lint/a11y/noAutofocus: popup editor must receive focus on open

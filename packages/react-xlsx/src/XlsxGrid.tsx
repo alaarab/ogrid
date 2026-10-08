@@ -46,10 +46,10 @@ export interface XlsxGridProps {
 }
 
 /**
- * Fixed virtualized row height per density. Virtual scrolling needs a uniform
- * row height, so the grid is pinned to one of these (via both `virtualScroll.
- * rowHeight` and the top-level `rowHeight` prop) rather than letting rows size
- * to content. Sheet row heights are kept for export but not rendered.
+ * Default row height per density (via both `virtualScroll.rowHeight` and the
+ * top-level `rowHeight` prop). A sheet row with its own height renders at that
+ * height scaled by this over the sheet's default row height, so a row twice
+ * Excel's default is twice the grid's (see {@link useSheetRowHeights}).
  */
 const ROW_HEIGHT_BY_DENSITY: Record<NonNullable<XlsxGridProps['density']>, number> = {
   compact: 28,
@@ -128,6 +128,27 @@ function useStyledColumns(state: XlsxSheetState | undefined, palette: ThemePalet
   }, [state, palette, editable]);
 }
 
+/**
+ * The sheet's explicit row heights as grid pixels, and the inverse for resizes.
+ * Rows keep their proportion to the sheet's default row height (15pt in
+ * Excel), which maps to the density's row height.
+ */
+function useSheetRowHeights(state: XlsxSheetState | undefined, rowHeight: number) {
+  const defaultPt = state?.source.formatting.defaultRowHeight ?? 15;
+  const scale = rowHeight / defaultPt;
+  const heights = state?.rowHeights;
+  const rowHeights = useMemo(() => {
+    const out: Record<string, number> = {};
+    if (!heights) return out;
+    for (const [rowId, pt] of heights) {
+      if (pt !== defaultPt) out[String(rowId)] = Math.max(1, Math.round(pt * scale));
+    }
+    return out;
+  }, [heights, defaultPt, scale]);
+  const pxToPoints = useCallback((px: number) => px / scale, [scale]);
+  return { rowHeights, pxToPoints };
+}
+
 export function XlsxGrid({
   workbook,
   sheetName,
@@ -163,10 +184,23 @@ export function XlsxGrid({
   );
   const sheets = useMemo(() => doc.sheetAccessors(), [doc]);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const rowHeight = ROW_HEIGHT_BY_DENSITY[density];
+  const { rowHeights, pxToPoints } = useSheetRowHeights(state, rowHeight);
 
   const onCellValueChanged = useCallback((e: ICellValueChangedEvent<SheetRow>) => {
-    doc.setCellValues(sheetName, [{ rowId: e.item.__rowIdx, columnId: e.columnId, value: coerceTyped(e.newValue) }]);
+    const rowId = e.item.__rowIdx;
+    doc.setCellValues(sheetName, [{ rowId, columnId: e.columnId, value: coerceTyped(e.newValue) }]);
+    // A line break typed into a cell (Alt+Enter) turns on Wrap Text, as in Excel.
+    // Same task as the value change, so one undo step reverts both.
+    if (typeof e.newValue === 'string' && e.newValue.includes('\n')
+      && !doc.sheet(sheetName)?.styles.get(cellKey(rowId, e.columnId))?.alignment?.wrapText) {
+      doc.applyStyle(sheetName, { rowIds: [rowId], columnIds: [e.columnId] }, { kind: 'wrapText', value: true });
+    }
   }, [doc, sheetName]);
+  const onRowResized = useCallback(
+    (rowId: unknown, px: number) => doc.setRowHeight(sheetName, rowId as number, pxToPoints(px)),
+    [doc, sheetName, pxToPoints],
+  );
   const onUndo = useCallback(() => doc.undo(sheetName), [doc, sheetName]);
   const onRedo = useCallback(() => doc.redo(sheetName), [doc, sheetName]);
   const onFormulaRecalc = useCallback((r: IRecalcResult) => doc.recordFormulaResults(sheetName, r), [doc, sheetName]);
@@ -186,7 +220,6 @@ export function XlsxGrid({
 
   const { rows, source } = state;
   const { truncated, parseTruncated } = source;
-  const rowHeight = ROW_HEIGHT_BY_DENSITY[density];
   const showToolbar = toolbar ?? editable;
 
   // Cast: the mapped columns use @alaarab/ogrid-core's IColumnDef where
@@ -204,9 +237,8 @@ export function XlsxGrid({
   // thousands of rows long, so the grid runs fully virtualized.
   // `enabled: true` turns on row virtualization; `paginate: false` makes
   // it span the whole sheet instead of a 25-row page, giving continuous
-  // scroll over the entire dataset. `rowHeight` is fixed (the
-  // virtualization model requires a uniform row height) and the matching
-  // top-level `rowHeight` prop pins the rendered rows to it. Past ~931k
+  // scroll over the entire dataset. `rowHeight` is the default row
+  // height; rows with a sheet height (`rowHeights`) differ from it. Past ~931k
   // rows the core scaled-spacer engages automatically to beat the browser
   // element-height cap. statusBar gives an Excel-style row-count footer.
   const gridProps = {
@@ -229,6 +261,11 @@ export function XlsxGrid({
     ...(editable ? { onCellNotesChange } : {}),
     // Excel conditional formats, read from the sheet; export writes the originals back untouched.
     ...(conditionalFormats?.length ? { conditionalFormats } : {}),
+    // Sheet row heights render (variable-height virtual scrolling); dragging a
+    // row number's bottom edge resizes a row and is saved on export.
+    rowResize: true,
+    rowHeights,
+    onRowResized,
     // Merged cells and frozen rows: passed through for the grid props landing upstream.
     ...gridLayoutProps({ mergedCells: state.merges, frozenRows: source.formatting.frozen.rows }),
     // Show the sheet in its real row order. OGrid otherwise defaults its

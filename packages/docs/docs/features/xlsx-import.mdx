@@ -135,7 +135,7 @@ Export starts from a copy of the source workbook and writes back only what chang
 
 Known gaps:
 
-- The grid renders rows at one height, so tall or wrapped rows are clipped (their heights still save).
+- Rows render at their saved heights (scaled to the grid's row height), but rows without a saved height don't grow to fit wrapped text. See [Wrap Text](./wrap-text#xlsx).
 - The toolbar reads the selection from the rendered cells. With row virtualization, a selection taller than the visible window only formats the rows on screen.
 - Sorting a column sorts formula cells by their formula text, not their result.
 - Text that starts with `=` in the source file is treated as a formula.

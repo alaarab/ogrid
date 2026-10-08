@@ -24,6 +24,11 @@ export function isColumnEditable<T>(col: IColumnDef<T>, item: T): boolean {
   return col.editable === true || (typeof col.editable === 'function' && col.editable(item));
 }
 
+/** Whether a cell wraps its text (the column's `wrapText`, per row when a function). */
+export function isCellWrapped<T>(col: IColumnDef<T>, item: T): boolean {
+  return col.wrapText === true || (typeof col.wrapText === 'function' && col.wrapText(item));
+}
+
 /**
  * Create an IGridDataAccessor from items and flat columns.
  * Shared factory used by the formula engine integration.

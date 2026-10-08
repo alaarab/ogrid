@@ -123,9 +123,10 @@ by row id, so they follow the record through sort, filter and paging.
 />
 ```
 
-Row resize is off with [virtual scrolling](./virtual-scrolling) and windowed data
-sources, which need one fixed row height. The handle is pointer-only; there is no
-keyboard row resize.
+Row resize works with [virtual scrolling](./virtual-scrolling) (except past the
+browser height cap, where every row is one height) and is off with windowed data
+sources. `rowHeights` applies without `rowResize` too. A manual height wins over
+[wrapped text](./wrap-text). The handle is pointer-only; there is no keyboard row resize.
 
 ## Merged cells
 

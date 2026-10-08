@@ -248,6 +248,24 @@ All notable changes to OGrid will be documented in this file.
   - `@alaarab/ogrid-core` exports `computeRangeCycleStep`,
     `cycleReferenceAtCaret` and `parseSheetReference`; inline editors accept
     `initialText` and `onCommit(value, { move })`.
+- Wrap text like Excel: a column's `wrapText` (or `wrapText: (row) => boolean`)
+  wraps its text at the column width, keeps line breaks and sits at the top of
+  the cell, and rows grow to fit. A manual row height (`rowHeights`, row
+  resize) wins and clips the text, as in Excel. Alt+Enter (Option+Enter on
+  macOS) inserts a line break in the inline editor, which becomes a textarea
+  that grows with its text (wrapped cells and text with line breaks open in
+  one); Enter still commits. Pasting a quoted multi-line cell keeps its line
+  breaks in one cell. Core exports `isCellWrapped`.
+- Variable row heights with virtual scrolling: manual heights (`rowHeights`,
+  `rowResize`) are part of the scroll geometry, and grids with wrapped columns
+  measure rows as they render (unrendered rows use `rowHeight`), keeping the
+  visible rows in place as heights settle. The scaled model past the browser
+  height cap and windowed sources keep one row height.
+- `@alaarab/ogrid-react-xlsx`: sheet row heights render (scaled to the grid's
+  row height against the sheet's default row height), rows can be resized and
+  the heights are saved on export (`XlsxWorkbookDocument.setRowHeight`), wrapped
+  cells show their line breaks, and typing a line break with Alt+Enter turns on
+  Wrap Text for the cell.
 
 ### Changed
 
@@ -258,6 +276,8 @@ All notable changes to OGrid will be documented in this file.
   (click again to reverse), as the docs described; it used to need the column
   menu. A press that turns into a column drag doesn't sort. Keyboard users
   still sort from the column menu.
+- `rowResize` now works with virtual scrolling, and `rowHeights` applies
+  without `rowResize`.
 - Ctrl+Z / Ctrl+Y work while no cell is active (e.g. after deleting the
   selected rows).
 - `@alaarab/ogrid-react-xlsx`: columns use the sheet's widths (Excel's
