@@ -12,7 +12,8 @@ import ExcelJS from 'exceljs';
 import { UndoRedoStack, triggerBlobDownload, type ICellNote, type IColumnDef, type RowId } from '@alaarab/ogrid-core';
 import { createBuiltInFunctions, tokenize, type IGridDataAccessor, type IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { applyStyleEdit, styleHas, type StyleEdit, type XlsxCellStyle } from './cellStyles';
-import { XLSX_MIME_TYPE } from './exportToXlsx';
+import { xlsxBlobFromWorkbook } from './exportToXlsx';
+import { attachSourceArchive, sourceArchiveOf } from './sourceArchive';
 import { readSheetNotes, writeSheetNotes } from './cellNotes';
 import { rebaseFormulaRows, toFileFormula } from './formulaReferences';
 import type { IMergedCell, XlsxSelection } from './gridAdapter';
@@ -487,12 +488,14 @@ export class XlsxWorkbookDocument {
     }
     // Unchanged formulas keep their cached results; have Excel recompute them.
     if (valuesChanged) out.calcProperties = { ...out.calcProperties, fullCalcOnLoad: true };
+    const source = sourceArchiveOf(this.workbook);
+    if (source) attachSourceArchive(out, source);
     return out;
   }
 
   async toBlob(): Promise<Blob> {
     const wb = await this.toWorkbook();
-    return new Blob([await wb.xlsx.writeBuffer()], { type: XLSX_MIME_TYPE });
+    return xlsxBlobFromWorkbook(wb);
   }
 
   /** Save as a downloaded .xlsx (browser only). */

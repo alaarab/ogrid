@@ -5,6 +5,7 @@
 import ExcelJS from 'exceljs';
 import { triggerBlobDownload, type CsvColumn } from '@alaarab/ogrid-core';
 import { rebaseFormulaRows } from './formulaReferences';
+import { sourceArchiveOf } from './sourceArchive';
 
 export const XLSX_MIME_TYPE =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -65,6 +66,11 @@ export function workbookFromGridData<T>(
 /** Serialize a workbook to a Blob with the .xlsx MIME type. */
 export async function xlsxBlobFromWorkbook(wb: ExcelJS.Workbook): Promise<Blob> {
   const buf = await wb.xlsx.writeBuffer();
+  const source = sourceArchiveOf(wb);
+  if (source) {
+    const { preserveMedia } = await import('./ooxmlMedia');
+    return new Blob([await preserveMedia(source, buf as ArrayBuffer, wb)], { type: XLSX_MIME_TYPE });
+  }
   return new Blob([buf], { type: XLSX_MIME_TYPE });
 }
 

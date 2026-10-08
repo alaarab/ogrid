@@ -6,6 +6,13 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- XLSX grids display anchored images and chart title placeholders over cells,
+  with scrolling, variable row heights and virtualization. Export from original
+  file bytes preserves charts, mixed image/chart drawings, pivot tables and
+  caches with remapped ZIP relationships/content types; pivot caches refresh
+  on open in Excel. Media code loads on demand. Includes a live workbook demo
+  and real XLSX edit/export fixtures.
+
 - Formula autocomplete and argument hints, in the cell editor and the formula
   bar, in both kits: typing a name after `=`, `(`, a comma or an operator lists
   matching functions (prefix matches first, then contains) and named ranges,
