@@ -101,7 +101,7 @@ This comparison covers built-in features, not custom implementations. AG Grid Co
 
 AG Grid availability was checked against its [Community / Enterprise documentation](https://www.ag-grid.com/react-data-grid/community-vs-enterprise/) on October 9, 2026. These rows don't imply identical APIs or Excel compatibility. See [Migrate from AG Grid](https://alaarab.github.io/ogrid/docs/guides/migration-from-ag-grid) for API mappings.
 
-## Features in v2.19.0
+## Features
 
 Both React kits share the same behavior. Features are enabled through props and column definitions; see the linked pages for defaults and limits.
 
@@ -143,7 +143,7 @@ Both React kits share the same behavior. Features are enabled through props and 
 
 ## Packages and dependencies
 
-All nine published packages share version **2.19.0**. UI kits re-export the React adapter and shared core API; use the core formula subpath for a standalone engine.
+All nine published packages are released together at one shared version. UI kits re-export the React adapter and shared core API; use the core formula subpath for a standalone engine.
 
 | Package | Purpose | Runtime peers |
 |---|---|---|
