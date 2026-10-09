@@ -1,16 +1,24 @@
-# OGrid Examples
+# OGrid examples
 
-Example applications for the OGrid React UI packages.
+Private Vite workspace with Radix and Fluent example apps. Uses the shared grid APIs, optional editors, XLSX package and development MCP bridge.
 
-## Running an example
+From the repository root (Bun >= 1.4.2, Node >= 22.19.0):
 
 ```bash
-# From the monorepo root  -  build packages first
+bun install --frozen-lockfile
 npm run build
-
-# Then start any example dev server
-npm run dev:react-radix
-npm run dev:react-fluent
+bun run dev:react-radix
+# Or:
+bun run dev:react-fluent
 ```
 
-See the [OGrid docs](https://alaarab.github.io/ogrid/) for full documentation.
+```bash
+bun run build:examples
+bun run test:examples:types
+bun run test:e2e:smoke
+bun run test:e2e:matrix
+```
+
+Build workspace dependencies before starting Vite: imports resolve to package `dist/` entries. Browser tests launch the app servers using the repository's Playwright configurations.
+
+See [quick start](https://alaarab.github.io/ogrid/docs/getting-started/quick-start), [XLSX](https://alaarab.github.io/ogrid/docs/features/xlsx-import) and the [root development commands](../../README.md#development-and-testing). Workspace version 2.19.0; not published to npm.

@@ -1,78 +1,54 @@
 # @alaarab/ogrid-react-xlsx
 
-Show an `.xlsx`, `.csv` or `.tsv` file as an OGrid spreadsheet, with sheet tabs, cell references and formulas, and export grids back to `.xlsx`. Built on ExcelJS and the Radix OGrid kit.
-
-## Install
+Show `.xlsx`, CSV or TSV files as an OGrid spreadsheet, edit a workbook and export `.xlsx`. Built on ExcelJS and the Radix kit. Requires React and ReactDOM 18 or 19.
 
 ```bash
-npm install @alaarab/ogrid-react-xlsx
+npm install @alaarab/ogrid-react-xlsx react react-dom
 ```
-
-Requires React 18 or 19.
-
-## Usage
 
 ```tsx
 import { XlsxWorkbookGrid } from '@alaarab/ogrid-react-xlsx';
 
-<XlsxWorkbookGrid blob={file} height={600} />
+export function WorkbookEditor({ file }: { file: Blob }) {
+  return <XlsxWorkbookGrid blob={file} height={600} editable exportFileName="book.xlsx" />;
+}
 ```
 
-Blobs of at least 1 MiB without `onDocument` open in a progressive worker preview, with loading
-percentage and Cancel. Set `streaming` to stream smaller files too, or
-`streaming={false}` for the eager formatted view. CSV/TSV keep the existing
-loader. To edit and save:
+Styles, number formats, widths, row heights, merges, freeze panes, validation, conditional formatting and notes round-trip. The toolbar edits fonts, borders, fills, alignment, number formats and merges. Row/column insert/delete shifts formulas, defined range names and worksheet metadata, with workbook-wide undo. Images display over cells; charts show title placeholders and pivots show saved cells. Sheet names, order and tab colors are preserved; this wrapper's tabs switch sheets rather than expose the general grid's tab-editing callbacks.
+
+Blobs of at least 1 MiB without `onDocument` use a progressive worker value preview, with progress and Cancel. `streaming={true}` opts smaller files in; `streaming={false}` gives the eager formatted view. CSV/TSV use the eager loader. **Enable editing** prepares the full document; before editing, streamed export returns the original Blob byte-for-byte. Workers and streaming code load separately, with a cooperative preview fallback if Workers are unavailable.
+
+For host-managed export, keep the document from `onDocument`:
 
 ```tsx
-<XlsxWorkbookGrid blob={file} editable exportFileName="book.xlsx" onDocument={(doc) => (docRef.current = doc)} />
-// later: const blob = await docRef.current.toBlob();
+import { useRef } from 'react';
+import { XlsxWorkbookGrid, type XlsxWorkbookDocument } from '@alaarab/ogrid-react-xlsx';
+
+export function HostEditor({ file }: { file: Blob }) {
+  const docRef = useRef<XlsxWorkbookDocument | null>(null);
+  return (
+    <>
+      <button type="button" onClick={() => { void docRef.current?.download('book.xlsx'); }}>Save</button>
+      <XlsxWorkbookGrid
+        blob={file} height={600} editable
+        onDocument={(doc) => { docRef.current = doc; }}
+      />
+    </>
+  );
+}
 ```
 
-In streaming mode, **Enable editing** prepares the full ExcelJS document in a
-worker. It then shows workbook formatting and enables value/formula editing,
-the formatting toolbar and undo. `onDocument` fires after that preparation. Supplying `onDocument` keeps the eager loader by default; use explicit `streaming={true}` to defer the callback until editing is enabled.
-Before editing, export returns the original Blob byte-for-byte; afterward it
-keeps every sheet and writes back only changes with the existing round-trip
-fidelity. Without Workers, preview parsing yields between small slices;
-preparing the full document uses the existing main-thread loader.
+`onDocument` disables automatic streaming; explicit `streaming={true}` defers it until Enable editing. Documents expose `setCellValues`, `applyStyle`, `mergeCells`, `setFreeze`, `setRowHeight`, `insertRows`, `deleteRows`, `insertColumns`, `deleteColumns`, `undo`, `redo`, `toWorkbook`, `toBlob` and `download`.
 
-Other entry points:
+Other entry points: `XlsxGrid` for a parsed sheet; `workbookFromBlob` / `sheetToGridData` for parsing; `streamWorkbook` for chunk/progress callbacks and lazy document loading; `exportToXlsx`, `workbookFromGridData`, `xlsxBlobFromWorkbook` for export; `mount` for DOM hosts.
 
-- `XlsxGrid` renders one sheet of an already-parsed ExcelJS workbook.
-- `workbookFromBlob` and `sheetToGridData` parse without rendering.
-- `streamWorkbook(blob, { signal, onChunk, onProgress })` streams worksheet
-  values without rendering. Its result exposes `sheets`, `loadDocument()` and
-  `toBlob()`. Chunk callbacks are awaited for backpressure. Rows use worksheet
-  coordinates including headers; the document applies header promotion.
-- `exportToXlsx`, `workbookFromGridData` and `xlsxBlobFromWorkbook` handle export.
-- `mount(node, { blob })` renders into a DOM node for non-React hosts. Call the returned function to unmount.
+Limits worth knowing:
 
-### Untrusted files
+- Charts/pivots require original bytes loaded through `blob` or `workbookFromBlob` and OGrid's Blob export helpers. Chart rendering, pivot authoring and media editing aren't implemented; media anchors and chart/pivot ranges don't shift with structure edits.
+- ExcelJS cannot write native dynamic-array metadata itself. OGrid's OOXML export preserves imported metadata and emits it for new spills; raw ExcelJS `writeBuffer()` bypasses that and chart/pivot preservation.
+- Streaming previews values and cached formula results. Editing, edited export and structural undo still use the full ExcelJS model. Default limits: 50 MiB input, 200 MiB uncompressed ZIP, 1,048,576 worksheet rows, 1,000 columns and 5,100,000 mapped cells per sheet; streaming shared strings are capped at 32 MiB. Configure `limits` / `streamOptions` and handle `onTruncated` as needed.
+- XLSX rows without saved heights don't auto-fit wrap text; formatting a virtual selection affects rendered rows. Header promotion changes formula coordinates; use `headerRow="none"` when source row references must stay intact.
 
-A few-KB file can declare a used range of billions of cells. Grid mapping is capped by `maxRows`, `maxCols` and `maxCells` (defaults: 1,048,576 worksheet rows, 1,000 columns, 5,100,000 cells). Pass `limits` to `XlsxGrid`/`XlsxWorkbookGrid`, or the same options to `sheetToGridData`. When a sheet is cut, the grid shows a notice and `sheetToGridData` returns `truncated` with the full size. A `NaN` limit uses the default, `Infinity` removes the limit, and other values are rounded down to at least one.
+ExcelJS loads statically. Lazy-load the route that imports this package to keep it out of the initial app bundle. For no-bundler hosts, use `@alaarab/ogrid-react-xlsx-browser`.
 
-`workbookFromBlob(blob, options)` and blob-backed `XlsxWorkbookGrid` also enforce `maxFileBytes` (default 50 MiB) before reading, and `maxUncompressedBytes` (default 200 MiB) against the ZIP directory before ExcelJS parsing. Multi-volume archives are rejected. CSV parsing stops at the row/cell limits and drops columns beyond the column limit; `parseTruncated` indicates that the original extent is unknown. These byte limits can be configured in `limits`. Pre-parsed workbooks bypass byte checks.
-
-Streaming preview checks actual inflated bytes as well as declared ZIP sizes,
-and limits decoded shared strings to 32 MiB by default (`streamOptions.maxSharedStringsBytes`).
-It retains grid values within the mapping caps, with small inflate/transport
-buffers. The eager path and full editable document still inflate the complete
-workbook with ExcelJS; row/cell limits bound mapping rather than that model.
-Editing, edited export and structural undo retain the full model's memory and
-CPU costs. See the docs' Large files section for matched browser measurements.
-
-### Formulas
-
-Imported formulas start with `=`. Shared formulas expand to each cell's references. Promoting a header row rebases local references, including absolute rows, into grid data coordinates the way deleting that row would in Excel: a range that starts on it shrinks, and a single reference to it becomes `#REF!`. The grid shows the file's cached result for those formulas instead of recalculating them. Sheet-qualified references keep worksheet coordinates and read other sheets' cached values. The grid preserves cached results for unsupported syntax, functions, named ranges or missing sheets; those formulas remain in `sheetToGridData().initialFormulas` for export but are not loaded into the live engine.
-
-Export accepts formulas in grid data coordinates, removes the leading `=`, and adds the worksheet header offset to local references. Keep `items` and `columns` in the order used to key the formulas. Export creates one sheet; callers exporting cross-sheet formulas must provide the referenced sheets themselves. Non-finite numeric values become empty cells, and invalid sheet names are sanitized.
-
-### Bundle size
-
-ExcelJS is imported statically, because every entry point needs it. To keep it out of your initial bundle, lazy-load the component that uses this package:
-
-```tsx
-const XlsxViewer = React.lazy(() => import('./XlsxViewer'));
-```
-
-For apps without a bundler, use `@alaarab/ogrid-react-xlsx-browser`.
+See [XLSX API, fidelity and measured large-file limits](https://alaarab.github.io/ogrid/docs/features/xlsx-import) and [formulas/spills](https://alaarab.github.io/ogrid/docs/features/formulas). MIT licensed; version 2.19.0.

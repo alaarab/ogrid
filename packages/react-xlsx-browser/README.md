@@ -1,20 +1,12 @@
 # @alaarab/ogrid-react-xlsx-browser
 
-A self-contained ES module graph of `@alaarab/ogrid-react-xlsx`, with React, ReactDOM, ExcelJS and every OGrid dependency included. It's for apps without a bundler: copy the files into a static `vendor/` directory and `import()` them.
-
-A browser ESM package of `@alaarab/ogrid-react-xlsx`, with React, ReactDOM, ExcelJS and every OGrid dependency bundled. It's for apps without a bundler: copy the files into a static `vendor/` directory and `import()` the entry. Streaming modules and the worker load on demand.
-
-## Install
+Self-contained browser ESM bundle of `ogrid-react-xlsx`, including React, ReactDOM, ExcelJS and OGrid dependencies. For static pages and other hosts without a bundler. No host React installation is required.
 
 ```bash
 npm install @alaarab/ogrid-react-xlsx-browser
 ```
 
-Copy every `.js` and `.css` file from `dist/` into the same static directory. Import `ogrid-xlsx.js` and link `ogrid-xlsx.css` as below. Keep the sibling chunks beside the entry: optional UI, drag behavior and media load them on demand.
-
-Copy **all `.js` files and the CSS in `dist/`**, including `xlsxWorker.js`, into your static assets. Keep relative paths and serve JS with a JavaScript MIME type. The worker is self-contained and requires no dependency installation on the host.
-
-## Usage
+Copy the **complete `dist/` directory** into your static `vendor/` directory, including all JS/CSS chunks and `xlsxWorker.js`. Keep relative paths and serve JavaScript with a JavaScript MIME type. Optional UI, media and streaming code load on demand.
 
 ```html
 <link rel="stylesheet" href="/vendor/ogrid-xlsx.css" />
@@ -22,20 +14,21 @@ Copy **all `.js` files and the CSS in `dist/`**, including `xlsxWorker.js`, into
 <script type="module">
   const { mount } = await import('/vendor/ogrid-xlsx.js');
   const blob = await (await fetch('/files/report.xlsx')).blob();
-  const unmount = mount(document.getElementById('sheet'), { blob });
+  const node = document.getElementById('sheet');
+  if (!node) throw new Error('Sheet container is missing');
+  const unmount = mount(node, {
+    blob, editable: true, exportFileName: 'report.xlsx',
+  });
   // Call unmount() before removing the node.
 </script>
 ```
 
-The complete module graph measures about 615 kB with gzip, or 486.30 kB after minification and Brotli compression (the size gate), within its 505.8 kB budget. These totals include deferred chunks; the initial entry does not load optional UI or media. If you have a bundler, use `@alaarab/ogrid-react-xlsx` instead so React and ExcelJS aren't duplicated. See its README for the API and the load limits for untrusted files.
+This includes the workbook editor's formatting, merges/freezing, structure edits, validation, notes, images and chart/pivot preservation. Charts show placeholders rather than rendered charts. The same [fidelity and load limits](https://alaarab.github.io/ogrid/docs/features/xlsx-import) apply.
 
-Blobs of at least 1 MiB without `onDocument` use a progressive worker preview automatically. Set
-`streaming: true` to stream smaller files too. With `editable: true`, choose
-**Enable editing** after loading to prepare the full document. Until then,
-Export returns the original file byte-for-byte. Use `streaming: false` for
-the eager formatted view. If you have a bundler, use
-`@alaarab/ogrid-react-xlsx` so React and ExcelJS aren't duplicated.
+Blobs of at least 1 MiB without `onDocument` use a progressive worker preview. Use `streaming: false` for the eager formatted view. With `editable: true`, Enable editing prepares the full document; unedited streamed export returns the original bytes.
 
-## Rendering the exported components
+The v2.19.0 size-limit entry measures **506.66 kB minified + Brotli**, within its 522 kB budget; the validation dialog measures 9.39 kB separately. These are independent entry measurements, not the total download of `dist/`; see the [root size table](../../README.md#bundle-sizes-minified--brotli).
 
-This bundle inlines its own copy of React, so the re-exported `XlsxGrid` and `XlsxWorkbookGrid` components must only be rendered by the bundle's React through `mount()`. Do not render them from a host React app: you would end up with two React copies and an "Invalid hook call" error. With a bundler, import those components from `@alaarab/ogrid-react-xlsx` instead.
+Use `mount()` to render with the bundle's React. Rendering its exported components in a host React tree creates a second React copy. Apps with a bundler should use `@alaarab/ogrid-react-xlsx` instead.
+
+See the [XLSX guide](https://alaarab.github.io/ogrid/docs/features/xlsx-import#browser-bundle-no-bundler). MIT licensed; version 2.19.0.
