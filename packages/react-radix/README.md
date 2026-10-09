@@ -40,4 +40,4 @@ The entry imports grid/popover CSS; `@alaarab/ogrid-react-radix/index.css` is al
 
 The `node` export supplies a CSS-free entry for Node loaders; bundlers use the styled `module` entry. Jest consumers need ESM transforms and a CSS stub. See [installation](https://alaarab.github.io/ogrid/docs/getting-started/installation) and the [headless guide](https://alaarab.github.io/ogrid/docs/headless).
 
-MIT licensed; version 2.19.0.
+MIT licensed.

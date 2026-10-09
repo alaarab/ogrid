@@ -23,4 +23,4 @@ export const columns: IColumnDef<Task>[] = [
 
 Pass these columns to your kit's `<OGrid>` with `editable` and an `onCellValueChanged` handler. Other exports: `TimePickerEditor`, `DateTimePickerEditor`, `ColorPickerEditor`, `SliderEditor`, `TagsEditor`.
 
-Editors are tree-shakeable and separate from the grid packages. See [editor options](https://alaarab.github.io/ogrid/docs/features/premium-inputs). Version 2.19.0.
+Editors are tree-shakeable and separate from the grid packages. See [editor options](https://alaarab.github.io/ogrid/docs/features/premium-inputs).
