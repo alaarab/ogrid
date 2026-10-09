@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.19.1] - 2026-10-09
+
 ### Changed
 
 - Refreshed root and package READMEs for v2.19.0: verified feature/API coverage, install examples, package dependencies, workbook limits, documentation links and development workflows; regenerated minified + Brotli size measurements.

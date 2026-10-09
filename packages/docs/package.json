@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-docs",
-  "version": "2.19.0",
+  "version": "2.19.1",
   "private": true,
   "scripts": {
     "start": "docusaurus start",
@@ -11,11 +11,11 @@
     "test": "bun test --preload ../../bun-test.setup.ts"
   },
   "dependencies": {
-    "@alaarab/ogrid-react": "2.19.0",
-    "@alaarab/ogrid-react-fluent": "2.19.0",
-    "@alaarab/ogrid-react-inputs": "2.19.0",
-    "@alaarab/ogrid-react-radix": "2.19.0",
-    "@alaarab/ogrid-react-xlsx": "2.19.0",
+    "@alaarab/ogrid-react": "2.19.1",
+    "@alaarab/ogrid-react-fluent": "2.19.1",
+    "@alaarab/ogrid-react-inputs": "2.19.1",
+    "@alaarab/ogrid-react-radix": "2.19.1",
+    "@alaarab/ogrid-react-xlsx": "2.19.1",
     "@docusaurus/core": "^3.10.2",
     "@docusaurus/preset-classic": "^3.10.2",
     "@docusaurus/theme-common": "^3.10.2",
