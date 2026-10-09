@@ -15,4 +15,4 @@ console.log(parseTags('red, green')); // ['red', 'green']
 
 `@alaarab/ogrid-react-inputs` uses these helpers for its React editors. Install this package directly when building your own editor UI.
 
-See the [editor guide](https://alaarab.github.io/ogrid/docs/features/premium-inputs). MIT licensed; version 2.19.0.
+See the [editor guide](https://alaarab.github.io/ogrid/docs/features/premium-inputs). MIT licensed.

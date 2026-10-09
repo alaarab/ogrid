@@ -1,6 +1,6 @@
 # OGrid documentation
 
-Private Docusaurus workspace for OGrid v2.19.0. Pages live in `docs/`, interactive examples in `src/components/demos/`, and site assets in `static/`. The MCP build copies these pages into its bundled documentation.
+Private Docusaurus workspace for OGrid. Pages live in `docs/`, interactive examples in `src/components/demos/`, and site assets in `static/`. The MCP build copies these pages into its bundled documentation.
 
 From the repository root (Bun >= 1.4.2, Node >= 22.19.0):
 

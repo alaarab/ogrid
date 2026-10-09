@@ -1,6 +1,6 @@
 # @alaarab/ogrid-mcp
 
-Standalone MCP server for bundled OGrid documentation, with an optional local HTTP bridge to inspect and control a running grid. No grid runtime dependency. MIT licensed; version 2.19.0. Requires Node >= 18.
+Standalone MCP server for bundled OGrid documentation, with an optional local HTTP bridge to inspect and control a running grid. No grid runtime dependency. MIT licensed. Requires Node >= 18.
 
 Add to your editor's MCP configuration:
 

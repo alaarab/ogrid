@@ -21,4 +21,4 @@ bun run test:e2e:matrix
 
 Build workspace dependencies before starting Vite: imports resolve to package `dist/` entries. Browser tests launch the app servers using the repository's Playwright configurations.
 
-See [quick start](https://alaarab.github.io/ogrid/docs/getting-started/quick-start), [XLSX](https://alaarab.github.io/ogrid/docs/features/xlsx-import) and the [root development commands](../../README.md#development-and-testing). Workspace version 2.19.0; not published to npm.
+See [quick start](https://alaarab.github.io/ogrid/docs/getting-started/quick-start), [XLSX](https://alaarab.github.io/ogrid/docs/features/xlsx-import) and the [root development commands](../../README.md#development-and-testing). Not published to npm.
