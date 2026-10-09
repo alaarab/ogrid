@@ -45,4 +45,4 @@ The component layer also shares merges, freeze/structure commands, find/replace,
 
 `@alaarab/ogrid-react/testing` exports shared test factories. This optional entry requires `@testing-library/react` 16 and React 18+.
 
-MIT licensed; version 2.19.0.
+MIT licensed.

@@ -51,4 +51,4 @@ Limits worth knowing:
 
 ExcelJS loads statically. Lazy-load the route that imports this package to keep it out of the initial app bundle. For no-bundler hosts, use `@alaarab/ogrid-react-xlsx-browser`.
 
-See [XLSX API, fidelity and measured large-file limits](https://alaarab.github.io/ogrid/docs/features/xlsx-import) and [formulas/spills](https://alaarab.github.io/ogrid/docs/features/formulas). MIT licensed; version 2.19.0.
+See [XLSX API, fidelity and measured large-file limits](https://alaarab.github.io/ogrid/docs/features/xlsx-import) and [formulas/spills](https://alaarab.github.io/ogrid/docs/features/formulas). MIT licensed.

@@ -27,8 +27,8 @@ This includes the workbook editor's formatting, merges/freezing, structure edits
 
 Blobs of at least 1 MiB without `onDocument` use a progressive worker preview. Use `streaming: false` for the eager formatted view. With `editable: true`, Enable editing prepares the full document; unedited streamed export returns the original bytes.
 
-The v2.19.0 size-limit entry measures **506.66 kB minified + Brotli**, within its 522 kB budget; the validation dialog measures 9.39 kB separately. These are independent entry measurements, not the total download of `dist/`; see the [root size table](../../README.md#bundle-sizes-minified--brotli).
+The size-limit entry measures **506.66 kB minified + Brotli**, within its 522 kB budget; the validation dialog measures 9.39 kB separately. These are independent entry measurements, not the total download of `dist/`; see the [root size table](../../README.md#bundle-sizes-minified--brotli).
 
 Use `mount()` to render with the bundle's React. Rendering its exported components in a host React tree creates a second React copy. Apps with a bundler should use `@alaarab/ogrid-react-xlsx` instead.
 
-See the [XLSX guide](https://alaarab.github.io/ogrid/docs/features/xlsx-import#browser-bundle-no-bundler). MIT licensed; version 2.19.0.
+See the [XLSX guide](https://alaarab.github.io/ogrid/docs/features/xlsx-import#browser-bundle-no-bundler). MIT licensed.
