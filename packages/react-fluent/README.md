@@ -1,31 +1,46 @@
 # @alaarab/ogrid-react-fluent
 
-OGrid data grid for React, built with Fluent UI v9.
-
-## Install
+OGrid's Fluent UI v9 kit. Supports React and ReactDOM 17, 18 and 19, and re-exports the React hooks and core types/utilities.
 
 ```bash
-npm install @alaarab/ogrid-react-fluent
+npm install @alaarab/ogrid-react-fluent react react-dom @fluentui/react-components @fluentui/react-icons
 ```
-
-## Usage
 
 ```tsx
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-fluent';
+import { useState, type ComponentType } from 'react';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { OGrid, type IColumnDef, type IOGridProps } from '@alaarab/ogrid-react-fluent';
 
-const columns: IColumnDef<Employee>[] = [
-  { columnId: 'name', name: 'Name', sortable: true, editable: true },
-  { columnId: 'department', name: 'Department', filterable: { type: 'multiSelect' } },
+interface Row { id: string; name: string }
+// v2.19.0's forwardRef declaration needs a typed alias in strict TypeScript.
+const RowGrid = OGrid as ComponentType<IOGridProps<Row>>;
+
+const columns: IColumnDef<Row>[] = [
+  { columnId: 'name', name: 'Name', sortable: true, editable: true,
+    filterable: { type: 'text' } },
 ];
 
-<OGrid columns={columns} data={employees} getRowId={(e) => e.id} />
+export function Example() {
+  const [rows, setRows] = useState<Row[]>([{ id: '1', name: 'Alex' }]);
+  return (
+    <FluentProvider theme={webLightTheme} style={{ height: 400 }}>
+      <RowGrid
+        data={rows} columns={columns} getRowId={(row) => row.id}
+        editable cellSelection cellReferences findReplace statusBar
+        onCellValueChanged={({ item, columnId, newValue }) => {
+          setRows((data) => data.map((row) =>
+            row.id === item.id ? { ...row, [columnId]: newValue } : row));
+        }}
+      />
+    </FluentProvider>
+  );
+}
 ```
 
-See the [OGrid docs](https://alaarab.github.io/ogrid/) for full documentation.
+Includes multi-level sort, number/condition filters, Excel selection/keyboard behavior, fill series, clipboard and undo. Opt into merges, freezing, structure edits, hiding, sheet-tab callbacks, find/replace, conditional formatting, notes, wrapping/row heights, formulas/spills, validation and drag/drop through the shared [props](https://alaarab.github.io/ogrid/docs/api/ogrid-props).
 
-## Tests and SSR
+The entry imports grid/popover CSS; `@alaarab/ogrid-react-fluent/index.css` is also available explicitly (`styles/index.css` is an alias). Optional dialogs load their own styles. Wrap the grid in `FluentProvider` with your theme; see [theming](https://alaarab.github.io/ogrid/docs/guides/theming).
 
-All component styles, including lazy dialogs and panels, ship in one stylesheet. The package entry imports it (`import './index.css'`), so bundlers pick up the styles with no extra import. An explicit `import '@alaarab/ogrid-react-fluent/index.css'` also works; `styles/index.css` remains an alias. JavaScript for optional UI still loads on demand. Plain Node has no CSS loader, so the package also publishes a `node` export condition that points at the same code without the stylesheet import. Bundlers match the `module` condition first and keep the styles; tools that load `node_modules` with Node itself get the CSS-free entry:
+The `node` export supplies a CSS-free entry for Node loaders; bundlers use the styled `module` entry. Jest consumers need ESM transforms and a CSS stub. See [installation](https://alaarab.github.io/ogrid/docs/getting-started/installation) and the [headless guide](https://alaarab.github.io/ogrid/docs/headless).
 
-- **Vite SSR** (dev `ssrLoadModule` and `vite build --ssr`) and **Vitest**: no configuration needed.
-- **Jest:** Jest resolves the `browser`/`default` conditions under jsdom, so it still sees the CSS import. Transform the ESM packages and stub CSS: `transformIgnorePatterns: ['node_modules/(?!@alaarab/)']` plus `moduleNameMapper: { '\\.css$': '<rootDir>/styleStub.js' }` (a file containing `module.exports = {};`).
+MIT licensed; version 2.19.0.

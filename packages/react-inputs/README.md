@@ -1,26 +1,26 @@
 # @alaarab/ogrid-react-inputs
 
-Opt-in premium cell editors for OGrid: date, time and date-time pickers, star rating, color picker, slider, and tags. Nothing is added to your bundle unless you import it.
-
-## Install
+Optional MIT cell editors: date, time and date-time pickers, star rating, color picker, slider and tags. Supports React and ReactDOM 17, 18 and 19 with either OGrid kit. Depends on `ogrid-core` and the framework-free `ogrid-inputs` helpers.
 
 ```bash
-npm install @alaarab/ogrid-react-inputs
+npm install @alaarab/ogrid-react-inputs react react-dom
 ```
 
-## Usage
-
-Set an editor as a column's `cellEditor` and open it in a popup:
+Set an editor on an editable column and open it in a popup:
 
 ```tsx
+import type { IColumnDef } from '@alaarab/ogrid-react-radix';
 import { DatePickerEditor, RatingEditor } from '@alaarab/ogrid-react-inputs';
 
-const columns = [
-  { columnId: 'dueDate', name: 'Due', editable: true, cellEditor: DatePickerEditor, cellEditorPopup: true },
-  { columnId: 'score', name: 'Score', editable: true, cellEditor: RatingEditor, cellEditorPopup: true },
+interface Task { id: string; dueDate: string; score: number }
+export const columns: IColumnDef<Task>[] = [
+  { columnId: 'dueDate', name: 'Due', editable: true,
+    cellEditor: DatePickerEditor, cellEditorPopup: true },
+  { columnId: 'score', name: 'Score', editable: true,
+    cellEditor: RatingEditor, cellEditorPopup: true },
 ];
 ```
 
-Editors: `DatePickerEditor`, `TimePickerEditor`, `DateTimePickerEditor`, `RatingEditor`, `ColorPickerEditor`, `SliderEditor`, `TagsEditor`. They work with both `@alaarab/ogrid-react-radix` and `@alaarab/ogrid-react-fluent`. React 17, 18 and 19 are supported.
+Pass these columns to your kit's `<OGrid>` with `editable` and an `onCellValueChanged` handler. Other exports: `TimePickerEditor`, `DateTimePickerEditor`, `ColorPickerEditor`, `SliderEditor`, `TagsEditor`.
 
-See the [premium inputs docs](https://alaarab.github.io/ogrid/docs/features/premium-inputs) for each editor's options.
+Editors are tree-shakeable and separate from the grid packages. See [editor options](https://alaarab.github.io/ogrid/docs/features/premium-inputs). Version 2.19.0.

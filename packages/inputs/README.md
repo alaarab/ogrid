@@ -1,17 +1,18 @@
 # @alaarab/ogrid-inputs
 
-Framework-free helpers behind OGrid's premium cell editors: calendar grids and date parsing, time options, star ratings, color parsing, slider math, and tag parsing. Zero dependencies.
-
-## Install
+Framework-free helpers for OGrid's optional editors: calendar grids and date parsing, time options, star ratings, color parsing, slider math and tag parsing. No runtime dependencies.
 
 ```bash
 npm install @alaarab/ogrid-inputs
 ```
 
-You usually don't install this directly. `@alaarab/ogrid-react-inputs` uses it for its React editors. Use it yourself if you're building editors on a different UI layer.
+```ts
+import { clampRating, parseTags } from '@alaarab/ogrid-inputs';
 
-```typescript
-import { getCalendarGrid, parseDate, getMinuteOptions, clampRating, parseTags } from '@alaarab/ogrid-inputs';
+console.log(clampRating(7, 5)); // 5
+console.log(parseTags('red, green')); // ['red', 'green']
 ```
 
-See the [OGrid docs](https://alaarab.github.io/ogrid/) for full documentation.
+`@alaarab/ogrid-react-inputs` uses these helpers for its React editors. Install this package directly when building your own editor UI.
+
+See the [editor guide](https://alaarab.github.io/ogrid/docs/features/premium-inputs). MIT licensed; version 2.19.0.

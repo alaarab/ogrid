@@ -1,284 +1,45 @@
 # @alaarab/ogrid-react-radix
 
-OGrid data grid for React, built with Radix UI primitives.
-
-## Install
+OGrid's Radix UI kit. Supports React and ReactDOM 17, 18 and 19, and re-exports the React hooks and core types/utilities.
 
 ```bash
-npm install @alaarab/ogrid-react-radix
+npm install @alaarab/ogrid-react-radix react react-dom @radix-ui/react-checkbox @radix-ui/react-popover
 ```
 
-## Usage
-
 ```tsx
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-radix';
+import { useState, type ComponentType } from 'react';
+import { OGrid, type IColumnDef, type IOGridProps } from '@alaarab/ogrid-react-radix';
 
-const columns: IColumnDef<Employee>[] = [
-  { columnId: 'name', name: 'Name', sortable: true, editable: true },
-  { columnId: 'department', name: 'Department', filterable: { type: 'multiSelect' } },
+interface Row { id: string; name: string }
+// v2.19.0's forwardRef declaration needs a typed alias in strict TypeScript.
+const RowGrid = OGrid as ComponentType<IOGridProps<Row>>;
+
+const columns: IColumnDef<Row>[] = [
+  { columnId: 'name', name: 'Name', sortable: true, editable: true,
+    filterable: { type: 'text' } },
 ];
 
-<OGrid columns={columns} data={employees} getRowId={(e) => e.id} />
+export function Example() {
+  const [rows, setRows] = useState<Row[]>([{ id: '1', name: 'Alex' }]);
+  return (
+    <div style={{ height: 400 }}>
+      <RowGrid
+        data={rows} columns={columns} getRowId={(row) => row.id}
+        editable cellSelection cellReferences findReplace statusBar
+        onCellValueChanged={({ item, columnId, newValue }) => {
+          setRows((data) => data.map((row) =>
+            row.id === item.id ? { ...row, [columnId]: newValue } : row));
+        }}
+      />
+    </div>
+  );
+}
 ```
 
-## Headless API — `useHeadlessGrid`
+Includes multi-level sort, number/condition filters, Excel selection/keyboard behavior, fill series, clipboard and undo. Opt into merges, freezing, structure edits, hiding, sheet-tab callbacks, find/replace, conditional formatting, notes, wrapping/row heights, formulas/spills, validation and drag/drop through the shared [props](https://alaarab.github.io/ogrid/docs/api/ogrid-props).
 
-Render OGrid's sort/filter/paginate/select state with your own table chrome
-(shadcn `<Table>`, plain `<table>`, anything else). The same logic that powers
-`<OGrid>` is exposed as a hook so you keep your design system and still get
-the spreadsheet-class state management.
+The entry imports grid/popover CSS; `@alaarab/ogrid-react-radix/index.css` is also available explicitly (`styles/index.css` is an alias). Optional dialogs load their own styles. For shadcn tokens, import `@alaarab/ogrid-react-radix/styles/preset-shadcn.css`; see [theming](https://alaarab.github.io/ogrid/docs/guides/theming).
 
-```tsx
-import { useHeadlessGrid } from '@alaarab/ogrid-react-radix';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'; // your shadcn primitives
+The `node` export supplies a CSS-free entry for Node loaders; bundlers use the styled `module` entry. Jest consumers need ESM transforms and a CSS stub. See [installation](https://alaarab.github.io/ogrid/docs/getting-started/installation) and the [headless guide](https://alaarab.github.io/ogrid/docs/headless).
 
-const grid = useHeadlessGrid({
-  columns,
-  data: employees,
-  getRowId: (e) => e.id,
-  initialSort: { field: 'salary', direction: 'desc' },
-  initialPageSize: 25,
-});
-
-return (
-  <Table>
-    <TableHeader>
-      <TableRow>
-        {grid.columns.map((col) => (
-          <TableHead
-            key={col.columnId}
-            onClick={() => col.sortable && grid.toggleSort(col.columnId)}
-          >
-            {col.name} {grid.sortIndicator(col.columnId)}
-          </TableHead>
-        ))}
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      {grid.rows.map((row) => (
-        <TableRow
-          key={grid.getRowId(row)}
-          onClick={() => grid.toggleRowSelection(row)}
-          data-selected={grid.isRowSelected(row)}
-        >
-          {grid.columns.map((col) => (
-            <TableCell key={col.columnId}>
-              {String(grid.getCellValue(row, col.columnId))}
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-);
-```
-
-The hook returns:
-
-| | |
-|---|---|
-| `rows`, `allFilteredRows`, `totalCount`, `totalPages` | Current-page rows, full filtered set, counts |
-| `columns`, `getRowId`, `getCellValue` | Column defs, row identity, cell value resolution (honors `valueGetter`) |
-| `sort`, `setSort`, `toggleSort`, `sortIndicator` | Current sort state + `▲`/`▼`/`""` indicator helper |
-| `filters`, `setFilters`, `setFilter`, `hasActiveFilters` | Filter state |
-| `page`, `pageSize`, `setPage`, `setPageSize` | Pagination |
-| `selectedRowIds`, `isRowSelected`, `toggleRowSelection`, `selectAllOnPage`, `clearSelection` | Minimal Set-based row selection |
-
-Pair with `preset-shadcn.css` for full theme inheritance:
-
-```ts
-import "@alaarab/ogrid-react-radix/styles/preset-shadcn.css";
-```
-
-## Filter labels and values
-
-Multi-select choices can be strings or objects with separate string values and
-display labels. Existing string arrays work unchanged:
-
-```tsx
-const columns = [{
-  columnId: 'active',
-  name: 'Status',
-  filterable: {
-    type: 'multiSelect' as const,
-    options: [
-      { value: 'true', label: 'Active' },
-      { value: 'false', label: 'Inactive' },
-    ],
-  },
-}];
-```
-
-Selecting “Inactive” produces `{ type: 'multiSelect', value: ['false'] }`.
-Search matches display labels. `IDataSource.fetchFilterOptions(field)` and
-`DataGridTable.filterOptions` accept the same `FilterOption[]` shape. Static
-`filterable.options` take precedence, including `[]`, and skip option fetching.
-Use string values for boolean or numeric data, matching OGrid's filter state.
-
-For custom palettes, map `--ogrid-*` variables on `:root` or a grid wrapper.
-Filter and column chooser portals preserve the wrapper's tokens and follow
-class, `data-theme`, and inline style changes while open. The shadcn preset
-expects shadcn tokens such as `--card` and `--primary`; apps with other token
-names should map OGrid variables directly. See the Radix example at
-`/filter-options.html` for a scoped palette and labeled boolean filter.
-
-For deployment, install matching published core/react/radix versions and commit
-the regenerated lockfile. A `--no-save` local tarball install can retain nested
-registry copies, even when their version labels match the tarballs. From the
-OGrid checkout, verify a consumer with:
-
-```sh
-node scripts/check-package-resolution.mjs /path/to/consumer 2.17.0
-```
-
-The check verifies exact internal dependency versions and confirms that every
-package resolves the same core/react installations as the consumer root.
-
-## Inline cell editing — `useInlineEdit`
-
-Add spreadsheet-style cell editing to your shadcn table. Compose with
-`useHeadlessGrid`; bring your own input component. `valueParser` validation
-fires on commit (same flow `<OGrid>` uses).
-
-```tsx
-import { useHeadlessGrid, useInlineEdit } from '@alaarab/ogrid-react-radix';
-
-const grid = useHeadlessGrid({ columns, data: employees, getRowId: (r) => r.id });
-const edit = useInlineEdit({
-  columns,
-  getRowId: (r) => r.id,
-  onCellEdit: ({ item, columnId, newValue }) =>
-    updateRow(item.id, { [columnId]: newValue }),
-});
-
-return (
-  <Table>
-    <TableBody>
-      {grid.rows.map((row) => (
-        <TableRow key={grid.getRowId(row)}>
-          {grid.columns.map((col) => (
-            <TableCell
-              key={col.columnId}
-              onDoubleClick={() => edit.startEdit(row, col.columnId)}
-            >
-              {edit.isEditing(row, col.columnId) ? (
-                <input autoFocus {...edit.getEditorProps(row, col.columnId)} />
-              ) : (
-                String(grid.getCellValue(row, col.columnId))
-              )}
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-);
-```
-
-The hook returns `editingCell`, `pendingValue`, `setPendingValue`, `startEdit`,
-`commitEdit`, `cancelEdit`, `isEditing(row, columnId)`, `canEdit(row, columnId)`,
-and `getEditorProps(row, columnId)` (which spreads into your input as
-`value`/`onChange`/`onBlur`/`onKeyDown` — Enter commits, Escape cancels).
-
-## Range selection — `useRangeSelection`
-
-Excel/Sheets-style anchor + focus range selection. Pure state — consumer
-wires their own mouse handlers. Foundation for fill handle and clipboard.
-
-```tsx
-const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
-
-<TableCell
-  onMouseDown={(e) => e.shiftKey ? range.extendRange(rowIdx, colIdx) : range.startRange(rowIdx, colIdx)}
-  onMouseEnter={(e) => e.buttons === 1 && range.extendRange(rowIdx, colIdx)}
-  data-selected={range.isInRange(rowIdx, colIdx)}
-/>
-```
-
-Returns `range`, `anchor`, `focus`, `startRange`, `extendRange`, `setRange`,
-`clearRange`, `selectAll`, `isInRange`, `getRangeRows`, `getRangeCells`.
-
-## Fill handle — `useFillHandle`
-
-Excel-style drag-to-fill. Builds on `useRangeSelection`. Smart-fill
-(numeric series, copy-text, type-compatibility checks) comes from core's
-`applyFillValues`.
-
-```tsx
-const fill = useFillHandle({
-  rangeSelection: range,
-  rows: grid.rows,
-  columns: grid.columns,
-  onFillCells: (events) => events.forEach(applyEdit),
-});
-
-// At the bottom-right of the active range:
-<div onMouseDown={fill.startFill} />
-
-// On every cell during drag:
-<TableCell
-  onMouseEnter={() => fill.isFilling && fill.updateFill(rowIdx, colIdx)}
-  onMouseUp={fill.commitFill}
-  data-fill={fill.isInFillRange(rowIdx, colIdx)}
-/>
-```
-
-## Copy / cut / paste — `useCellClipboard`
-
-TSV-format clipboard, round-trippable through Excel and Google Sheets.
-Honors `clipboardFormatter` for copy and `valueParser` for paste validation.
-
-```tsx
-const clipboard = useCellClipboard({
-  rangeSelection: range,
-  rows: grid.rows,
-  columns: grid.columns,
-  onCellEdit: (events) => events.forEach(applyEdit),
-});
-
-// On the focusable grid container. Ctrl/Cmd+C, X and V are left to the
-// browser: the native copy/cut/paste events that follow carry the clipboard
-// data and need no permission, unlike `copyRange()` / `cutRange()` /
-// `pasteRange()` (for buttons and menus).
-<div
-  tabIndex={0}
-  onCopy={clipboard.onCopy}
-  onCut={clipboard.onCut}
-  onPaste={clipboard.onPaste}
->
-```
-
-## Undo / redo — `useUndoRedo`
-
-Wraps your `onCellEdit` callback with an undo/redo history stack. Pair
-with `useInlineEdit`, `useFillHandle`, and `useCellClipboard` to get
-spreadsheet-style undo for free.
-
-```tsx
-const undo = useUndoRedo({ onCellValueChanged: applyEditToRows });
-
-const edit = useInlineEdit({ columns, getRowId, onCellEdit: undo.onCellValueChanged });
-const fill = useFillHandle({ ..., onFillCells: (events) => events.forEach(undo.onCellValueChanged) });
-const clipboard = useCellClipboard({ ..., onCellEdit: (events) => events.forEach(undo.onCellValueChanged) });
-
-<button onClick={undo.undo} disabled={!undo.canUndo}>Undo</button>
-<button onClick={undo.redo} disabled={!undo.canRedo}>Redo</button>
-```
-
-## Theming
-
-Override any `--ogrid-*` variable to customize. The shadcn preset above maps
-them to your shadcn tokens (`--card`, `--ring`, `--radius`, `--font-sans`)
-automatically.
-
-See the [OGrid docs](https://alaarab.github.io/ogrid/) for the full token
-catalog and component reference.
-
-## Tests and SSR
-
-All component styles, including lazy dialogs and panels, ship in one stylesheet. The package entry imports it (`import './index.css'`), so bundlers pick up the styles with no extra import. An explicit `import '@alaarab/ogrid-react-radix/index.css'` also works; `styles/index.css` remains an alias. JavaScript for optional UI still loads on demand. Plain Node has no CSS loader, so the package also publishes a `node` export condition that points at the same code without the stylesheet import. Bundlers match the `module` condition first and keep the styles; tools that load `node_modules` with Node itself get the CSS-free entry:
-
-- **Vite SSR** (dev `ssrLoadModule` and `vite build --ssr`) and **Vitest**: no configuration needed.
-- **Jest:** Jest resolves the `browser`/`default` conditions under jsdom, so it still sees the CSS import. Transform the ESM packages and stub CSS: `transformIgnorePatterns: ['node_modules/(?!@alaarab/)']` plus `moduleNameMapper: { '\\.css$': '<rootDir>/styleStub.js' }` (a file containing `module.exports = {};`).
+MIT licensed; version 2.19.0.
