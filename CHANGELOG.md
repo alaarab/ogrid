@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.19.0] - 2026-10-09
+
 ### Changed
 
 - Polished Radix and Fluent spreadsheet surfaces in light and dark themes: validation dialogs and prompts, find/replace, notes, formula assistance, cell/column/sheet menus, condition filters, XLSX formatting and streaming controls, and drag feedback. Added consistent spacing, theme-aware contrast, focus rings, and reduced-motion styling without changing grid behavior or JavaScript loading boundaries. Modal-only styles load with the validation dialog.
