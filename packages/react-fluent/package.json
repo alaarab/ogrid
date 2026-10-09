@@ -19,7 +19,7 @@
   },
   "scripts": {
     "build": "rimraf dist && tsup && tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist/types && node ../../scripts/add-use-client.mjs dist/esm/index.js && node ../../scripts/write-node-entry.mjs",
-    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
     "test": "bun test --preload ../../bun-test.setup.ts",
     "storybook": "storybook dev -p 6006 --no-open",
     "build-storybook": "storybook build"
@@ -56,6 +56,7 @@
     "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
+    "@alaarab/ogrid-react-inputs": "2.19.0",
     "@fluentui/react-components": "^9.74.9",
     "@fluentui/react-icons": "^2.0.343",
     "@storybook/react-vite": "^10.6.1",

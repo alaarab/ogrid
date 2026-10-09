@@ -136,5 +136,8 @@ export function createOGrid(components: CreateOGridComponents) {
 
   OGridInner.displayName = 'OGrid';
 
-  return React.memo(OGridInner) as typeof OGridInner;
+  // Restore the row generic erased by forwardRef. Static metadata cannot depend
+  // on a row type: React 17/18 propTypes would block ComponentType<T> consumers.
+  return React.memo(OGridInner) as (<T>(props: IOGridProps<T> & React.RefAttributes<IOGridApi<T>>) => React.ReactElement | null)
+    & Pick<React.ForwardRefExoticComponent<unknown>, keyof React.ForwardRefExoticComponent<unknown>>;
 }

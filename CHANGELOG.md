@@ -8,6 +8,11 @@ All notable changes to OGrid will be documented in this file.
 
 - Refreshed root and package READMEs for v2.19.0: verified feature/API coverage, install examples, package dependencies, workbook limits, documentation links and development workflows; regenerated minified + Brotli size measurements.
 
+### Fixed
+
+- Preserved the row generic on Radix and Fluent `OGrid` and the shared `createOGrid` factory through React's ref and memo wrappers. Explicit `<OGrid<T>>` usage and inference from row data now keep refs, row IDs and cell-change callbacks typed without consumer casts on React 17, 18 and 19.
+- Removed README and XLSX generic workarounds and updated stale story props and metadata casts. Both kits now include their stories in typechecking.
+
 ## [2.19.0] - 2026-10-09
 
 ### Changed
