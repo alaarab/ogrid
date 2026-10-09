@@ -21,8 +21,8 @@ function makeProjects(count: number): Project[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `proj-${i + 1}`,
     name: `Project ${String.fromCharCode(65 + (i % 26))}${Math.floor(i / 26) || ''}`,
-    status: STATUSES[i % STATUSES.length],
-    owner: OWNERS[i % OWNERS.length],
+    status: STATUSES[i % STATUSES.length] ?? 'Active',
+    owner: OWNERS[i % OWNERS.length] ?? 'Alice Johnson',
     budget: Math.round((10000 + Math.random() * 90000) * 100) / 100,
     startDate: new Date(2024, i % 12, 1 + (i % 28)).toISOString().slice(0, 10),
     active: i % 3 !== 0,
@@ -77,7 +77,7 @@ const getRowId = (p: Project) => p.id;
 
 const meta: Meta<typeof OGrid<Project>> = {
   title: 'OGrid/React Radix/OGrid',
-  component: OGrid as React.ComponentType,
+  component: OGrid<Project>,
   parameters: { layout: 'padded' },
 };
 
@@ -147,7 +147,7 @@ export const Editable: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<Project>) => {
       setData((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -220,7 +220,7 @@ export const SpreadsheetExperience: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<Project>) => {
       setData((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -253,7 +253,7 @@ export const CellReferences: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<Project>) => {
       setData((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -342,8 +342,8 @@ export const WindowedDataSource: Story = {
       const makeRow = (i: number): Project => ({
         id: `proj-${i + 1}`,
         name: `Project ${String.fromCharCode(65 + (i % 26))}${Math.floor(i / 26) || ''}`,
-        status: STATUSES[i % STATUSES.length],
-        owner: OWNERS[i % OWNERS.length],
+        status: STATUSES[i % STATUSES.length] ?? 'Active',
+        owner: OWNERS[i % OWNERS.length] ?? 'Alice Johnson',
         budget: 10000 + (i % 900) * 100,
         startDate: new Date(2024, i % 12, 1 + (i % 28)).toISOString().slice(0, 10),
         active: i % 3 !== 0,
@@ -389,7 +389,6 @@ export const WorkerSort50K: Story = {
           getRowId={getRowId}
           entityLabelPlural="projects"
           statusBar
-          pagination={false}
           layoutMode="fill"
           workerSort
         />
@@ -417,7 +416,6 @@ export const ColumnVirtualization50Cols: Story = {
         getRowId={getRowId}
         entityLabelPlural="projects"
         statusBar
-        pagination={false}
         layoutMode="fill"
         virtualScroll={{ columns: true, columnOverscan: 3 }}
       />
@@ -468,7 +466,6 @@ export const ToolbarWithSecondaryRow: Story = {
       getRowId={getRowId}
       entityLabelPlural="projects"
       columnChooser="toolbar"
-      pagination
       defaultPageSize={10}
       toolbar={
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
@@ -714,7 +711,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       (e: ICellValueChangedEvent<Project>) => {
         setData((prev) =>
           prev.map((row) =>
-            row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row,
+            row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row,
           ),
         );
       },
@@ -864,7 +861,6 @@ export const Formulas: Story = {
             { col: 1, row: 3, formula: '=SUM(B1:B3)' },
             { col: 2, row: 3, formula: '=SUM(C1:C3)' },
           ]}
-          pagination={false}
           statusBar
         />
       </div>

@@ -6,7 +6,7 @@
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type ExcelJS from 'exceljs';
-import { OGrid, type IOGridProps, type ICellValueChangedEvent, type IColumnsChangeEvent } from '@alaarab/ogrid-react-radix';
+import { OGrid, type IOGridProps, type ICellValueChangedEvent, type IColumnsChangeEvent, type IColumnDef as ReactColumnDef } from '@alaarab/ogrid-react-radix';
 import type { ICellNote, IColumnDef, IOGridApi, IRowsChangeEvent } from '@alaarab/ogrid-core';
 import type { IRecalcResult } from '@alaarab/ogrid-core/formula';
 import { styleToCss, themePaletteOf, type CssStyle, type ThemePalette, type XlsxCellStyle } from './cellStyles';
@@ -293,8 +293,7 @@ export function XlsxGrid({
 
   // Cast: the mapped columns use @alaarab/ogrid-core's IColumnDef where
   // cellEditor is `unknown`, while OGrid wants @alaarab/ogrid-react's
-  // narrower variant (the mapper only sets 'select'). createOGrid()'s
-  // memo+forwardRef also drops the generic at the call site.
+  // narrower variant (the mapper only sets 'select').
   //
   // Formulas: the sheet state stores engine-evaluable formulas as "=..."
   // text in the rows. Passing onUndo makes the document the owner of the
@@ -310,8 +309,8 @@ export function XlsxGrid({
   // height; rows with a sheet height (`rowHeights`) differ from it. Past ~931k
   // rows the core scaled-spacer engages automatically to beat the browser
   // element-height cap. statusBar gives an Excel-style row-count footer.
-  const gridProps = {
-    columns,
+  const gridProps: IOGridProps<SheetRow> = {
+    columns: columns as ReactColumnDef<SheetRow>[],
     data: rows,
     getRowId: (row: SheetRow) => row.__rowIdx,
     hiddenRowIds: hiddenRows,
@@ -362,7 +361,7 @@ export function XlsxGrid({
     density,
     statusBar: true,
     columnChooser: false as const,
-  } as unknown as IOGridProps<unknown>;
+  };
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative', width: '100%', height, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -387,7 +386,7 @@ export function XlsxGrid({
         </div>
       )}
       {/* One grid per sheet state: the formula engine loads a sheet's formulas once per OGrid instance. */}
-      <OGrid key={gridKeyFor(state)} {...gridProps} ref={apiRef as React.Ref<IOGridApi<unknown>>} />
+      <OGrid<SheetRow> key={gridKeyFor(state)} {...gridProps} ref={apiRef} />
       {hasMedia && <Suspense fallback={null}><MediaLayer workbook={workbook} sheetName={sheetName} rootRef={wrapperRef} apiRef={apiRef} headerPromoted={source.formatting.headerPromoted} rowHeight={rowHeight} rowHeights={rowHeights} /></Suspense>}
     </div>
   );

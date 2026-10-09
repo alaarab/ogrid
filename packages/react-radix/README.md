@@ -7,12 +7,10 @@ npm install @alaarab/ogrid-react-radix react react-dom @radix-ui/react-checkbox 
 ```
 
 ```tsx
-import { useState, type ComponentType } from 'react';
-import { OGrid, type IColumnDef, type IOGridProps } from '@alaarab/ogrid-react-radix';
+import { useState } from 'react';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-radix';
 
 interface Row { id: string; name: string }
-// v2.19.0's forwardRef declaration needs a typed alias in strict TypeScript.
-const RowGrid = OGrid as ComponentType<IOGridProps<Row>>;
 
 const columns: IColumnDef<Row>[] = [
   { columnId: 'name', name: 'Name', sortable: true, editable: true,
@@ -23,7 +21,7 @@ export function Example() {
   const [rows, setRows] = useState<Row[]>([{ id: '1', name: 'Alex' }]);
   return (
     <div style={{ height: 400 }}>
-      <RowGrid
+      <OGrid<Row>
         data={rows} columns={columns} getRowId={(row) => row.id}
         editable cellSelection cellReferences findReplace statusBar
         onCellValueChanged={({ item, columnId, newValue }) => {

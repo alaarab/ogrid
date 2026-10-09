@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.build.json",
+  "exclude": [
+    "src/**/__tests__/**",
+    "src/**/*.module.scss.ts"
+  ]
+}

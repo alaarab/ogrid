@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import ExcelJS from 'exceljs';
 import { OGrid } from '@alaarab/ogrid-react-radix';
-import type { IOGridProps } from '@alaarab/ogrid-react-radix';
+import type { IOGridProps, IColumnDef } from '@alaarab/ogrid-react-radix';
 import { triggerBlobDownload } from '@alaarab/ogrid-core';
 import type { IDataSource } from '@alaarab/ogrid-core';
 import { WorkbookSheetTabs } from './WorkbookSheetTabs';
@@ -121,12 +121,14 @@ export default function StreamingWorkbookGrid(props: XlsxWorkbookGridProps & { b
   if (cancelled) return <div role="status">Workbook loading cancelled.</div>;
   if (document) return <XlsxWorkbookGrid {...props} blob={undefined as never} workbook={document.workbook} document={document} initialSheet={active} streaming={false} onSheetChange={(name) => { setActive(name); callbacks.current.onSheetChange?.(name); }} onDocument={callbacks.current.onDocument} />;
   const rowHeight = density === 'compact' ? 28 : density === 'comfortable' ? 44 : 36;
-  const gridProps = {
-    dataSource, columns: mapped?.columns ?? [], getRowId: (row: SheetRow) => row.__rowIdx,
+  const gridProps: IOGridProps<SheetRow> = {
+    // The mapper uses core column types; its built-in editors satisfy React's narrower type.
+    ...(dataSource ? { dataSource } : { data: [] }),
+    columns: (mapped?.columns ?? []) as IColumnDef<SheetRow>[], getRowId: (row: SheetRow) => row.__rowIdx,
     defaultSortBy: '', cellReferences: true, density, rowHeight,
     virtualScroll: { enabled: true, paginate: false, rowHeight, columns: (mapped?.columns.length ?? 0) > 100 },
     statusBar: true, columnChooser: false,
-  } as unknown as IOGridProps<unknown>;
+  };
   return (
     <div style={{ height, width: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <style>{STREAM_CSS}</style>

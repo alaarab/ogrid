@@ -31,8 +31,8 @@ npm install @alaarab/ogrid-react-radix react react-dom @radix-ui/react-checkbox 
 React 17, 18 and 19 are supported by the grid kits, hooks and optional editors. `react-xlsx` requires React 18 or 19. The browser XLSX package bundles its own React.
 
 ```tsx
-import { useRef, useState, type ComponentType, type RefAttributes } from 'react';
-import { OGrid, type IColumnDef, type IOGridApi, type IOGridProps } from '@alaarab/ogrid-react-radix';
+import { useRef, useState } from 'react';
+import { OGrid, type IColumnDef, type IOGridApi } from '@alaarab/ogrid-react-radix';
 
 interface Employee {
   id: string;
@@ -40,9 +40,6 @@ interface Employee {
   department: string;
   salary: number;
 }
-
-// v2.19.0's forwardRef declaration needs a typed alias in strict TypeScript.
-const EmployeeGrid = OGrid as ComponentType<IOGridProps<Employee> & RefAttributes<IOGridApi<Employee>>>;
 
 const columns: IColumnDef<Employee>[] = [
   { columnId: 'name', name: 'Name', sortable: true, editable: true },
@@ -63,7 +60,7 @@ export default function App() {
       <button type="button" onClick={() => gridRef.current?.setCellValue('1', 'salary', 95000)}>
         Update Alex's salary
       </button>
-      <EmployeeGrid
+      <OGrid<Employee>
         ref={gridRef}
         columns={columns}
         data={employees}

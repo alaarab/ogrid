@@ -1,7 +1,7 @@
 import * as React from 'react';
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { DataGridTable } from './DataGridTable';
-import type { IColumnDef, ICellValueChangedEvent, ICellEditorProps, IRowSelectionChangeEvent } from '@alaarab/ogrid-react';
+import type { IColumnDef, ICellValueChangedEvent, ICellEditorProps, IRowSelectionChangeEvent, RowId } from '@alaarab/ogrid-react';
 import { DatePickerEditor, RatingEditor, ColorPickerEditor, SliderEditor, TagsEditor } from '@alaarab/ogrid-react-inputs';
 
 interface Row {
@@ -49,7 +49,7 @@ const noop = () => {};
 
 const meta: Meta<typeof DataGridTable<Row>> = {
   title: 'OGrid/React Fluent/DataGridTable',
-  component: DataGridTable as React.ComponentType,
+  component: DataGridTable<Row>,
   parameters: { layout: 'padded' },
 };
 
@@ -431,7 +431,7 @@ const spreadsheetColumns: IColumnDef<SpreadsheetRow>[] = [
 
 export const MultiRowSelection: Story = {
   render: function MultiRowSelectionStory() {
-    const [selected, setSelected] = React.useState<Set<string>>(new Set());
+    const [selected, setSelected] = React.useState<Set<RowId>>(new Set());
     return (
       <div>
         <p style={{ marginBottom: 8, fontSize: 14 }}>
@@ -449,7 +449,7 @@ export const MultiRowSelection: Story = {
           rowSelection="multiple"
           selectedRows={selected}
           onSelectionChange={(e: IRowSelectionChangeEvent<SpreadsheetRow>) => setSelected(new Set(e.selectedRowIds))}
-          statusBar
+          statusBar={{ totalCount: spreadsheetRows.length }}
           filters={{}}
           onFilterChange={noop}
           filterOptions={{
@@ -465,7 +465,7 @@ export const MultiRowSelection: Story = {
 
 export const SingleRowSelection: Story = {
   render: function SingleRowSelectionStory() {
-    const [selected, setSelected] = React.useState<Set<string>>(new Set());
+    const [selected, setSelected] = React.useState<Set<RowId>>(new Set());
     const selectedItem = spreadsheetRows.find((r) => selected.has(r.id));
     return (
       <div>
@@ -488,7 +488,7 @@ export const SingleRowSelection: Story = {
           rowSelection="single"
           selectedRows={selected}
           onSelectionChange={(e: IRowSelectionChangeEvent<SpreadsheetRow>) => setSelected(new Set(e.selectedRowIds))}
-          statusBar
+          statusBar={{ totalCount: spreadsheetRows.length }}
           filters={{}}
           onFilterChange={noop}
           filterOptions={{
@@ -565,7 +565,7 @@ export const KeyboardNavigation: Story = {
           editable
           onCellValueChanged={handleCellValueChanged}
           rowSelection="multiple"
-          statusBar
+          statusBar={{ totalCount: items.length }}
           filters={{}}
           onFilterChange={noop}
           filterOptions={{}}
@@ -645,7 +645,7 @@ export const PinnedColumns: Story = {
           sortDirection="asc"
           onColumnSort={noop}
           visibleColumns={new Set(pinnedCols.map((c) => c.columnId))}
-          statusBar
+          statusBar={{ totalCount: spreadsheetRows.length }}
           filters={{}}
           onFilterChange={noop}
           filterOptions={{}}
@@ -663,7 +663,7 @@ export const PinnedColumns: Story = {
 export const SpreadsheetExperience: Story = {
   render: function SpreadsheetExperienceStory() {
     const [items, setItems] = React.useState(spreadsheetRows);
-    const [selected, setSelected] = React.useState<Set<string>>(new Set());
+    const [selected, setSelected] = React.useState<Set<RowId>>(new Set());
 
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<SpreadsheetRow>) => {
       setItems((prev) =>
@@ -952,7 +952,7 @@ export const PremiumInputs: Story = {
           visibleColumns={new Set(['name', 'rating', 'color', 'progress', 'tags'])}
           editable
           cellSelection
-          statusBar
+          statusBar={{ totalCount: items.length }}
           onCellValueChanged={handleCellValueChanged}
           filters={{}}
           onFilterChange={noop}

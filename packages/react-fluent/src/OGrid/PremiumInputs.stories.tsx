@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { OGrid } from './OGrid';
 import type { IColumnDef, ICellValueChangedEvent } from '@alaarab/ogrid-react';
 import { RatingEditor, ColorPickerEditor, TagsEditor } from '@alaarab/ogrid-react-inputs';
@@ -22,7 +22,7 @@ function makeProducts(count: number): ProductRow[] {
     id: `prod-${i + 1}`,
     name: `${names[i % names.length]} ${String.fromCharCode(65 + (i % 26))}`,
     rating: (i % 5) + 1,
-    color: colors[i % colors.length],
+    color: colors[i % colors.length] ?? '#e53935',
     tags: TAG_SUGGESTIONS.slice(0, (i % 3) + 1).join(', '),
     price: Math.round((5 + Math.random() * 95) * 100) / 100,
   }));
@@ -32,7 +32,7 @@ const getRowId = (p: ProductRow) => p.id;
 
 const meta: Meta<typeof OGrid<ProductRow>> = {
   title: 'OGrid/React Fluent/Premium Inputs',
-  component: OGrid as React.ComponentType,
+  component: OGrid<ProductRow>,
   parameters: { layout: 'padded' },
 };
 
@@ -46,7 +46,7 @@ export const PremiumEditors: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<ProductRow>) => {
       setData((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
