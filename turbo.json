@@ -1,7 +1,14 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalPassThroughEnv": [
-    "OGRID_PLAYWRIGHT_PROJECTS"
+    "OGRID_PLAYWRIGHT_PROJECTS",
+    "OGRID_PERF_URL",
+    "OGRID_PERF_LABEL",
+    "OGRID_PERF_VARIANTS",
+    "OGRID_PERF_BUDGETS",
+    "OGRID_PERF_RADIX",
+    "OGRID_PERF_OUT",
+    "OGRID_PERF_MINIFY"
   ],
   "globalDependencies": [
     "tsconfig.base.json"
