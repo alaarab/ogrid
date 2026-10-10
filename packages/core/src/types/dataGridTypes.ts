@@ -346,6 +346,14 @@ export interface IVirtualScrollConfig {
   columns?: boolean;
   /** Number of extra columns to render outside the visible area (default: 2). */
   columnOverscan?: number;
+  /**
+   * Measure each rendered row's real height instead of assuming `rowHeight`.
+   * Defaults to on when a visible column has `renderCell` or `wrapText`, since
+   * their content can make rows taller than `rowHeight`; without measuring,
+   * the scrollbar and `scrollToRow` drift. Set `false` when every row is
+   * exactly `rowHeight` tall to skip the measurement.
+   */
+  measureRows?: boolean;
 }
 
 // --- Column reordering ---

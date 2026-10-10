@@ -209,6 +209,15 @@ export function createWrapTextTests(OGrid: React.ComponentType<IOGridProps<NoteR
       expect(spacerTotal).toBe(199 * 30 + 90 - (90 + (rendered - 1) * 30));
     });
 
+    it('rows with custom renderers are measured (their content sets the height) unless measureRows is false', () => {
+      const custom: IColumnDef<NoteRow>[] = [{ columnId: 'title', name: 'Title', renderCell: (r) => <div>{r.title}</div> }];
+      const measured = renderGrid({ data: many, columns: custom, virtualScroll });
+      expect(rowEl(measured.container, 'v0').hasAttribute('data-index')).toBe(true);
+      measured.unmount();
+      const fixed = renderGrid({ data: many, columns: custom, virtualScroll: { ...virtualScroll, measureRows: false } });
+      expect(rowEl(fixed.container, 'v0').hasAttribute('data-index')).toBe(false);
+    });
+
     it('rows can be resized from the row numbers while virtual scrolling', () => {
       const onRowResized = jest.fn();
       const { container } = renderGrid({ data: many, virtualScroll, rowResize: true, showRowNumbers: true, onRowResized });

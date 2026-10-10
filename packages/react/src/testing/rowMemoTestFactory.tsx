@@ -228,6 +228,47 @@ export function createRowMemoOGridTests(OGrid: React.ComponentType<IOGridProps<F
       expect(renders).toEqual({});
     });
 
+    // Regression guard for large grids: a data change used to give the cell
+    // renderer a new identity (through the validation context), so every row repainted.
+    it('a committed edit, and its undo, repaint only the rows they touch', async () => {
+      function Host() {
+        const [data, setData] = React.useState(rows);
+        return element({
+          data,
+          onCellValueChanged: (e) => setData((prev) => prev.map((r) => (r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r))),
+        });
+      }
+      const { container } = render(<Host />);
+      const rowIdAt = (i: number) => container.querySelector(`tbody tr:nth-child(${i + 1})`)?.getAttribute('data-row-id');
+      const [edited, below] = [rowIdAt(2), rowIdAt(3)];
+      const before = getCell(container, 2, 1).textContent;
+      fireEvent.pointerDown(getCell(container, 2, 1));
+      await waitFor(() => expect(getCell(container, 2, 1).getAttribute('data-active-cell')).toBe('true'));
+      fireEvent.doubleClick(getCell(container, 2, 1));
+      const input = await waitFor(() => {
+        const el = container.querySelector('tbody tr:nth-child(3) input');
+        expect(el).toBeTruthy();
+        return el as HTMLInputElement;
+      });
+
+      renders = {};
+      fireEvent.change(input, { target: { value: 'Paused' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      await waitFor(() => expect(getCell(container, 2, 1).textContent).toBe('Paused'));
+      // The edited row, and the row Enter moves the active cell to.
+      expect(Object.keys(renders).sort()).toEqual([edited, below].sort());
+
+      renders = {};
+      const grid = container.querySelector('[role="region"]') as HTMLElement;
+      act(() => {
+        grid.focus();
+        fireEvent.keyDown(grid, { key: 'z', ctrlKey: true });
+      });
+      await waitFor(() => expect(getCell(container, 2, 1).textContent).toBe(before));
+      expect(renders[edited as string]).toBeGreaterThan(0);
+      expect(Object.keys(renders).filter((id) => id !== edited && id !== below)).toEqual([]);
+    });
+
     it('repaints a dependent formula cell in another row after a formula edit (K03)', async () => {
       const { container } = render(
         element({ formulas: true, initialFormulas: [{ col: 1, row: 4, formula: '=A1+1' }] }),

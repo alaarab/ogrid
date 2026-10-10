@@ -94,6 +94,13 @@ export interface UseVirtualScrollResult {
  */
 const DEFAULT_PASSTHROUGH_THRESHOLD = 100;
 
+/** Vertical scroll that also works where `Element.scrollTo` is missing (jsdom). */
+function scrollContainerTo(container: HTMLElement, top: number): void {
+  if (container.scrollTop === top) return;
+  if (typeof container.scrollTo === 'function') container.scrollTo({ top, behavior: 'auto' });
+  else container.scrollTop = top;
+}
+
 /**
  * Wraps TanStack Virtual for row virtualization, with optional column virtualization.
  *
@@ -355,7 +362,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
           align = index * rowHeight < current ? 'start' : 'end';
         }
         const top = scrollTopForRowScaled(index, geometry, config, align);
-        container.scrollTo({ top, behavior: 'auto' });
+        scrollContainerTo(container, top);
         setScrollTop(top);
       } else if (tanStackActive) {
         if (align === 'center' && stickyHeight > 0) {
@@ -377,7 +384,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
           align = height <= 0 || rowTop < container.scrollTop ? 'start' : 'end';
         }
         const adjustment = align === 'center' ? (height - actualHeight) / 2 : align === 'end' ? height - actualHeight : 0;
-        container.scrollTo({ top: Math.max(0, rowTop - adjustment), behavior: 'auto' });
+        scrollContainerTo(container, Math.max(0, rowTop - adjustment));
       }
     },
     [isScaled, tanStackActive, containerRef, rowHeight, totalRows, geometry, stickyHeader]

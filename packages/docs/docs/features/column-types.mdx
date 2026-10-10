@@ -24,6 +24,10 @@ OGrid provides built-in column types that automatically configure alignment, dis
 | `'date'` | Left | Date picker | Date range (from/to) | `toLocaleDateString()` |
 | `'boolean'` | Center | Checkbox |  -  | `True` / `False` |
 
+:::note Alignment and custom renderers
+A numeric column right-aligns its cell content as one box, including a `renderCell` result: a two-line renderer sits at the right edge with both lines right-aligned. To lay out a cell differently, style the renderer's root, for example `style={{ width: '100%', textAlign: 'left' }}`. See [Performance: alignment in mixed cells](./performance#alignment-in-mixed-cells).
+:::
+
 ## Quick Example
 
 ```tsx
