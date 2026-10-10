@@ -11,7 +11,9 @@
     "build:react-fluent": "vite build --config vite.fluent.config.ts",
     "build:react-radix": "vite build --config vite.radix.config.ts",
     "serve:e2e:react-fluent": "vite build --config vite.fluent.config.ts --logLevel warn && vite preview --config vite.fluent.config.ts",
-    "serve:e2e:react-radix": "vite build --config vite.radix.config.ts --logLevel warn && vite preview --config vite.radix.config.ts"
+    "serve:e2e:react-radix": "vite build --config vite.radix.config.ts --logLevel warn && vite preview --config vite.radix.config.ts",
+    "build:perf": "vite build --config vite.perf.config.ts --logLevel warn",
+    "serve:perf": "vite build --config vite.perf.config.ts --logLevel warn && vite preview --config vite.perf.config.ts"
   },
   "dependencies": {
     "@alaarab/ogrid-core": "2.19.1",
