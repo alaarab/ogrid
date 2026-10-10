@@ -293,6 +293,12 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     // Verify it's within a cell wrapper that has row/col index attributes
     const cellWrapper = amountCells[0]!.closest('[data-col-index]');
     expect(cellWrapper).toBeTruthy();
+    // The flex cell content right-aligns through this variable; text-align alone
+    // left a custom renderer's box (and plain values) at the start.
+    const amountTd = amountCells[0]!.closest('td') as HTMLElement;
+    const nameTd = container.querySelector('[data-testid="cell-name"]')!.closest('td') as HTMLElement;
+    expect(amountTd.style.getPropertyValue('--ogrid-cell-justify')).toBe('safe flex-end');
+    expect(nameTd.style.getPropertyValue('--ogrid-cell-justify')).toBe('');
   });
 
   it('suppressHorizontalScroll prevents overflow-x auto', () => {

@@ -138,7 +138,7 @@ The `rowHeight` property sets the fixed pixel height for every row. Choose a val
 />
 ```
 
-`rowHeight` is the default height. Rows can differ from it: manual heights (`rowHeights`, `rowResize`) are part of the scroll geometry, and when a column has `wrapText` the rendered rows are measured (rows not rendered yet count as `rowHeight`). Past the browser height cap (the scaled model) and with windowed data sources, every row is exactly `rowHeight` tall. See [Wrap Text](./wrap-text#virtual-scrolling).
+`rowHeight` is the default height. Rows can differ from it: manual heights (`rowHeights`, `rowResize`) are part of the scroll geometry, and when a visible column has `wrapText` or a custom `renderCell`, the rendered rows are measured (rows not rendered yet count as `rowHeight`). Turn measuring off with `measureRows: false` when every row is exactly `rowHeight` tall. Past the browser height cap (the scaled model) and with windowed data sources, every row is exactly `rowHeight` tall. See [Wrap Text](./wrap-text#virtual-scrolling).
 
 ### Overscan
 
@@ -336,6 +336,7 @@ Column virtualization requires that all columns have a defined width (via `defau
 | `threshold` | `number` | `100` | Minimum row count before virtualization activates. Below this, all rows render. |
 | `columns` | `boolean` | `false` | Enable column virtualization. Renders only columns visible in the horizontal viewport. |
 | `columnOverscan` | `number` | `2` | Extra columns rendered beyond the visible horizontal range on each side. |
+| `measureRows` | `boolean` | on when a visible column has `renderCell` or `wrapText` | Measure each rendered row's real height instead of assuming `rowHeight`. Set `false` when every row is exactly `rowHeight` tall. |
 
 ### Grid API Methods
 
@@ -344,7 +345,7 @@ Column virtualization requires that all columns have a defined width (via `defau
 | `scrollToRow` | `(index: number, options?: { align?: 'start' \| 'center' \| 'end' }) => void` | Scroll to a specific row by its index in the data array. |
 
 :::tip
-For the best experience with virtual scrolling, ensure your CSS row height matches the `rowHeight` value. Mismatched heights cause scroll position drift.
+Set `rowHeight` close to your typical row height (for example the height of a two-line custom cell). Rows that aren't rendered yet are estimated at `rowHeight`, so a close estimate keeps the scrollbar steady while measured rows replace the estimates.
 :::
 
 ## Related

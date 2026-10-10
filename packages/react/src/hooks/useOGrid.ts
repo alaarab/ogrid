@@ -251,8 +251,11 @@ export function useOGrid<T>(
   });
 
   const validationRules = useValidationRules(props.dataValidations, props.onDataValidationsChange);
+  // Without rules nothing reads the context; leaving it undefined keeps the
+  // validator (and so the cell renderer and every memoized row) stable across data edits.
+  const validationOn = validationRules.rules.length > 0 || !!props.allowValidationEditing;
   // biome-ignore lint/correctness/useExhaustiveDependencies: recalculation changes the values used by validation and invalid-data circles
-  const validationContext = useMemo(() => ({
+  const validationContext = useMemo(() => !validationOn ? undefined : ({
     items: sheetItems, columns, namedRanges: props.namedRanges,
     resolveSource: props.validationSourceResolver,
     getValue: (col: number, row: number, sheet?: string): unknown => {
@@ -263,7 +266,7 @@ export function useOGrid<T>(
     },
     evaluateFormula: formulaEngine.enabled ? (formula: string, anchor: { col: number; row: number }, cell: { col: number; row: number }, proposed?: { value?: unknown; changes?: readonly { col: number; row: number; value: unknown }[] }) =>
       formulaEngine.createDetachedEvaluator({ preserveArrays: true, sheet: props.validationSheet, changes: proposed?.changes, proposed: proposed && 'value' in proposed ? { ...cell, value: proposed.value } : undefined })?.(formula, anchor, cell) : undefined,
-  }), [sheetItems, columns, props.namedRanges, props.sheets, props.validationSourceResolver, props.validationSheet, formulaEngine, dgFormulaProps.formulaVersion]);
+  }), [validationOn, sheetItems, columns, props.namedRanges, props.sheets, props.validationSourceResolver, props.validationSheet, formulaEngine, dgFormulaProps.formulaVersion]);
 
   // --- Cell API and structure edits (through the table's edit path and undo history) ---
   const gridEditBridgeRef = useRef<IGridEditBridge<T> | null>(null);

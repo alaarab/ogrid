@@ -30,6 +30,8 @@ function resolveFrozenRowCount(frozenRows: number | undefined, rowCount: number)
 
 /** The grid moves focus itself (roving tabindex in useGridCellFocus). */
 const ACTIVE_CELL_OPTIONS = { focus: false } as const;
+/** Shared empty row list for the validation context while no rules exist. */
+const NO_VALIDATION_ITEMS: readonly unknown[] = [];
 
 export interface UseDataGridStateParams<T> {
   props: IOGridDataGridProps<T>;
@@ -462,8 +464,11 @@ export function useDataGridState<T>(
   }, [formulasOn, getFormula, setFormula, onFormulaCellChanged, formulaCol, formulaRow]);
 
   const validationRules = useValidationRules(props.dataValidations, props.onDataValidationsChange);
-  const validationContext = useMemo(() => validationContextFor(props.validationContext, rowItems, flatColumns), [props.validationContext, rowItems, flatColumns]);
-  const validationOn = validationRules.rules.length > 0 || props.allowValidationEditing;
+  const validationOn = validationRules.rules.length > 0 || !!props.allowValidationEditing;
+  // Without rules the validator reads no cell values, so a data change must not
+  // replace it: the cell renderer depends on it, and a new one repaints every row.
+  const validationItems = validationOn ? rowItems : NO_VALIDATION_ITEMS as T[];
+  const validationContext = useMemo(() => validationContextFor(props.validationContext, validationItems, flatColumns), [props.validationContext, validationItems, flatColumns]);
   const sheetIndex = useMemo(() => {
     const map = new Map<RowId, number>();
     if (validationOn) validationContext.items.forEach((item, row) => { if (item !== undefined) map.set(getRowId(item), row); });

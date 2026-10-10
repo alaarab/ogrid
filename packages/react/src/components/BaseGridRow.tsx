@@ -30,6 +30,9 @@ export interface MergedCellRender {
  */
 export type RowMergePlan = Record<number, MergedCellRender | null>;
 
+/** Cell content alignment variable set per column by useColumnMeta. */
+const CELL_JUSTIFY_VAR = '--ogrid-cell-justify';
+
 const FROZEN_CELL_STYLE: React.CSSProperties = {
   position: 'sticky',
   top: 'var(--ogrid-frozen-top, 0px)',
@@ -288,8 +291,9 @@ function GridRowInner(props: BaseGridRowProps) {
         // undefined, so we reuse the memoized baseStyle directly (zero allocation).
         const colStyle = columnMeta.cellStyles[col.columnId];
         // A cell spanning columns takes its width from the columns it covers.
-        const metaStyle = merged && merged.colSpan > 1
-          ? { ...colStyle, width: undefined, maxWidth: undefined, textAlign: columnMeta.cellStyles[merged.anchorColumn.columnId]?.textAlign }
+        const anchorStyle = merged && merged.colSpan > 1 ? columnMeta.cellStyles[merged.anchorColumn.columnId] ?? {} : null;
+        const metaStyle = anchorStyle
+          ? { ...colStyle, width: undefined, maxWidth: undefined, textAlign: anchorStyle.textAlign, [CELL_JUSTIFY_VAR]: (anchorStyle as Record<string, unknown>)[CELL_JUSTIFY_VAR] } as React.CSSProperties
           : colStyle;
         const isPinnedCell = metaStyle != null && (metaStyle.left != null || metaStyle.right != null);
         const baseStyle = frozen
