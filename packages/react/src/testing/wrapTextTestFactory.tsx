@@ -218,6 +218,48 @@ export function createWrapTextTests(OGrid: React.ComponentType<IOGridProps<NoteR
       expect(rowEl(fixed.container, 'v0').hasAttribute('data-index')).toBe(false);
     });
 
+    // Scrollbar drift: content-sized rows taller than rowHeight must move the rows below them.
+    for (const measureRows of [undefined, false] as const) {
+      it(`custom-rendered rows of different heights ${measureRows === false ? 'keep rowHeight with measureRows: false' : 'are part of the scroll geometry'}`, async () => {
+        const custom: IColumnDef<NoteRow>[] = [{ columnId: 'title', name: 'Title', renderCell: (r) => <div>{r.title}</div> }];
+        // Even rows render two lines (45px), odd rows one (30px = rowHeight).
+        const heightOf = (el: Element) => (Number(el.getAttribute('data-index')) % 2 === 0 ? 45 : 30);
+        const original = HTMLElement.prototype.getBoundingClientRect;
+        const measured = new Set<number>();
+        HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+          const rect = original.call(this);
+          if (this.tagName !== 'TR' || !this.hasAttribute('data-index')) return rect;
+          measured.add(Number(this.getAttribute('data-index')));
+          const height = heightOf(this);
+          return { ...rect.toJSON?.(), x: 0, y: 0, top: 0, left: 0, right: 800, bottom: height, width: 800, height, toJSON: () => ({}) } as DOMRect;
+        };
+        try {
+          const { container } = renderGrid({ data: many, columns: custom, virtualScroll: { ...virtualScroll, measureRows } });
+          const renderedFirst = container.querySelectorAll('tbody tr[data-row-id]').length;
+          expect(renderedFirst).toBeGreaterThan(4);
+          const scroller = container.querySelector('tbody')?.closest('table')?.parentElement?.closest('[data-ogrid-scroll-container], [role="region"]') as HTMLElement;
+          await act(async () => {
+            scroller.scrollTop = 3000;
+            scroller.dispatchEvent(new Event('scroll'));
+            await new Promise((r) => setTimeout(r, 20));
+          });
+          const firstRow = container.querySelector('tbody tr[data-row-id]') as HTMLElement;
+          const first = Number(firstRow.getAttribute('data-row-id')?.slice(1));
+          expect(first).toBeGreaterThan(renderedFirst);
+          const topSpacer = Number.parseFloat((container.querySelector('tbody tr[aria-hidden]') as HTMLElement).style.height);
+          // Rows above the window that were rendered (and measured) keep their real height.
+          if (measureRows === false) expect(measured.size).toBe(0);
+          else expect(measured.has(0)).toBe(true);
+          let expected = 0;
+          for (let i = 0; i < first; i++) expected += measured.has(i) && i % 2 === 0 ? 45 : 30;
+          expect(topSpacer).toBe(expected);
+          if (measureRows !== false) expect(topSpacer).toBeGreaterThan(first * 30);
+        } finally {
+          HTMLElement.prototype.getBoundingClientRect = original;
+        }
+      });
+    }
+
     it('rows can be resized from the row numbers while virtual scrolling', () => {
       const onRowResized = jest.fn();
       const { container } = renderGrid({ data: many, virtualScroll, rowResize: true, showRowNumbers: true, onRowResized });
