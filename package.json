@@ -51,6 +51,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
     "test:e2e": "node scripts/run-playwright-matrix.mjs",
+    "bench:large-grid": "bunx playwright test --config=playwright.perf.config.ts",
     "test:e2e:docs": "bunx playwright test --config=playwright.docs.config.ts",
     "test:e2e:smoke": "bunx playwright test --config=playwright.smoke.config.ts",
     "test:e2e:matrix": "bun scripts/run-playwright-matrix.mjs",
