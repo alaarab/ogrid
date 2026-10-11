@@ -6,6 +6,7 @@ storybook-static
 .playwright-mcp
 playwright-report
 test-results
+perf-results
 .turbo
 .angular
 *.tsbuildinfo

@@ -99,8 +99,10 @@ export function useDataGridTableOrchestration<T>(
   });
   const rowHeightsActive = !windowed && (rowResizeAllowed || props.rowHeights != null);
   const getRowHeight = rowHeightsActive ? rowResize.getRowHeight : undefined;
-  // Wrapped text sizes rows to content, so a virtual grid measures its rows.
-  const measureRows = !windowed && visibleCols.some((c) => c.wrapText);
+  // Wrapped text and custom renderers size rows to content, so a virtual grid
+  // measures its rows unless the consumer says every row is `rowHeight` tall.
+  const measureRowsOption = props.virtualScroll?.measureRows;
+  const measureRows = !windowed && (measureRowsOption ?? visibleCols.some((c) => c.wrapText || c.renderCell != null));
   const rowSizing = useMemo(() => {
     if (!getRowHeight && !measureRows) return undefined;
     return {

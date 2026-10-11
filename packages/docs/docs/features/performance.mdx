@@ -41,18 +41,7 @@ td.ogrid-cell[data-pinned] {
 }
 ```
 
-Without row virtualization, OGrid also sets `content-visibility: auto` on rows, letting the browser skip off-screen row layout entirely:
-
-```css
-/* Browser skips layout for rows not in the viewport */
-tr[data-row]:not([data-virtual-scroll]) {
-  content-visibility: auto;
-}
-```
-
-When row virtualization is active, spacer rows handle positioning instead — so `content-visibility` is not applied there. The `data-virtual-scroll` attribute on `<table>` controls this automatically.
-
-**Net result**: even without opting into anything, a 500-row grid renders measurably faster than without these rules.
+Containment limits how far a change inside one cell spreads, but every rendered row is still in the DOM. Without row virtualization, a grid with `defaultPageSize: 'all'` mounts every row: 2,000 rows x 20 columns is 40,000 cells, and selecting a cell, sorting or editing then costs hundreds of milliseconds of layout. Turn on [row virtualization](./virtual-scrolling) for anything past a few hundred rows.
 
 ---
 
@@ -200,14 +189,119 @@ Same props across all React packages — just change the import:
 
 ---
 
+## Large editable grids
+
+The numbers below come from the repo's large-grid benchmark (`npm run bench:large-grid`): 2,000 rows x 20 columns, ten of them custom React renderers (badges, avatar stacks, two-line cells), with editing and range selection.
+
+| Setup | First render | Scroll | Click a cell |
+|---|---|---|---|
+| `defaultPageSize: 'all'`, no virtualization | 3.5 to 7.7 s, 40,000 cells | 6 to 22 fps | 0.4 to 2 s |
+| `virtualScroll: { enabled: true, rowHeight: 44 }` | 80 to 280 ms, 460 cells | 60 fps on an idle machine | 20 to 60 ms |
+
+A grid stays fast when a change repaints only the rows it touches. Each row is memoized: it re-renders when its own data, selection or editing state changes, or when something every row reads changes identity. The guidelines below keep it that way.
+
+### Virtualize, and give `rowHeight` your real row height
+
+```tsx
+<OGrid virtualScroll={{ enabled: true, rowHeight: 44 }} defaultPageSize="all" ... />
+```
+
+Rows with `renderCell` or `wrapText` columns are measured, so mixed heights (a two-line cell next to a one-line cell) don't make the scrollbar drift. Set `rowHeight` to the common height so unmeasured rows are estimated well.
+
+### Keep `columns` stable
+
+The column definitions, their `renderCell`/`valueGetter`/`valueFormatter` functions and their `cellEditorParams` are compared by identity. A new `columns` array repaints every visible row and recomputes column state, so build it once:
+
+```tsx
+// Bad: new columns on every render, and on every data change.
+const columns = buildColumns(rows, onOpen);
+
+// Good: columns depend only on things that change how columns look.
+const onOpen = useCallback((row: Row) => setOpenId(row.id), []);
+const columns = useMemo(() => buildColumns(onOpen), [onOpen]);
+```
+
+Don't derive columns from `data`. If a renderer or parser needs a lookup built from the rows (for example a name-to-id map), keep it in a ref that the column functions read:
+
+```tsx
+const ownerIds = useRef(new Map<string, string>());
+ownerIds.current = useMemo(() => buildOwnerMap(rows), [rows]);
+const columns = useMemo(() => [
+  { columnId: 'owner', name: 'Owner', valueParser: ({ newValue }) => ownerIds.current.get(String(newValue)) },
+], []);
+```
+
+Event callbacks such as `onCellValueChanged` and `onSelectionChange` can be inline functions: OGrid reads them through refs, so a new function does not repaint rows.
+
+### Make renderers cheap, and memoize the expensive ones
+
+`renderCell` runs for every visible cell of every row that repaints, so keep it a plain function of the row. Render heavy pieces (avatars, popovers, tooltips) as memoized components keyed on the values they show:
+
+```tsx
+const AvatarStack = React.memo(function AvatarStack({ people }: { people: Person[] }) {
+  return <span className="avatars">{people.slice(0, 3).map((p) => <Avatar key={p.id} person={p} />)}</span>;
+});
+
+const columns = useMemo<IColumnDef<Row>[]>(() => [
+  { columnId: 'reviewers', name: 'Reviewed by', renderCell: (r) => <AvatarStack people={r.reviewers} /> },
+], []);
+```
+
+Replace edited rows with new objects and leave the others as they are (`rows.map((r) => r.id === id ? { ...r, ...patch } : r)`), so `React.memo` children of unchanged rows keep their props. Mount tooltips and popovers on hover or focus, not in every cell, and don't fetch per cell: cache images and lookups outside the renderer.
+
+### Know what repaints every row
+
+Some inputs are read by every cell, so a change to them repaints all visible rows. That is expected; just don't trigger them on every keystroke:
+
+- a new `columns` array, or a new `visibleColumns`, `columnOrder` or `pinnedColumns`;
+- a column resize (each drag step), a sort or a filter;
+- with `dataValidations` rules, any data change (rules can read other cells);
+- with `conditionalFormats` rules, any data change (rules such as top 10 and data bars depend on every value);
+- with `formulas`, every recalculation.
+
+A cell edit, paste, fill, undo or a range delete without those features repaints only the rows it changed, plus the rows the selection moves through.
+
+### Alignment in mixed cells
+
+A `type: 'numeric'` column right-aligns its cell content as one box. Plain values sit at the right edge, and so does a custom renderer's root element, with its lines right-aligned inside it:
+
+```tsx
+{
+  columnId: 'access',
+  name: 'Access',
+  type: 'numeric',
+  renderCell: (r) => (
+    <span style={{ display: 'block', minWidth: 0 }}>
+      <span>{r.people}</span>
+      <span style={{ display: 'block' }}>{r.groups.join(', ')}</span>
+    </span>
+  ),
+}
+```
+
+Both lines end at the right edge. To align part of a numeric cell differently, give the renderer's root the full width and set alignment on its parts:
+
+```tsx
+renderCell: (r) => (
+  <span style={{ display: 'block', width: '100%' }}>
+    <span style={{ display: 'block', textAlign: 'right' }}>{r.people}</span>
+    <span style={{ display: 'block', textAlign: 'left' }}>{r.groups.join(', ')}</span>
+  </span>
+),
+```
+
+Text columns align to the start. For a right-aligned custom cell in a text column, use `marginLeft: 'auto'` on the renderer's root.
+
+---
+
 ## Which features do I actually need?
 
 Start here, add as needed:
 
 | Dataset | Recommended setup |
 |---|---|
-| < 1,000 rows, < 20 columns | Nothing — CSS containment handles it automatically. |
-| 1,000 – 10,000 rows | Add row virtualization: `virtualScroll: { enabled: true, rowHeight: 36 }`. |
+| < 300 rows, < 20 columns | Nothing. |
+| 300 to 10,000 rows | Add row virtualization: `virtualScroll: { enabled: true, rowHeight: 36 }`. |
 | > 10,000 rows | Row virtualization + `workerSort: 'auto'`. |
 | > 30 columns with horizontal scroll | Add `columns: true` to the `virtualScroll` config. |
 | Very large + very wide | All three: row virtualization, column virtualization, and `workerSort: true`. |

@@ -75,6 +75,26 @@ describe('scrollToRow API integration', () => {
     });
   }
 
+  it('scrolls a virtual grid below the row threshold where Element.scrollTo is missing (jsdom)', () => {
+    const apiRef = React.createRef<IOGridApi<Row>>();
+    const { result, rerender } = renderHook(() => {
+      const grid = useOGrid({ columns, getRowId, data, virtualScroll: { enabled: true, rowHeight: 40 } }, apiRef);
+      return useDataGridTableOrchestration({ props: grid.dataGridProps });
+    });
+    const container = document.createElement('div');
+    container.innerHTML = '<table><thead></thead><tbody><tr data-row-id="2"><td data-row-index="2"></td></tr></tbody></table>';
+    Object.defineProperty(container, 'clientHeight', { value: 300 });
+    Object.defineProperty(container, 'scrollTo', { value: undefined });
+    container.getBoundingClientRect = () => ({ top: 10 }) as DOMRect;
+    container.querySelector('tbody tr')!.getBoundingClientRect = () => ({ top: 510, height: 40 }) as DOMRect;
+    result.current.wrapperRef.current = container;
+    rerender();
+    act(() => apiRef.current!.scrollToRow(2, { align: 'start' }));
+    expect(container.scrollTop).toBe(500);
+    // Keyboard/click activation scrolls through the same path.
+    expect(() => act(() => result.current.setActiveCell({ rowIndex: 2, columnIndex: 0 }))).not.toThrow();
+  });
+
   it('uses a single row height for virtual math when both height props are provided', () => {
     const apiRef = React.createRef<IOGridApi<Row>>();
     const { result } = renderHook(() => {

@@ -11,6 +11,9 @@ import { useMemo } from 'react';
 import { estimateHeaderMinWidth } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 
+/** Read by `.cellContent` (`justify-content`); `safe` keeps overflowing text clipped at its end. */
+const NUMERIC_JUSTIFY = { '--ogrid-cell-justify': 'safe flex-end' } as React.CSSProperties;
+
 export interface UseColumnMetaParams<T> {
   visibleCols: IColumnDef<T>[];
   getColumnWidth: (col: IColumnDef<T>) => number;
@@ -85,6 +88,9 @@ export function useColumnMeta<T>(params: UseColumnMetaParams<T>): ColumnMetaResu
         width: autoWidth,
         maxWidth: autoMaxWidth,
         textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
+        // The cell content is a flex row, so text-align alone moves neither plain
+        // text nor a custom renderer's box; this right-aligns both as one unit.
+        ...(col.type === 'numeric' ? NUMERIC_JUSTIFY : undefined),
         ...stickyOverride,
         ...(isPinnedLeft && leftOffsets[col.columnId] != null ? { left: leftOffsets[col.columnId] } : undefined),
         ...(isPinnedRight && rightOffsets[col.columnId] != null ? { right: rightOffsets[col.columnId] } : undefined),

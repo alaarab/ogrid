@@ -228,6 +228,78 @@ export function createRowMemoOGridTests(OGrid: React.ComponentType<IOGridProps<F
       expect(renders).toEqual({});
     });
 
+    // Regression guard for large grids: a data change used to give the cell
+    // renderer a new identity (through the validation context), so every row repainted.
+    it('a committed edit, and its undo, repaint only the rows they touch', async () => {
+      function Host() {
+        const [data, setData] = React.useState(rows);
+        return element({
+          data,
+          onCellValueChanged: (e) => setData((prev) => prev.map((r) => (r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r))),
+        });
+      }
+      const { container } = render(<Host />);
+      const rowIdAt = (i: number) => container.querySelector(`tbody tr:nth-child(${i + 1})`)?.getAttribute('data-row-id');
+      const [edited, below] = [rowIdAt(2), rowIdAt(3)];
+      const before = getCell(container, 2, 1).textContent;
+      fireEvent.pointerDown(getCell(container, 2, 1));
+      await waitFor(() => expect(getCell(container, 2, 1).getAttribute('data-active-cell')).toBe('true'));
+      fireEvent.doubleClick(getCell(container, 2, 1));
+      const input = await waitFor(() => {
+        const el = container.querySelector('tbody tr:nth-child(3) input');
+        expect(el).toBeTruthy();
+        return el as HTMLInputElement;
+      });
+
+      renders = {};
+      fireEvent.change(input, { target: { value: 'Paused' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      await waitFor(() => expect(getCell(container, 2, 1).textContent).toBe('Paused'));
+      // The edited row, and the row Enter moves the active cell to.
+      expect(Object.keys(renders).sort()).toEqual([edited, below].sort());
+
+      renders = {};
+      const grid = container.querySelector('[role="region"]') as HTMLElement;
+      act(() => {
+        grid.focus();
+        fireEvent.keyDown(grid, { key: 'z', ctrlKey: true });
+      });
+      await waitFor(() => expect(getCell(container, 2, 1).textContent).toBe(before));
+      expect(renders[edited as string]).toBeGreaterThan(0);
+      expect(Object.keys(renders).filter((id) => id !== edited && id !== below)).toEqual([]);
+    });
+
+    // The renderer keeps its identity across data edits, so only formulaVersion
+    // (a row prop the comparator checks) can repaint a dependent row elsewhere.
+    it('repaints a formula cell in another row after a plain value it depends on is edited', async () => {
+      function Host() {
+        const [data, setData] = React.useState(rows.map((r) => (r.id === '1' ? { ...r, name: '5' } : r)));
+        return element({
+          data,
+          formulas: true,
+          initialFormulas: [{ col: 1, row: 4, formula: '=A1*2' }],
+          onCellValueChanged: (e) => setData((prev) => prev.map((r) => (r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r))),
+        });
+      }
+      const { container } = render(<Host />);
+      const dependentCell = () => container.querySelector('tbody tr[data-row-id="5"] td[data-column-id="status"]') as HTMLElement;
+      const sourceCell = () => container.querySelector('tbody tr[data-row-id="1"] td[data-column-id="name"] [data-row-index]') as HTMLElement;
+      await waitFor(() => expect(dependentCell().textContent).toBe('10'));
+      fireEvent.pointerDown(sourceCell());
+      await waitFor(() => expect(sourceCell().getAttribute('data-active-cell')).toBe('true'));
+      fireEvent.doubleClick(sourceCell());
+      const input = await waitFor(() => {
+        const el = container.querySelector('tbody tr[data-row-id="1"] input');
+        expect(el).toBeTruthy();
+        return el as HTMLInputElement;
+      });
+      renders = {};
+      fireEvent.change(input, { target: { value: '21' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      await waitFor(() => expect(dependentCell().textContent).toBe('42'));
+      expect(renders['5']).toBeGreaterThan(0);
+    });
+
     it('repaints a dependent formula cell in another row after a formula edit (K03)', async () => {
       const { container } = render(
         element({ formulas: true, initialFormulas: [{ col: 1, row: 4, formula: '=A1+1' }] }),

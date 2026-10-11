@@ -396,6 +396,9 @@
   height: 100%;
   display: flex;
   align-items: center;
+  // Numeric columns set the variable on the cell (useColumnMeta) so plain values
+  // and custom renderers both sit at the right edge.
+  justify-content: var(--ogrid-cell-justify, normal);
   font-size: var(--ogrid-cell-font-size, 13px);
   line-height: 1.4;
   min-width: 0;

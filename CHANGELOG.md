@@ -4,6 +4,21 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `virtualScroll.measureRows`: measure rendered rows' real heights instead of assuming `rowHeight`. It defaults to on when a visible column has `renderCell` or `wrapText`, so mixed-height custom cells no longer make the scrollbar and `scrollToRow` drift. Set `false` when every row is exactly `rowHeight` tall.
+- Large-grid benchmark (`npm run bench:large-grid`): 2,000 rows x 20 columns with custom renderers, editing and range selection, with render-count budgets per interaction. It can also measure a published release.
+
+### Fixed
+
+- A cell edit, paste, fill, undo, redo or range delete repainted every rendered row, because the data validation context (added in 2.19.0) was rebuilt on each data change even with no validation rules. Without rules it now stays stable, and only the changed rows repaint, as in 2.18. With 2,000 rendered rows, an edit commit went from 20,000 custom cell renders to 20.
+- Numeric columns now right-align their content. The cell content is a flex row, so `text-align: right` had moved neither plain values nor a custom renderer's box: plain numbers sat at the left, and a two-line `renderCell` showed its first line right-aligned and its second line left. The whole content now sits at the right edge, lines right-aligned. A renderer that sets its own width or alignment is unaffected.
+- Virtual scrolling no longer throws where `Element.scrollTo` is missing (jsdom) when it scrolls a row into view, and skips the scroll when the position is already right.
+
+### Docs
+
+- Performance: a "Large editable grids" section covering virtualization with custom renderers, stable columns, renderer memoization, what repaints every row, and alignment in mixed cells. Removed the claim that rows get `content-visibility: auto`; OGrid doesn't set it.
+
 ## [2.19.1] - 2026-10-09
 
 ### Changed
