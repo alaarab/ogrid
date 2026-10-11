@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-react-xlsx-browser",
-  "version": "2.19.1",
+  "version": "2.19.2",
   "type": "module",
   "description": "Self-contained browser ESM bundle of @alaarab/ogrid-react-xlsx. React + ReactDOM + ExcelJS + every @alaarab/ogrid-* dep included with local lazy chunks. Copy dist/ into a static vendor/ directory and `import()` from a no-bundler app.",
   "main": "dist/ogrid-xlsx.js",
@@ -42,7 +42,7 @@
     "node": ">=18"
   },
   "peerDependencies": {
-    "@alaarab/ogrid-core": "2.19.1",
+    "@alaarab/ogrid-core": "2.19.2",
     "exceljs": "^4.4.0",
     "react": "^17.0.0 || ^18.0.0 || ^19.0.0"
   },
@@ -58,7 +58,7 @@
     }
   },
   "devDependencies": {
-    "@alaarab/ogrid-react-xlsx": "2.19.1",
+    "@alaarab/ogrid-react-xlsx": "2.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "react": "^19.3.0",

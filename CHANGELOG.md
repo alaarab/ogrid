@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.19.2] - 2026-10-11
+
 ### Added
 
 - `virtualScroll.measureRows`: measure rendered rows' real heights instead of assuming `rowHeight`. It defaults to on when a visible column has `renderCell` or `wrapText`, so mixed-height custom cells no longer make the scrollbar and `scrollToRow` drift. Set `false` when every row is exactly `rowHeight` tall.
