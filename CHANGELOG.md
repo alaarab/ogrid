@@ -4,6 +4,10 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Middle-click auto-scroll works over grid cells again. Cells cancel `pointerdown`, so the browser never sent the `mousedown` the hook listened for; it now listens for pointer events. Holding the middle button and dragging also pans now, and releasing the button stops it, as in Excel.
+
 ## [2.19.2] - 2026-10-11
 
 ### Added
