@@ -24,6 +24,10 @@ const INTERACTIVE_TARGET_SELECTOR =
  * Middle-click shows a small origin indicator; moving the mouse away from
  * the origin scrolls the container in that direction. Speed is proportional
  * to distance. Any subsequent click or Escape cancels the auto-scroll.
+ * Holding the middle button and dragging pans until the button is released.
+ *
+ * Listens for pointer events, not mouse events: grid cells cancel
+ * `pointerdown`, which makes the browser skip the compatibility `mousedown`.
  */
 export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams): void {
   useEffect(() => {
@@ -39,6 +43,8 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
     let originY = 0;
     let currentX = 0;
     let currentY = 0;
+    /** The middle button moved past the dead zone while held: release ends the pan. */
+    let dragged = false;
     let indicator: HTMLDivElement | null = null;
     let rafId = 0;
 
@@ -119,15 +125,22 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
 
     // ── Global listeners (added only while panning) ────────────────────────
 
-    function onMouseMove(e: MouseEvent) {
+    function onPointerMove(e: PointerEvent) {
       currentX = e.clientX;
       currentY = e.clientY;
-      updateCursor(currentX - originX, currentY - originY);
+      const dx = currentX - originX;
+      const dy = currentY - originY;
+      if ((e.buttons & 4) && (Math.abs(dx) > DEAD_ZONE || Math.abs(dy) > DEAD_ZONE)) dragged = true;
+      updateCursor(dx, dy);
     }
 
-    function onGlobalMouseDown() {
+    function onGlobalPointerDown() {
       // Any click anywhere stops the pan.
       stopPan();
+    }
+
+    function onPointerUp(e: PointerEvent) {
+      if (e.button === 1 && dragged) stopPan();
     }
 
     function onKeyDown(e: KeyboardEvent) {
@@ -154,6 +167,7 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
       originY = y;
       currentX = x;
       currentY = y;
+      dragged = false;
       indicator = createIndicator(x, y);
       document.body.style.cursor = 'all-scroll';
       rafId = requestAnimationFrame(scrollLoop);
@@ -162,8 +176,9 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
       // event doesn't immediately trigger the stop handler.
       setTimeout(() => {
         if (!active) return;
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mousedown', onGlobalMouseDown, true);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerdown', onGlobalPointerDown, true);
+        window.addEventListener('pointerup', onPointerUp, true);
         window.addEventListener('keydown', onKeyDown, true);
         window.addEventListener('blur', onWindowBlur);
         document.addEventListener('visibilitychange', onVisibilityChange);
@@ -182,8 +197,9 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
       removeIndicator();
       document.body.style.cursor = '';
 
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mousedown', onGlobalMouseDown, true);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerdown', onGlobalPointerDown, true);
+      window.removeEventListener('pointerup', onPointerUp, true);
       window.removeEventListener('keydown', onKeyDown, true);
       window.removeEventListener('blur', onWindowBlur);
       document.removeEventListener('visibilitychange', onVisibilityChange);
@@ -195,7 +211,7 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
 
     // ── Wrapper listener (always attached) ─────────────────────────────────
 
-    function onWrapperMouseDown(e: MouseEvent) {
+    function onWrapperPointerDown(e: PointerEvent) {
       if (e.button !== 1) return;
       const target = e.target as Element | null;
       if (target?.closest?.(INTERACTIVE_TARGET_SELECTOR)) return;
@@ -214,11 +230,11 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
       e.preventDefault();
     }
 
-    wrapper.addEventListener('mousedown', onWrapperMouseDown);
+    wrapper.addEventListener('pointerdown', onWrapperPointerDown);
     wrapper.addEventListener('auxclick', onWrapperAuxClick);
 
     return () => {
-      wrapper.removeEventListener('mousedown', onWrapperMouseDown);
+      wrapper.removeEventListener('pointerdown', onWrapperPointerDown);
       wrapper.removeEventListener('auxclick', onWrapperAuxClick);
       if (active) stopPan();
     };

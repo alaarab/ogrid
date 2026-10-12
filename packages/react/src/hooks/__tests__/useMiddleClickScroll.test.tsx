@@ -14,8 +14,9 @@ function Harness(): React.ReactElement {
   );
 }
 
+// Grid cells cancel pointerdown, so the browser never sends mousedown: the hook must start from pointerdown.
 function middleMouseDown(target: Element, x = 10, y = 10): MouseEvent {
-  const event = new MouseEvent('mousedown', {
+  const event = new MouseEvent('pointerdown', {
     button: 1,
     bubbles: true,
     cancelable: true,
@@ -85,5 +86,25 @@ describe('useMiddleClickScroll', () => {
     } else {
       delete (document as { visibilityState?: unknown }).visibilityState;
     }
+  });
+
+  it('keeps panning after a plain middle click, and ends a held drag on release', async () => {
+    render(<Harness />);
+    const wrapper = screen.getByTestId('wrapper');
+    const tick = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+    middleMouseDown(wrapper);
+    await tick();
+    window.dispatchEvent(new MouseEvent('pointerup', { button: 1 }));
+    expect(indicator()).not.toBeNull();
+    act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
+    expect(indicator()).toBeNull();
+    await tick();
+
+    middleMouseDown(wrapper);
+    await tick();
+    window.dispatchEvent(new MouseEvent('pointermove', { buttons: 4, clientX: 80, clientY: 10 }));
+    act(() => { window.dispatchEvent(new MouseEvent('pointerup', { button: 1 })); });
+    expect(indicator()).toBeNull();
   });
 });
