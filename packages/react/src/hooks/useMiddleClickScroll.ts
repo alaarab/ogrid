@@ -5,12 +5,24 @@ export interface UseMiddleClickScrollParams {
   wrapperRef: RefObject<HTMLElement | null>;
 }
 
-/** Dead zone in px around the origin — no scrolling inside this radius. */
 const DEAD_ZONE = 12;
-/** Scroll speed multiplier: px/frame per pixel of distance beyond dead zone. */
-const SPEED_SCALE = 0.06;
-/** Maximum scroll speed in px/frame. */
-const MAX_SPEED = 25;
+const RAMP_DISTANCE = 320;
+const MAX_SPEED = 2400;
+const MAX_FRAME_MS = 50;
+
+export interface AutoScrollVelocity {
+  x: number;
+  y: number;
+}
+
+export function getAutoScrollVelocity(dx: number, dy: number): AutoScrollVelocity {
+  const distance = Math.hypot(dx, dy);
+  if (distance <= DEAD_ZONE) return { x: 0, y: 0 };
+  const t = Math.min(1, (distance - DEAD_ZONE) / RAMP_DISTANCE);
+  const speed = MAX_SPEED * t * t;
+  return { x: (speed * dx) / distance, y: (speed * dy) / distance };
+}
+
 /**
  * Interactive targets keep their native middle-click behaviour (e.g. opening a
  * link in a new tab) instead of starting a pan.
@@ -22,8 +34,8 @@ const INTERACTIVE_TARGET_SELECTOR =
  * Enables middle-click (button 1) auto-scroll on a scrollable container.
  *
  * Middle-click shows a small origin indicator; moving the mouse away from
- * the origin scrolls the container in that direction. Speed is proportional
- * to distance. Any subsequent click or Escape cancels the auto-scroll.
+ * the origin scrolls the container in that direction. Outside a dead zone,
+ * speed grows with distance from the origin up to a cap. Any subsequent click or Escape cancels the auto-scroll.
  * Holding the middle button and dragging pans until the button is released.
  *
  * Listens for pointer events, not mouse events: grid cells cancel
@@ -47,6 +59,9 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
     let dragged = false;
     let indicator: HTMLDivElement | null = null;
     let rafId = 0;
+    let lastFrame = 0;
+    let carryX = 0;
+    let carryY = 0;
 
     // ── Indicator ──────────────────────────────────────────────────────────
 
@@ -77,9 +92,7 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
     // ── Cursor ─────────────────────────────────────────────────────────────
 
     function updateCursor(dx: number, dy: number) {
-      const absDx = Math.abs(dx);
-      const absDy = Math.abs(dy);
-      if (absDx <= DEAD_ZONE && absDy <= DEAD_ZONE) {
+      if (Math.hypot(dx, dy) <= DEAD_ZONE) {
         document.body.style.cursor = 'all-scroll';
         return;
       }
@@ -98,28 +111,24 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
 
     // ── Scroll loop ────────────────────────────────────────────────────────
 
-    function scrollLoop() {
+    function scrollLoop(now: number) {
       if (!active) return;
-      const dx = currentX - originX;
-      const dy = currentY - originY;
-      const absDx = Math.abs(dx);
-      const absDy = Math.abs(dy);
-
-      let sx = 0;
-      let sy = 0;
-
-      if (absDx > DEAD_ZONE) {
-        sx = Math.sign(dx) * Math.min((absDx - DEAD_ZONE) * SPEED_SCALE, MAX_SPEED);
+      const elapsed = lastFrame ? Math.min(now - lastFrame, MAX_FRAME_MS) : 0;
+      lastFrame = now;
+      const velocity = getAutoScrollVelocity(currentX - originX, currentY - originY);
+      if (velocity.x === 0 && velocity.y === 0) {
+        carryX = 0;
+        carryY = 0;
+      } else {
+        carryX += (velocity.x * elapsed) / 1000;
+        carryY += (velocity.y * elapsed) / 1000;
+        const stepX = Math.trunc(carryX);
+        const stepY = Math.trunc(carryY);
+        carryX -= stepX;
+        carryY -= stepY;
+        if (stepX !== 0) wrapper.scrollLeft += stepX;
+        if (stepY !== 0) wrapper.scrollTop += stepY;
       }
-      if (absDy > DEAD_ZONE) {
-        sy = Math.sign(dy) * Math.min((absDy - DEAD_ZONE) * SPEED_SCALE, MAX_SPEED);
-      }
-
-      if (sx !== 0 || sy !== 0) {
-        wrapper.scrollLeft += sx;
-        wrapper.scrollTop += sy;
-      }
-
       rafId = requestAnimationFrame(scrollLoop);
     }
 
@@ -130,7 +139,7 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
       currentY = e.clientY;
       const dx = currentX - originX;
       const dy = currentY - originY;
-      if ((e.buttons & 4) && (Math.abs(dx) > DEAD_ZONE || Math.abs(dy) > DEAD_ZONE)) dragged = true;
+      if ((e.buttons & 4) && Math.hypot(dx, dy) > DEAD_ZONE) dragged = true;
       updateCursor(dx, dy);
     }
 
@@ -168,6 +177,9 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
       currentX = x;
       currentY = y;
       dragged = false;
+      lastFrame = 0;
+      carryX = 0;
+      carryY = 0;
       indicator = createIndicator(x, y);
       document.body.style.cursor = 'all-scroll';
       rafId = requestAnimationFrame(scrollLoop);
