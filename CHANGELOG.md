@@ -4,6 +4,10 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Middle-click auto-scroll speed now follows the pointer's distance from the origin, as in Excel and browsers: nothing moves within 12 px of the origin, then speed climbs with distance (slow for fine control near the origin, fast farther out) up to a cap of 2,400 px per second. It is timed per frame, so the speed is the same at 60 Hz and 144 Hz, and it moves along the pointer's direction, diagonals included. Slow speeds no longer stall on sub-pixel steps.
+
 ## [2.19.3] - 2026-10-12
 
 ### Fixed
