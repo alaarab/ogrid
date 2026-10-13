@@ -11,6 +11,10 @@ All notable changes to OGrid will be documented in this file.
 - `getColumnState()` returns `columnVisibility`, and `applyColumnState()` accepts it ahead of `visibleColumns`, with or without the model props. With the model on, `getColumnState().visibleColumns` includes columns hidden to fit.
 - `columnVisibilityFromVisibleColumns()` converts a saved full visible set into the diff, once, when moving off `visibleColumns` storage. Also exported: `resolveColumnVisibility`, `updateColumnVisibility`, `getFitHiddenColumns`, `normalizeColumnVisibility`, `sameColumnVisibility`.
 
+### Changed
+
+- Middle-click auto-scroll speed now follows the pointer's distance from the origin, as in Excel and browsers: nothing moves within 12 px of the origin, then speed climbs with distance (slow for fine control near the origin, fast farther out) up to a cap of 2,400 px per second. It is timed per frame, so the speed is the same at 60 Hz and 144 Hz, and it moves along the pointer's direction, diagonals included. Slow speeds no longer stall on sub-pixel steps.
+
 ### Fixed
 
 - **Clear All** in the column chooser and the side bar no longer leaves a grid with zero columns when no column is `required`; it keeps the first visible column.
