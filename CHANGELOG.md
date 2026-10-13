@@ -4,6 +4,10 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Packages are now published with npm Trusted Publishing (GitHub Actions OIDC) instead of a long-lived npm token. No code changes.
+
 ## [2.20.0] - 2026-10-13
 
 ### Added
