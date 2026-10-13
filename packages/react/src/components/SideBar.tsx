@@ -255,6 +255,8 @@ function ColumnsPanel(props: {
     columns.forEach((c) => {
       if (c.required && visibleColumns.has(c.columnId)) next.add(c.columnId);
     });
+    const first = columns.find((c) => visibleColumns.has(c.columnId));
+    if (next.size === 0 && first) next.add(first.columnId);
     onSetVisibleColumns(next);
   };
 

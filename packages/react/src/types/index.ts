@@ -36,6 +36,7 @@ export type {
   IWindowedDataSource,
   IDataSource,
   IGridColumnState,
+  IColumnVisibilityState,
   IOGridApi,
   IOGridProps,
   IOGridClientProps,

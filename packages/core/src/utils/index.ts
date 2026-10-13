@@ -184,6 +184,10 @@ export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText
 export type { FormulaReference } from './formulaBarHelpers';
 export { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS, resolveResponsiveConfig, applyResponsiveHiding } from './responsiveColumns';
 export type { IResponsiveColumnsConfig } from './responsiveColumns';
+export {
+  EMPTY_COLUMN_VISIBILITY, normalizeColumnVisibility, resolveColumnVisibility, getFitHiddenColumns,
+  updateColumnVisibility, columnVisibilityFromVisibleColumns, sameColumnVisibility,
+} from './columnVisibility';
 export { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from './dateFormatter';
 export { handleBooleanCellPointerDown } from './checkboxUtils';
 export type { BooleanCellSelectHandlers } from './checkboxUtils';

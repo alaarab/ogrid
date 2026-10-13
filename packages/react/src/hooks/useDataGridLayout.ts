@@ -1,8 +1,8 @@
-import { useMemo, useState, useLayoutEffect, useCallback } from 'react';
+import { useMemo, useState, useLayoutEffect, useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns, computeHiddenGaps, hiddenKeysAround } from '../utils';
 import type { RowId, IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, resolveResponsiveConfig, applyResponsiveHiding } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, resolveResponsiveConfig, applyResponsiveHiding, getResponsiveHiddenColumns } from '@alaarab/ogrid-core';
 import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 import { useTableLayout } from './useTableLayout';
 import { useColumnPinning } from './useColumnPinning';
@@ -29,6 +29,7 @@ export interface UseDataGridLayoutParams<T> {
   sortModel?: ReadonlyArray<{ field: string; direction: 'asc' | 'desc' }>;
   onColumnSort?: (columnKey: string, direction?: 'asc' | 'desc' | null, options?: { additive?: boolean }) => void;
   responsiveColumns?: boolean | IResponsiveColumnsConfig;
+  onFitHiddenColumnsChange?: (columnIds: Set<string>) => void;
   wrapperRef: RefObject<HTMLDivElement | null>;
   /** Column structure edits for the header menu (omit to hide those items). */
   onInsertColumn?: (columnId: string, side: 'left' | 'right') => void;
@@ -189,10 +190,22 @@ export function useDataGridLayout<T>(
   });
 
   // Second pass: apply responsive column hiding based on measured container width
+  const { onFitHiddenColumnsChange } = params;
+  const reportsFit = onFitHiddenColumnsChange != null;
   const visibleCols = useMemo(
-    () => applyResponsiveHiding(userVisibleCols, containerWidth, responsiveConfig) as IColumnDef<T>[],
-    [userVisibleCols, containerWidth, responsiveConfig],
+    () => reportsFit ? userVisibleCols : applyResponsiveHiding(userVisibleCols, containerWidth, responsiveConfig) as IColumnDef<T>[],
+    [reportsFit, userVisibleCols, containerWidth, responsiveConfig],
   );
+  const fitHiddenKey = useMemo(() => {
+    if (!reportsFit || !responsiveConfig || containerWidth <= 0) return '';
+    return [...getResponsiveHiddenColumns(containerWidth, flatColumns, responsiveConfig)].join('\u0000');
+  }, [reportsFit, responsiveConfig, containerWidth, flatColumns]);
+  const reportedFitKey = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (!onFitHiddenColumnsChange || reportedFitKey.current === fitHiddenKey) return;
+    reportedFitKey.current = fitHiddenKey;
+    onFitHiddenColumnsChange(new Set(fitHiddenKey ? fitHiddenKey.split('\u0000') : []));
+  }, [onFitHiddenColumnsChange, fitHiddenKey]);
 
   const visibleColumnCount = visibleCols.length;
   const specialColsCount = (hasCheckboxCol ? 1 : 0) + (hasRowNumbersCol ? 1 : 0);

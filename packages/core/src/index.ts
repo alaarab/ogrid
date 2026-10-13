@@ -39,6 +39,7 @@ export type {
   IWindowedDataSource,
   IDataSource,
   IGridColumnState,
+  IColumnVisibilityState,
   RowSelectionMode,
   IRowSelectionChangeEvent,
   StatusBarPanel,
@@ -372,6 +373,11 @@ export type { FormulaReference } from './utils';
 // Utils  -  responsiveColumns
 export { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS, resolveResponsiveConfig, applyResponsiveHiding } from './utils';
 export type { IResponsiveColumnsConfig } from './utils';
+
+export {
+  EMPTY_COLUMN_VISIBILITY, normalizeColumnVisibility, resolveColumnVisibility, getFitHiddenColumns,
+  updateColumnVisibility, columnVisibilityFromVisibleColumns, sameColumnVisibility,
+} from './utils';
 
 // Utils  -  dateFormatter
 export { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from './utils';

@@ -4,9 +4,24 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Saved column visibility: `defaultColumnVisibility`, `columnVisibility` and `onColumnVisibilityChange` store users' choices as a diff from each column's `defaultVisible` (`{ hidden, shown }`). Columns added in a later release appear by default for users who already saved choices, and their choices are kept, with no storage version to bump. Choices for columns that haven't loaded yet are kept too.
+- With the model on, columns hidden to fit (`responsiveColumns` + `responsivePriority`) show as unchecked in the column chooser, leave a hidden column marker in the header with `allowHiding`, and stay on screen at any width once the user brings them back. They are never saved as hidden.
+- `getColumnState()` returns `columnVisibility`, and `applyColumnState()` accepts it ahead of `visibleColumns`, with or without the model props. With the model on, `getColumnState().visibleColumns` includes columns hidden to fit.
+- `columnVisibilityFromVisibleColumns()` converts a saved full visible set into the diff, once, when moving off `visibleColumns` storage. Also exported: `resolveColumnVisibility`, `updateColumnVisibility`, `getFitHiddenColumns`, `normalizeColumnVisibility`, `sameColumnVisibility`.
+
 ### Changed
 
 - Middle-click auto-scroll speed now follows the pointer's distance from the origin, as in Excel and browsers: nothing moves within 12 px of the origin, then speed climbs with distance (slow for fine control near the origin, fast farther out) up to a cap of 2,400 px per second. It is timed per frame, so the speed is the same at 60 Hz and 144 Hz, and it moves along the pointer's direction, diagonals included. Slow speeds no longer stall on sub-pixel steps.
+
+### Fixed
+
+- **Clear All** in the column chooser and the side bar no longer leaves a grid with zero columns when no column is `required`; it keeps the first visible column.
+
+### Docs
+
+- New "Saved Column Visibility" page, plus the new props and `IGridColumnState.columnVisibility` in the API reference.
 
 ## [2.19.3] - 2026-10-12
 

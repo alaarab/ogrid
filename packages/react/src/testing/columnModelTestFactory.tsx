@@ -106,6 +106,27 @@ export function createColumnModelTests(OGrid: OGridComponent): void {
       expect(headerIds(container)).toEqual(['name', 'id']);
     });
 
+    it('hides columns to fit with a header marker that brings one back and keeps it', () => {
+      layout = mockLayout(400);
+      const columns: IColumnDef<FixtureRow>[] = [
+        { columnId: 'name', name: 'Name' },
+        { columnId: 'status', name: 'Status', responsivePriority: 2 },
+        { columnId: 'id', name: 'Id' },
+      ];
+      const onColumnVisibilityChange = jest.fn();
+      const { container } = renderOGrid({
+        columns, responsiveColumns: true, allowHiding: true,
+        defaultColumnVisibility: { hidden: [], shown: [] }, onColumnVisibilityChange,
+      });
+      expect(bodyIds(container)).toEqual(['name', 'id']);
+      const marker = container.querySelector('thead [data-hidden-gap]');
+      if (!marker) throw new Error('missing hidden column marker');
+      fireEvent.click(marker);
+      expect(onColumnVisibilityChange).toHaveBeenLastCalledWith({ hidden: [], shown: ['status'] });
+      expect(bodyIds(container)).toEqual(['name', 'status', 'id']);
+      expect(headerIds(container)).toEqual(['name', 'status', 'id']);
+    });
+
     it('uncontrolled drag reorder moves the column (no onColumnOrderChange)', async () => {
       layout = mockLayout();
       const { container } = renderOGrid({ columnReorder: true });

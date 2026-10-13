@@ -78,13 +78,14 @@ export function useColumnChooserState(
   }, [columns, visibleColumns, onVisibilityChange, onSetVisibleColumns]);
 
   const handleClearAll = useCallback((): void => {
+    const keep = new Set(columns.filter((col) => col.required).map((col) => col.columnId));
+    const first = columns.find((col) => visibleColumns.has(col.columnId));
+    if (keep.size === 0 && first) keep.add(first.columnId);
     if (onSetVisibleColumns) {
-      // Keep required columns visible
-      const required = new Set(columns.filter((col) => col.required).map((col) => col.columnId));
-      onSetVisibleColumns(required);
+      onSetVisibleColumns(keep);
     } else {
       columns.forEach((col) => {
-        if (!col.required && visibleColumns.has(col.columnId)) {
+        if (!keep.has(col.columnId) && visibleColumns.has(col.columnId)) {
           onVisibilityChange(col.columnId, false);
         }
       });
