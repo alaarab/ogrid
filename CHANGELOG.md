@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.20.0] - 2026-10-13
+
 ### Added
 
 - Saved column visibility: `defaultColumnVisibility`, `columnVisibility` and `onColumnVisibilityChange` store users' choices as a diff from each column's `defaultVisible` (`{ hidden, shown }`). Columns added in a later release appear by default for users who already saved choices, and their choices are kept, with no storage version to bump. Choices for columns that haven't loaded yet are kept too.
