@@ -53,6 +53,7 @@ const sidebars: SidebarsConfig = {
         'features/column-reordering',
         'features/drag-and-drop',
         'features/column-chooser',
+        'features/column-visibility',
         'features/column-types',
         'features/cell-references',
         'features/toolbar',

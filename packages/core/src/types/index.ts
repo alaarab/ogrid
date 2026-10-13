@@ -39,6 +39,7 @@ export type {
   IWindowedDataSource,
   IDataSource,
   IGridColumnState,
+  IColumnVisibilityState,
   RowSelectionMode,
   IRowSelectionChangeEvent,
   StatusBarPanel,
