@@ -7,6 +7,7 @@ import { useOGridSorting } from './useOGridSorting';
 import { useOGridFilters } from './useOGridFilters';
 import { useOGridDataFetching } from './useOGridDataFetching';
 import { useOGridColumnVisibility } from './useOGridColumnVisibility';
+import { useOGridColumnVisibilityModel } from './useOGridColumnVisibilityModel';
 import { useOGridColumnLayout } from './useOGridColumnLayout';
 import { useOGridRowSelection } from './useOGridRowSelection';
 import { useOGridImperativeHandle } from './useOGridImperativeHandle';
@@ -147,8 +148,18 @@ export function useOGrid<T>(
   const isWindowed = windowed != null;
   useRowIdValidation(displayItems, getRowId);
 
+  const visibilityModel = useOGridColumnVisibilityModel({
+    columns,
+    columnVisibility: props.columnVisibility,
+    defaultColumnVisibility: props.defaultColumnVisibility,
+    onColumnVisibilityChange: props.onColumnVisibilityChange,
+    onVisibleColumnsChange: props.onVisibleColumnsChange,
+    hideToFit: !!responsiveColumns,
+  });
   const visibility = useOGridColumnVisibility({
-    columns, controlledVisibleColumns, onVisibleColumnsChange: props.onVisibleColumnsChange,
+    columns,
+    controlledVisibleColumns: visibilityModel ? visibilityModel.displayed : controlledVisibleColumns,
+    onVisibleColumnsChange: visibilityModel ? visibilityModel.onDisplayedChange : props.onVisibleColumnsChange,
   });
   const { visibleColumns, setVisibleColumns, handleVisibilityChange } = visibility;
   const selection = useOGridRowSelection({
@@ -283,7 +294,7 @@ export function useOGrid<T>(
   const scrollToRowRef = useRef<IOGridApi<T>['scrollToRow'] | null>(null);
   useOGridImperativeHandle({
     ref, isServerSide, columnOrder, onColumnOrderChange, commitSelection: selection.commitSelection,
-    sortingState, filtersState, dataFetchingState, setVisibleColumns,
+    sortingState, filtersState, dataFetchingState, setVisibleColumns, visibilityModel,
     setInternalColumnOrder: columnLayout.setInternalColumnOrder,
     setColumnWidthOverrides: columnLayout.setColumnWidthOverrides,
     setPinnedOverrides: columnLayout.setPinnedOverrides,
@@ -343,6 +354,7 @@ export function useOGrid<T>(
     statusBar: statusBarConfig, isLoading: isLoadingResolved,
     ...dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader: stickyHeader ?? true, columnReorder, responsiveColumns,
+    onFitHiddenColumnsChange: visibilityModel?.onFitHiddenColumnsChange,
     virtualScroll, rowHeight, density, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     mergedCells, frozenRows: freeze.frozenRows, frozenColumns: freeze.frozenColumns, conditionalFormat,
     dataValidations: validationRules.rules, onDataValidationsChange: validationRules.change,
@@ -367,7 +379,7 @@ export function useOGrid<T>(
     showRowNumbersResolved, showColumnLettersResolved, showNameBox, showActiveCellChange, onActiveCellChange,
     isWindowed, page, pageSize, displayTotalCount, statusBarConfig,
     isLoadingResolved, dgFilterProps,
-    layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
+    layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, visibilityModel?.onFitHiddenColumnsChange, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, hidingActions, dgNoteProps,
     freeze.frozenRows, freeze.frozenColumns, freeze.freezeActions, pinnedOverrides,

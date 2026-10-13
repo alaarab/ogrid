@@ -72,6 +72,9 @@ sort / filter / page props as plain hook parameters, and the
 |------|------|---------|-------------|
 | `visibleColumns` | `Set<string>` | `undefined` | Controlled set of visible column IDs. When provided, only these columns are displayed. |
 | `onVisibleColumnsChange` | `(cols: Set<string>) => void` | `undefined` | Callback fired when column visibility changes (e.g., via the column chooser). |
+| `defaultColumnVisibility` | `IColumnVisibilityState` | `undefined` | Starting visibility as a diff from each column's `defaultVisible` (`{ hidden, shown }`). Turns on the [saved column visibility](../features/column-visibility) model. |
+| `columnVisibility` | `IColumnVisibilityState` | `undefined` | Controlled visibility diff. Takes precedence over `visibleColumns`. |
+| `onColumnVisibilityChange` | `(state: IColumnVisibilityState) => void` | `undefined` | Fired with the new diff when the user shows or hides columns. Save this value. |
 | `columnOrder` | `string[]` | `undefined` | Controlled column order as an array of column IDs. |
 | `onColumnOrderChange` | `(order: string[]) => void` | `undefined` | Callback fired when the user reorders columns. |
 | `onColumnResized` | `(columnId: string, width: number) => void` | `undefined` | Callback fired when the user finishes resizing a column. |

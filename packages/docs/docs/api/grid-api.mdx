@@ -149,6 +149,7 @@ interface IGridColumnState {
   columnWidths?: Record<string, number>;
   filters?: IFilters;
   pinnedColumns?: Record<string, 'left' | 'right'>;
+  columnVisibility?: { hidden: string[]; shown: string[] };
 }
 ```
 
@@ -160,6 +161,7 @@ interface IGridColumnState {
 | `columnWidths` | `Record<string, number>` | Map of column IDs to their current pixel widths. Only includes columns that have been explicitly sized. |
 | `filters` | `IFilters` | Current filter state. |
 | `pinnedColumns` | `Record<string, 'left' \| 'right'>` | Map of column IDs to their pinned position. Only includes columns that are pinned. |
+| `columnVisibility` | `{ hidden: string[]; shown: string[] }` | Visibility as a diff from each column's `defaultVisible`. Prefer it over `visibleColumns` for saving: columns added later appear on their own. `applyColumnState` uses it ahead of `visibleColumns`. See [Saved Column Visibility](../features/column-visibility). |
 
 ## Save and Restore State
 

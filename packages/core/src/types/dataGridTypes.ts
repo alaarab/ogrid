@@ -149,6 +149,11 @@ export function isWindowedDataSource<T>(
   return !!ds && typeof ds.getRowCount === 'function' && typeof ds.getRows === 'function';
 }
 
+export interface IColumnVisibilityState {
+  hidden: string[];
+  shown: string[];
+}
+
 /** Column state returned by getColumnState(). All fields JSON-serializable for persistence (e.g. localStorage). */
 export interface IGridColumnState {
   visibleColumns: string[];
@@ -163,6 +168,7 @@ export interface IGridColumnState {
   filters?: IFilters;
   /** Pinned columns (column id -> 'left' | 'right'). */
   pinnedColumns?: Record<string, 'left' | 'right'>;
+  columnVisibility?: IColumnVisibilityState;
 }
 
 // --- Row selection ---

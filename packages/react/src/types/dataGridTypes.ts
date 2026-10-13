@@ -21,6 +21,7 @@ export type {
   IWindowedDataSource,
   IDataSource,
   IGridColumnState,
+  IColumnVisibilityState,
   RowSelectionMode,
   IRowSelectionChangeEvent,
   StatusBarPanel,
@@ -58,6 +59,7 @@ import type {
   IMergedCell,
   ICellNote,
   IRowsChangeEvent,
+  IColumnVisibilityState,
 } from '@alaarab/ogrid-core';
 
 // --- Structure edits ---
@@ -204,6 +206,9 @@ interface IOGridBaseProps<T> extends IDataValidationProps<T> {
   onSortModelChange?: (sortModel: ISortModelItem[]) => void;
   onFiltersChange?: (filters: IFilters) => void;
   onVisibleColumnsChange?: (cols: Set<string>) => void;
+  columnVisibility?: IColumnVisibilityState;
+  defaultColumnVisibility?: IColumnVisibilityState;
+  onColumnVisibilityChange?: (state: IColumnVisibilityState) => void;
   columnOrder?: string[];
   onColumnOrderChange?: (order: string[]) => void;
   /** Called when a column is resized by the user. */
@@ -701,6 +706,7 @@ export interface IOGridDataGridProps<T> extends IDataValidationProps<T> {
   onCellDrop?: (event: ICellDropEvent<T>) => void;
   /** Responsive column hiding config (passed from IOGridBaseProps). */
   responsiveColumns?: boolean | IResponsiveColumnsConfig;
+  onFitHiddenColumnsChange?: (columnIds: Set<string>) => void;
   /** Virtual scrolling configuration. When provided, only visible rows are rendered for large datasets. */
   virtualScroll?: IVirtualScrollConfig;
   /** Fixed row height in pixels. Overrides default row height (36px). */

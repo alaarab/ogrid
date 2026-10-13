@@ -1,0 +1,145 @@
+---
+sidebar_position: 12.5
+title: Saved Column Visibility
+description: Save users' show and hide choices as a small diff from the column defaults, so new columns appear on their own and saved choices survive releases.
+---
+
+# Saved Column Visibility
+
+Spreadsheet-style column visibility you can persist. Each column has a default
+(`defaultVisible`), and the grid records only what the user changed:
+
+```ts
+interface IColumnVisibilityState {
+  hidden: string[];
+  shown: string[];
+}
+```
+
+- `hidden`: columns the user hid that are visible by default.
+- `shown`: columns the user showed that are hidden by default, and columns the
+  user brought back after the grid [hid them to fit](#hide-to-fit).
+
+Everything else follows the column definitions. A column you add in a later
+release shows up for everyone when its `defaultVisible` isn't `false`, and
+nobody's saved choices are lost. There is no storage version to bump and no
+migration list to keep.
+
+## Saving to local storage
+
+```tsx
+import { OGrid, type IColumnVisibilityState } from '@alaarab/ogrid-react-radix';
+
+const key = `reports.columns.${userId}`;
+
+function load(): IColumnVisibilityState | undefined {
+  try {
+    return JSON.parse(localStorage.getItem(key) ?? 'null') ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+<OGrid
+  columns={columns}
+  data={data}
+  getRowId={(r) => r.id}
+  columnChooser="toolbar"
+  allowHiding
+  defaultColumnVisibility={load() ?? { hidden: [], shown: [] }}
+  onColumnVisibilityChange={(state) => localStorage.setItem(key, JSON.stringify(state))}
+/>;
+```
+
+Passing `defaultColumnVisibility`, `columnVisibility` or
+`onColumnVisibilityChange` turns the model on. `defaultColumnVisibility` is the
+starting state; `columnVisibility` makes it controlled, so pass back what
+`onColumnVisibilityChange` reports. When the key isn't known on the first
+render (the user is still loading), wait for it before mounting the grid, or
+use the controlled prop.
+
+`onVisibleColumnsChange` still fires with the full visible set. Don't combine
+the model with the `visibleColumns` prop; the model takes precedence.
+
+## Hide to fit
+
+Give columns a `responsivePriority` and turn on
+[`responsiveColumns`](./responsive-columns). When the grid is too narrow, the
+columns above the allowed priority leave the screen, highest number first:
+
+```tsx
+const columns = [
+  { columnId: 'name', name: 'Report', required: true },
+  { columnId: 'callsApi', name: 'Calls API', responsivePriority: 1 },
+  { columnId: 'views', name: 'Views (12 mo)', responsivePriority: 2 },
+  { columnId: 'health', name: 'Health', responsivePriority: 3 },
+  { columnId: 'lastUsed', name: 'Last viewed', responsivePriority: 4 },
+];
+
+<OGrid
+  columns={columns}
+  responsiveColumns={{
+    breakpoints: [
+      { minWidth: 0, maxPriority: 0 },
+      { minWidth: 1100, maxPriority: 1 },
+      { minWidth: 1300, maxPriority: 2 },
+      { minWidth: 1420, maxPriority: 3 },
+      { minWidth: 1600, maxPriority: Infinity },
+    ],
+  }}
+  allowHiding
+  defaultColumnVisibility={saved}
+  onColumnVisibilityChange={save}
+  {...rest}
+/>;
+```
+
+With the model on, a column hidden to fit:
+
+- shows as unchecked in the column chooser and isn't counted as visible;
+- leaves a [hidden column marker](./hiding) in the header (with
+  `allowHiding`), so one click brings it back;
+- stays on screen at any width once the user brings it back, because that is
+  recorded in `shown`;
+- is never saved as hidden. Widening the window brings it back.
+
+`getColumnState().visibleColumns` lists the columns the user wants, including
+ones hidden to fit, so an export doesn't depend on the window width.
+
+## Grid API
+
+`getColumnState()` includes `columnVisibility`, and `applyColumnState()`
+accepts it. This works with or without the model props. Restoring a saved
+`visibleColumns` array still works; with the model on it is converted to a
+diff against the current defaults.
+
+```ts
+const { columnVisibility } = gridRef.current.getColumnState();
+gridRef.current.applyColumnState({ columnVisibility: { hidden: [], shown: [] } });
+```
+
+## Moving from a saved visible set
+
+If you saved full visible sets before, convert them once with
+`columnVisibilityFromVisibleColumns`. Pass the column ids that existed when the
+old set was saved, so columns added since then keep their defaults instead of
+counting as hidden:
+
+```ts
+import { columnVisibilityFromVisibleColumns } from '@alaarab/ogrid-react-radix';
+
+const legacy = JSON.parse(localStorage.getItem(oldKey) ?? 'null');
+const state = legacy
+  ? columnVisibilityFromVisibleColumns(columns, legacy, columnIdsWhenSaved)
+  : { hidden: [], shown: [] };
+```
+
+## Rules
+
+- `required` columns are always shown and never hidden to fit.
+- The grid never shows zero columns. **Clear All** keeps required columns, or
+  the first visible column when none are required.
+- Choices for columns that aren't in `columns` right now are kept, so they
+  apply when those columns load or come back.
+- Hidden columns keep their letter when `cellReferences` is on (A, B, D), as in
+  Excel.
