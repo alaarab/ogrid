@@ -135,6 +135,22 @@ describe('useColumnChooserState', () => {
     expect(onVisibilityChange).not.toHaveBeenCalledWith('c', false);
   });
 
+  it('handleClearAll keeps the first visible column when no column is required', () => {
+    const onSetVisibleColumns = jest.fn();
+    const { result } = renderHook(() =>
+      useColumnChooserState({
+        columns: [{ columnId: 'a', name: 'A' }, { columnId: 'b', name: 'B' }, { columnId: 'c', name: 'C' }],
+        visibleColumns: new Set(['b', 'c']),
+        onVisibilityChange: jest.fn(),
+        onSetVisibleColumns,
+      })
+    );
+    act(() => {
+      result.current.handleClearAll();
+    });
+    expect(onSetVisibleColumns).toHaveBeenCalledWith(new Set(['b']));
+  });
+
   it('visibleCount reflects current visible columns', () => {
     const onVisibilityChange = jest.fn();
     const { result, rerender } = renderHook(

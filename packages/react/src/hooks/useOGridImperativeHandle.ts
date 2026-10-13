@@ -4,6 +4,9 @@ import type { RowId, IOGridApi } from '../types';
 import type { UseOGridSortingState } from './useOGridSorting';
 import type { UseOGridFiltersState } from './useOGridFilters';
 import type { UseOGridDataFetchingState } from './useOGridDataFetching';
+import type { OGridColumnVisibilityModel } from './useOGridColumnVisibilityModel';
+import { columnVisibilityFromVisibleColumns, resolveColumnVisibility } from '@alaarab/ogrid-core';
+import type { IColumnMeta } from '@alaarab/ogrid-core';
 
 export interface UseOGridImperativeHandleParams<T> {
   ref: Ref<IOGridApi<T>>;
@@ -22,6 +25,7 @@ export interface UseOGridImperativeHandleParams<T> {
   dataFetchingState: UseOGridDataFetchingState<T>;
   /** Writers owned by sibling hooks / useOGrid (stable useState setters or useCallbacks). */
   setVisibleColumns: (cols: Set<string>) => void;
+  visibilityModel?: OGridColumnVisibilityModel;
   setInternalColumnOrder: Dispatch<SetStateAction<string[] | undefined>>;
   setColumnWidthOverrides: Dispatch<SetStateAction<Record<string, number>>>;
   setPinnedOverrides: Dispatch<SetStateAction<Record<string, 'left' | 'right'>>>;
@@ -33,7 +37,7 @@ export interface UseOGridImperativeHandleParams<T> {
   columnWidthOverrides: Record<string, number>;
   pinnedOverrides: Record<string, 'left' | 'right'>;
   effectiveSelectedRows: Set<RowId>;
-  columns: ReadonlyArray<{ columnId: string }>;
+  columns: readonly IColumnMeta[];
   getRowId: (item: T) => RowId;
   scrollToRowRef: React.RefObject<IOGridApi<T>['scrollToRow'] | null>;
   /** Cell and structure-edit methods (stable callbacks from useOGridCellApi / useOGridStructureEdits). */
@@ -56,6 +60,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
     filtersState,
     dataFetchingState,
     setVisibleColumns,
+    visibilityModel,
     setInternalColumnOrder,
     setColumnWidthOverrides,
     setPinnedOverrides,
@@ -74,6 +79,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
   const { getCellValue, setCellValue, insertRows, deleteRows, insertColumn, deleteColumn } = editApi;
 
   const visibleColumnsRef = useLatestRef(visibleColumns);
+  const visibilityModelRef = useLatestRef(visibilityModel);
   const sortRef = useLatestRef(sortingState.sort);
   const sortModelRef = useLatestRef(sortingState.sortModel);
   const columnOrderRef = useLatestRef(effectiveColumnOrder);
@@ -102,7 +108,10 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       },
       setLoading: setInternalLoading,
       getColumnState: () => ({
-        visibleColumns: Array.from(visibleColumnsRef.current),
+        visibleColumns: Array.from(visibilityModelRef.current ? visibilityModelRef.current.getUserVisible() : visibleColumnsRef.current),
+        columnVisibility: visibilityModelRef.current
+          ? visibilityModelRef.current.getState()
+          : columnVisibilityFromVisibleColumns(columnsRef.current, visibleColumnsRef.current),
         sort: sortRef.current,
         // Only multi-level sorts add `sortModel`; `sort` alone describes a single level.
         ...(sortModelRef.current.length > 1 ? { sortModel: sortModelRef.current } : {}),
@@ -112,7 +121,14 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
         pinnedColumns: Object.keys(pinnedOverridesRef.current).length > 0 ? pinnedOverridesRef.current : undefined,
       }),
       applyColumnState: (state: Partial<import('../types').IGridColumnState>) => {
-        if (state.visibleColumns) setVisibleColumns(new Set(state.visibleColumns));
+        const visibilityModel = visibilityModelRef.current;
+        if (state.columnVisibility) {
+          if (visibilityModel) visibilityModel.setState(state.columnVisibility);
+          else setVisibleColumns(resolveColumnVisibility(columnsRef.current, state.columnVisibility));
+        } else if (state.visibleColumns) {
+          if (visibilityModel) visibilityModel.setState(columnVisibilityFromVisibleColumns(columnsRef.current, state.visibleColumns));
+          else setVisibleColumns(new Set(state.visibleColumns));
+        }
         if (state.sortModel) setSortModel(state.sortModel);
         else if (state.sort) setSort(state.sort);
         if (state.columnOrder) {
@@ -161,7 +177,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       columnOrder, onColumnOrderChange, commitSelection, refreshData,
       columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef, allFilteredItemsRef,
       effectiveSelectedRowsRef, filtersRef, getRowIdRef, pinnedOverridesRef,
-      sortRef, sortModelRef, visibleColumnsRef,
+      sortRef, sortModelRef, visibleColumnsRef, visibilityModelRef,
       // Stable useState setters (passed as params, so listed explicitly to satisfy
       // exhaustive-deps); their identity never changes, so recreation frequency is
       // unchanged from the original inline handle.
