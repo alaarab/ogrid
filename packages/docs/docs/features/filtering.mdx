@@ -198,6 +198,34 @@ const filters: IFilters = {
 
 Incomplete conditions (no operand, an unparsable number or date) are ignored; a filter with none left is removed. The filter icon shows the active state, and **Clear** in the popover removes the filter.
 
+## Quick filter (search box)
+
+`quickFilterBox` adds a search box to the start of the grid's toolbar. It searches every visible column at once and works on top of the column filters:
+
+```tsx
+<OGrid columns={columns} data={reports} getRowId={(r) => r.id} quickFilterBox />
+```
+
+- The text is split on spaces and **every term must match** somewhere in the row, in any visible column. `carol signed` keeps Carol's signed rows.
+- Matching is case-insensitive and checks both the raw value and the displayed text, so a budget shown as `$1,200` matches `1200` and `$1,200`.
+- Hidden columns are not searched.
+- Typing applies after a short pause; <kbd>Enter</kbd> applies at once and <kbd>Escape</kbd> clears. A change goes back to page 1.
+
+Pass an object to change the box's text: `quickFilterBox={{ placeholder: 'Search reports' }}` (also `ariaLabel`).
+
+To keep the text yourself (URL sync, saved views, or your own search input), use `quickFilter` and `onQuickFilterChange`. Leave out `quickFilterBox` to drive the search from your own input:
+
+```tsx
+const [search, setSearch] = useState('');
+
+<input type="search" value={search} onChange={(e) => setSearch(e.target.value)} />
+<OGrid columns={columns} data={reports} getRowId={(r) => r.id} quickFilter={search} />
+```
+
+With your own input, consider debouncing it for large grids; the built-in box already does.
+
+With a `dataSource`, the grid does not search rows itself: it passes the trimmed text to `fetchPage` (and windowed `getRows` / `getRowCount`) as `quickFilter`, and your server applies it.
+
 ## Keeping filter state outside the grid
 
 By default the grid owns its filter state — filters reset when the component unmounts. To persist them (URL sync, page reload survival), pass `filters` and `onFiltersChange`:
@@ -229,7 +257,7 @@ When you're using a `dataSource`, the grid hands off filter values to your `fetc
 
 ```tsx
 const dataSource: IDataSource<Task> = {
-  fetchPage: async ({ filters, page, pageSize, sort }) => {
+  fetchPage: async ({ filters, quickFilter, page, pageSize, sort }) => {
     const params = new URLSearchParams({
       page: String(page),
       pageSize: String(pageSize),
@@ -244,6 +272,10 @@ const dataSource: IDataSource<Task> = {
     if (filters.salary?.type === 'condition') {
       // { kind, conditions: [{ operator, value, valueTo }], join }
       params.set('salary', JSON.stringify(filters.salary.value));
+    }
+    if (quickFilter) {
+      // Search box text (quickFilter / quickFilterBox)
+      params.set('q', quickFilter);
     }
 
     const res = await fetch(`/api/tasks?${params}`);
@@ -280,6 +312,10 @@ Server-side filtering pairs naturally with [pagination](./pagination). The `tota
 | `filterable.yearsCount` | `number` | — | How many years to generate for `'years'` source. |
 | `filters` | `IFilters` | — | Controlled filter state (pass to own state externally). |
 | `onFiltersChange` | `(filters: IFilters) => void` | — | Called whenever filters change. |
+| `quickFilterBox` | `boolean \| { placeholder?, ariaLabel? }` | `false` | Show the toolbar search box. |
+| `quickFilter` | `string` | - | Controlled quick filter text. |
+| `defaultQuickFilter` | `string` | `''` | Starting quick filter text when uncontrolled. |
+| `onQuickFilterChange` | `(text: string) => void` | - | Called when the search box changes the text. |
 
 ## Next steps
 

@@ -122,6 +122,14 @@ export interface UseOGridDataFetchingParams<T> {
    * are dropped from each fetched page. Windowed sources ignore this.
    */
   hiddenRowIds?: ReadonlySet<RowId> | null;
+  /**
+   * Quick filter (search box) text. Client-side, a row passes when every term
+   * appears in one of `quickFilterColumns`; data sources receive it trimmed as
+   * `quickFilter`.
+   */
+  quickFilter?: string;
+  /** Columns the quick filter searches client-side (the visible ones). Default: `columns`. */
+  quickFilterColumns?: ICoreColumnDef<T>[];
 }
 
 export interface UseOGridDataFetchingState<T> {
@@ -163,8 +171,20 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const {
     isServerSide, dataSource, dataSourceKey, displayData, getRowId, columns, stableFilters,
     sort, sortModel: sortModelParam, sortVersion, page, pageSize, paginate = true, onError, onFirstDataRendered, workerSort,
-    editVersionRef, structureVersionRef, hiddenRowIds,
+    editVersionRef, structureVersionRef, hiddenRowIds, quickFilterColumns,
   } = params;
+  // Trimmed; blank means no quick filter. Data sources get it as `quickFilter`.
+  const quickFilter = params.quickFilter?.trim() || undefined;
+  const quickFilterActive = quickFilter !== undefined;
+  const clientDataOptions = useMemo(
+    () => (quickFilterActive ? { quickFilter, quickFilterColumns } : undefined),
+    [quickFilterActive, quickFilter, quickFilterColumns],
+  );
+  // The re-sort trigger compares filters by identity: fold the quick filter in.
+  const resortFilters = useMemo(
+    () => (clientDataOptions ? [stableFilters, clientDataOptions] : stableFilters),
+    [stableFilters, clientDataOptions],
+  );
   // Effects and memos depend on the sort's content (`sortKey`), not object identity.
   const sortKey = sortModelKey(sortModelParam ?? normalizeSortModel(sort.field, sort.direction));
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on sort content (sortKey)
@@ -185,7 +205,8 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const getRowIdRef = useLatestRef(getRowId);
 
   // Determine if worker sort should be used
-  const useWorker = shouldUseWorkerSort(workerSort, displayData.length, {
+  // The worker has no formatters, so a quick filter runs on the main thread.
+  const useWorker = !quickFilterActive && shouldUseWorkerSort(workerSort, displayData.length, {
     columns,
     filters: stableFilters,
     sortBy: sort.field,
@@ -202,7 +223,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   // rebuilt from a full re-sort. Rows only move when the user explicitly sorts.
   const snapshotRef = useRef<RowOrderSnapshot<T> | null>(null);
   const resortTrackerRef = useRef<ResortTracker<T>>(createResortTracker<T>());
-  const resortInputs: ResortInputs = [sortVersion, stableFilters, columns, sortKey, sort.direction];
+  const resortInputs: ResortInputs = [sortVersion, resortFilters, columns, sortKey, sort.direction];
   // A structure edit the host has applied (new data since the edit): full re-sort.
   const structureChanged =
     structureSeenRef.current !== structureVersion && resortTrackerRef.current.data !== displayData;
@@ -218,8 +239,8 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   // Current filters only (no sort): applied to rows inserted since the snapshot
   // was taken, so a new row that doesn't match stays hidden.
   const filterRows = useCallback(
-    (rows: T[]) => processClientSideData(rows, columns, stableFilters),
-    [columns, stableFilters],
+    (rows: T[]) => processClientSideData(rows, columns, stableFilters, undefined, undefined, clientDataOptions),
+    [columns, stableFilters, clientDataOptions],
   );
 
   // --- Client-side filtering & sorting (sync path) ---
@@ -242,7 +263,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     } else {
       // Full re-sort against the current displayData; the snapshot remembers
       // the resulting order so later edits can look up the updated rows.
-      orderedRows = processClientSideData(displayData, columns, stableFilters, sortArg, sortDirArg);
+      orderedRows = processClientSideData(displayData, columns, stableFilters, sortArg, sortDirArg, clientDataOptions);
       snapshotRef.current = createSnapshot(displayData, orderedRows, getRowIdRef.current);
     }
 
@@ -257,7 +278,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     return { items: pageWindow(shownRows, page, pageSize), totalCount: total, all: shownRows, gaps };
     // Note: sortVersion is implicitly tracked via trackResort / snapshotRef.current === null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sortKey, page, pageSize, paginate, filterRows, getRowIdRef, hiddenRowIds]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, clientDataOptions, sortVersion, sortKey, page, pageSize, paginate, filterRows, getRowIdRef, hiddenRowIds]);
 
   // Stabilize callback refs so inline dataSource/onError don't cause infinite re-fetches.
   const dataSourceRef = useLatestRef(dataSource);
@@ -362,6 +383,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
         sort: { field: sort.field, direction: sort.direction },
         sortModel: sortLevels.slice(),
         filters: stableFilters,
+        ...(quickFilter ? { quickFilter } : {}),
         signal: controller.signal,
       })
       .then((res) => {
@@ -381,7 +403,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     return () => {
       controller.abort();
     };
-  }, [isServerSide, page, pageSize, sort.field, sort.direction, sortLevels, stableFilters, refreshCounter, dataSourceVersion, dataSourceRef, onErrorRef]);
+  }, [isServerSide, page, pageSize, sort.field, sort.direction, sortLevels, stableFilters, quickFilter, refreshCounter, dataSourceVersion, dataSourceRef, onErrorRef]);
 
   // --- Windowed (lazy) data source ---
   // When the data source implements the windowed contract (getRowCount +
@@ -442,13 +464,14 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       sort: { field: sort.field, direction: sort.direction },
       sortModel: sortLevels.slice(),
       filters: stableFilters,
+      quickFilter,
     });
     const last = lastWindowRef.current;
     if (last) cache.ensureRange(last.start, last.end);
     // stableFilters is read but intentionally excluded from deps in favour of
     // windowedFiltersKey (its content-stable string form).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWindowed, sort.field, sort.direction, sortKey, windowedFiltersKey, refreshCounter, dataSourceVersion]);
+  }, [isWindowed, sort.field, sort.direction, sortKey, windowedFiltersKey, quickFilter, refreshCounter, dataSourceVersion]);
 
   const requestWindow = useCallback((start: number, end: number) => {
     lastWindowRef.current = { start, end };

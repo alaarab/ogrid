@@ -97,6 +97,7 @@ function App() {
           editable={isPremiumExample || !projectScenario.serverSide}
           cellSelection
           rangeMove={new URLSearchParams(window.location.search).has('rangeMove')}
+          quickFilterBox={new URLSearchParams(window.location.search).has('quickFilter')}
           cellReferences={isPremiumExample ? undefined : projectScenario.cellReferences}
           rowSelection={isPremiumExample ? undefined : projectScenario.rowSelection}
           formulas={isPremiumExample ? undefined : projectScenario.formulas}

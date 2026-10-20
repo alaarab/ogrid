@@ -309,6 +309,23 @@ interface IOGridBaseProps<T> extends IDataValidationProps<T> {
    */
   findReplace?: boolean;
   /**
+   * Quick filter: one search over the whole grid. A row is kept when every
+   * whitespace-separated term appears in one of its visible columns (raw value
+   * or displayed text, case-insensitive), on top of the column filters.
+   * Controlled when set; pair with `onQuickFilterChange`. With a `dataSource`
+   * the text is passed as `quickFilter` in fetch params for the server to apply.
+   */
+  quickFilter?: string;
+  /** Starting quick filter text when `quickFilter` is not controlled. */
+  defaultQuickFilter?: string;
+  /** Called with the new text when the search box (or the API) changes the quick filter. */
+  onQuickFilterChange?: (text: string) => void;
+  /**
+   * Show a search box for the quick filter at the start of the toolbar.
+   * Pass an object to set its `placeholder` or `ariaLabel`. Default: false.
+   */
+  quickFilterBox?: boolean | { placeholder?: string; ariaLabel?: string };
+  /**
    * Excel-style conditional formatting rules (highlight rules, color scales,
    * data bars, icon sets). Statistics cover the full client-side data (the
    * current page for server-side grids). `formula` rules need `formulas`.
