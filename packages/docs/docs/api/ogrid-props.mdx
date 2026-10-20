@@ -76,7 +76,7 @@ sort / filter / page props as plain hook parameters, and the
 | `columnVisibility` | `IColumnVisibilityState` | `undefined` | Controlled visibility diff. Takes precedence over `visibleColumns`. |
 | `onColumnVisibilityChange` | `(state: IColumnVisibilityState) => void` | `undefined` | Fired with the new diff when the user shows or hides columns. Save this value. |
 | `columnOrder` | `string[]` | `undefined` | Controlled column order as an array of column IDs. |
-| `onColumnOrderChange` | `(order: string[]) => void` | `undefined` | Callback fired when the user reorders columns. |
+| `onColumnOrderChange` | `(order: string[]) => void` | `undefined` | Fired with every column id in the new order when columns are reordered. Save this value. |
 | `onColumnResized` | `(columnId: string, width: number) => void` | `undefined` | Callback fired when the user finishes resizing a column. |
 | `responsiveColumns` | `boolean \| IResponsiveColumnsConfig` | `false` | Auto-hide columns by their `responsivePriority` as the container narrows. `true` uses default breakpoints (576/768/992/1200px); pass a config object for custom thresholds. |
 
@@ -145,7 +145,7 @@ See [Structure Editing](../features/structure-editing).
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
-| `columnReorder` | `boolean` | `false` | Enable drag-and-drop column reordering via header cells. See [Column Reordering](../features/column-reordering). |
+| `columnReorder` | `boolean` | `false` | Enable column reordering: drag a header, or use Move left / Move right in the header menu. See [Column Reordering](../features/column-reordering). |
 
 ## Virtual Scrolling
 

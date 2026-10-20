@@ -217,6 +217,11 @@ export interface DataGridPinningState {
     handleUnhideColumns: () => void;
     canHide: boolean;
     canUnhide: boolean;
+    handleMoveLeft: () => void;
+    handleMoveRight: () => void;
+    canReorder: boolean;
+    canMoveLeft: boolean;
+    canMoveRight: boolean;
     canPinLeft: boolean;
     canPinRight: boolean;
     canUnpin: boolean;
@@ -339,6 +344,8 @@ export function useDataGridState<T>(
     onDeleteColumn,
     onHideColumns,
     onUnhideColumns,
+    columnReorder: props.columnReorder,
+    onColumnOrderChange: props.onColumnOrderChange,
     columns,
     items,
     getRowId,

@@ -10,6 +10,8 @@ export function BaseDropIndicator({ dropIndicatorX, wrapperLeft, className }: Ba
   return (
     <div
       className={className}
+      data-ogrid-column-drop-indicator=""
+      aria-hidden
       style={{ left: dropIndicatorX - wrapperLeft }}
     />
   );
