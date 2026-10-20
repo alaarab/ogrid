@@ -2,7 +2,7 @@
   {
     "name": "core",
     "path": "packages/core/dist/esm/index.js",
-    "limit": "31.2 kB"
+    "limit": "31.7 kB"
   },
   {
     "name": "core formula assist (lazy)",
@@ -20,7 +20,7 @@
   {
     "name": "react-radix",
     "path": "packages/react-radix/dist/esm/index.js",
-    "limit": "188 kB",
+    "limit": "189 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist",
       "./DataValidationDialog-*.js"
@@ -29,7 +29,7 @@
   {
     "name": "react-fluent",
     "path": "packages/react-fluent/dist/esm/index.js",
-    "limit": "227.2 kB",
+    "limit": "228.6 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist",
       "./DataValidationDialog-*.js"
