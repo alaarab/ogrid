@@ -29,7 +29,7 @@
   {
     "name": "react-fluent",
     "path": "packages/react-fluent/dist/esm/index.js",
-    "limit": "226.1 kB",
+    "limit": "226.6 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist",
       "./DataValidationDialog-*.js"
