@@ -10,6 +10,7 @@ export type {
   UserLike,
   UserLikeInput,
   FilterValue,
+  MultiSelectFilterMode,
   IFilters,
   ISortModelItem,
   SortModel,
@@ -320,6 +321,13 @@ interface IOGridBaseProps<T> extends IDataValidationProps<T> {
   defaultQuickFilter?: string;
   /** Called with the new text when the search box (or the API) changes the quick filter. */
   onQuickFilterChange?: (text: string) => void;
+  /**
+   * Extra text per row for the quick filter to search besides the visible
+   * columns, such as comments or fields with no column. Client-side only; a
+   * `dataSource` applies `quickFilter` on the server. Read when the rows or
+   * the quick filter text change.
+   */
+  getQuickFilterText?: (row: T) => string | null | undefined;
   /**
    * Show a search box for the quick filter at the start of the toolbar.
    * Pass an object to set its `placeholder` or `ariaLabel`. Default: false.

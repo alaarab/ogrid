@@ -113,6 +113,33 @@ A checkbox list — users pick one or more values, the grid shows only matching 
 | `'api'` | Calls `dataSource.fetchFilterOptions(field)` — for dynamic option lists. |
 | `'years'` | Auto-generates a year list from the current year down. |
 
+#### Any of, None of, All of
+
+Above the checkbox list, a **match** select sets how the chosen options apply:
+
+| Mode | Keeps rows that | Filter value |
+|------|-----------------|--------------|
+| Any of (default) | hold one of the chosen options | `{ type: 'multiSelect', value: ['open'] }` |
+| None of | hold none of them (exclude, "not in") | `{ type: 'multiSelect', value: ['open'], mode: 'none' }` |
+| All of | hold every chosen option (array columns) | `{ type: 'multiSelect', value: ['Ana', 'Ben'], mode: 'all' }` |
+
+`mode` is left out for Any of, so existing saved filters keep working. Data sources receive `mode` in `filters` unchanged.
+
+#### Columns with array values
+
+For a column whose value is an array (tags, reviewers), set `multiValue: true`. Each array item becomes an option, a row matches item by item, and the match select adds **All of**:
+
+```tsx
+{
+  columnId: 'reviewers',
+  name: 'Reviewers',
+  valueFormatter: (v) => (Array.isArray(v) ? v.join(', ') : ''),
+  filterable: { type: 'multiSelect', multiValue: true },
+}
+```
+
+An empty array counts as blank. Matching handles array values even without the flag; `multiValue` adds All of and keeps sorting off the Web Worker (`workerSort`) for that column.
+
 ### Date filter
 
 A date range picker with "From" and "To" inputs. Shows only rows where the column value falls within the range:
@@ -224,6 +251,14 @@ const [search, setSearch] = useState('');
 
 With your own input, consider debouncing it for large grids; the built-in box already does.
 
+To search text that isn't in a visible column (comments, notes, ids), return it from `getQuickFilterText`. Terms can match it like a column:
+
+```tsx
+<OGrid quickFilterBox getQuickFilterText={(report) => report.comments.join(' ')} {...props} />
+```
+
+The grid reads it when the rows or the search text change, so a change to what it returns shows up with the next data update.
+
 With a `dataSource`, the grid does not search rows itself: it passes the trimmed text to `fetchPage` (and windowed `getRows` / `getRowCount`) as `quickFilter`, and your server applies it.
 
 ## Keeping filter state outside the grid
@@ -250,6 +285,40 @@ function App() {
 ```
 
 Now you can serialize `filters` to the URL, localStorage, or a server — and the grid will restore the exact filter state when the user comes back.
+
+### Saving filters in the URL
+
+Core has helpers so you don't hand-roll this (also exported from the React packages):
+
+- `serializeFilters(filters)`: a compact string (JSON, sorted keys, empty entries dropped). Returns `''` when nothing is filtered.
+- `parseFilters(text, columns?)`: reads it back. Returns `{ filters, invalid }` and never throws: bad JSON gives `{}`.
+- `validateFilters(value, columns?)`: the same check for a value you already parsed.
+
+Each entry is rebuilt from its known fields, and malformed ones are dropped and listed in `invalid` (`{ field, reason }`). Pass `columns` to also drop entries for fields that aren't filterable, or whose type doesn't match the column's filter (for example a text filter on a number column).
+
+```tsx
+import { parseFilters, serializeFilters } from '@alaarab/ogrid-react-radix';
+
+const [params, setParams] = useSearchParams();
+const filters = useMemo(() => parseFilters(params.get('filters'), columns).filters, [params]);
+
+<OGrid
+  columns={columns}
+  data={reports}
+  getRowId={(r) => r.id}
+  filters={filters}
+  onFiltersChange={(next) => {
+    const text = serializeFilters(next);
+    setParams((p) => {
+      if (text) p.set('filters', text);
+      else p.delete('filters');
+      return p;
+    });
+  }}
+/>
+```
+
+The quick filter is a plain string, so store it as its own parameter (`quickFilter` / `onQuickFilterChange`).
 
 ## Server-side filtering
 
@@ -316,6 +385,8 @@ Server-side filtering pairs naturally with [pagination](./pagination). The `tota
 | `quickFilter` | `string` | - | Controlled quick filter text. |
 | `defaultQuickFilter` | `string` | `''` | Starting quick filter text when uncontrolled. |
 | `onQuickFilterChange` | `(text: string) => void` | - | Called when the search box changes the text. |
+| `getQuickFilterText` | `(row: T) => string` | - | Extra per-row text the quick filter searches (client-side). |
+| `filterable.multiValue` | `boolean` | `false` | Multi-select on a column of arrays: options per item, adds All of. |
 
 ## Next steps
 

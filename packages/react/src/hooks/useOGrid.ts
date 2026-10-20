@@ -154,6 +154,14 @@ export function useOGrid<T>(
     controlled: props.quickFilter, defaultValue: props.defaultQuickFilter,
     onChange: useStableOptionalCallback(props.onQuickFilterChange), setPage,
   });
+  // Held stable: an inline callback must not re-filter on every render. Changing
+  // what it returns for the same rows needs new data (or new quick filter text).
+  const quickFilterTextRef = useLatestRef(props.getQuickFilterText);
+  const hasQuickFilterText = props.getQuickFilterText != null;
+  const quickFilterTextGetter = useMemo(
+    () => (hasQuickFilterText ? (row: T) => quickFilterTextRef.current?.(row) : undefined),
+    [hasQuickFilterText, quickFilterTextRef],
+  );
   const quickFilterColumns = useMemo(
     () => processingColumns.filter((c) => visibleColumns.has(c.columnId)),
     [processingColumns, visibleColumns],
@@ -167,6 +175,7 @@ export function useOGrid<T>(
     onError: props.onError, onFirstDataRendered: props.onFirstDataRendered, workerSort: props.workerSort,
     hiddenRowIds: hiddenRows.hiddenRowSet,
     quickFilter: quickFilterState.quickFilter, quickFilterColumns,
+    getQuickFilterText: quickFilterTextGetter,
   });
   const { displayItems, windowed, displayTotalCount } = dataFetchingState;
   // A windowed (lazy) source virtual-scrolls all rows: no pages, no pager.

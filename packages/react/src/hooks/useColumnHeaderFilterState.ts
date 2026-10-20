@@ -1,4 +1,4 @@
-import type { FilterOption } from '@alaarab/ogrid-core';
+import type { FilterOption, MultiSelectFilterMode } from '@alaarab/ogrid-core';
 const POPOVER_FOCUSABLE =
   'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -33,11 +33,18 @@ const SORT_CLICK_SLOP = 5;
 
 const EMPTY_OPTIONS: string[] = [];
 
+const DEFAULT_MULTI_SELECT_MODES: readonly MultiSelectFilterMode[] = ['any', 'none'];
+
 export interface UseColumnHeaderFilterStateParams {
   filterType: ColumnFilterType;
   onSort?: (options?: { additive?: boolean }) => void;
   selectedValues?: string[];
-  onFilterChange?: (values: string[]) => void;
+  /** Multi-select: apply the chosen options, and how they match (`any` when omitted). */
+  onFilterChange?: (values: string[], mode?: MultiSelectFilterMode) => void;
+  /** Multi-select: how the applied options match. */
+  multiSelectMode?: MultiSelectFilterMode;
+  /** Multi-select: the match modes offered (Any of / None of, plus All of for `multiValue` columns). */
+  multiSelectModes?: readonly MultiSelectFilterMode[];
   options?: FilterOption[];
   isLoadingOptions?: boolean;
   textValue?: string;
@@ -53,6 +60,11 @@ export interface UseColumnHeaderFilterStateParams {
 }
 
 export interface UseColumnHeaderFilterStateResult {
+  /** Multi-select match mode chosen in the open popover (applied with the options). */
+  tempMultiSelectMode: MultiSelectFilterMode;
+  setTempMultiSelectMode: (mode: MultiSelectFilterMode) => void;
+  /** Match modes the multi-select popover offers. */
+  multiSelectModes: readonly MultiSelectFilterMode[];
   headerRef: RefObject<HTMLDivElement | null>;
   popoverRef: RefObject<HTMLDivElement | null>;
   peopleInputRef: RefObject<HTMLInputElement | null>;
@@ -116,6 +128,8 @@ export function useColumnHeaderFilterState(
     onSort,
     selectedValues,
     onFilterChange,
+    multiSelectMode,
+    multiSelectModes,
     options,
     textValue = '',
     onTextChange,
@@ -147,6 +161,7 @@ export function useColumnHeaderFilterState(
   const multiSelectFilterState = useMultiSelectFilterState({
     selectedValues,
     onFilterChange,
+    mode: multiSelectMode,
     options,
     isFilterOpen,
   });
@@ -358,6 +373,9 @@ export function useColumnHeaderFilterState(
     setSearchText: multiSelectFilterState.setSearchText,
     debouncedSearchText: multiSelectFilterState.debouncedSearchText,
     filteredOptions: multiSelectFilterState.filteredOptions,
+    tempMultiSelectMode: multiSelectFilterState.tempMode,
+    setTempMultiSelectMode: multiSelectFilterState.setTempMode,
+    multiSelectModes: multiSelectModes ?? DEFAULT_MULTI_SELECT_MODES,
     peopleSuggestions: peopleFilterState.peopleSuggestions,
     isPeopleLoading: peopleFilterState.isPeopleLoading,
     peopleSearchText: peopleFilterState.peopleSearchText,

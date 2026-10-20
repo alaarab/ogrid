@@ -55,4 +55,12 @@ describe('quick filter', () => {
     const out = processClientSideData(rows, columns, { status: { type: 'multiSelect', value: ['open'] } }, 'name', 'desc', { quickFilter: 'a' });
     expect(out.map((r) => r.name)).toEqual(['Gamma', 'Alpha report']);
   });
+
+  it('searches extra per-row text, which can supply a term on its own', () => {
+    const notes: Record<string, string> = { Beta: 'needs legal review' };
+    const matches = createQuickFilterPredicate('legal signed', columns, (r) => notes[r.name]);
+    expect(rows.filter(matches!).map((r) => r.name)).toEqual(['Beta']);
+    const out = processClientSideData(rows, columns, {}, undefined, undefined, { quickFilter: 'legal', getQuickFilterText: (r) => notes[r.name] });
+    expect(out.map((r) => r.name)).toEqual(['Beta']);
+  });
 });
