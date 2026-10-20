@@ -79,8 +79,13 @@ const MULTI_SELECT_MODE_LABELS: Record<MultiSelectFilterMode, string> = {
   all: 'All of',
   none: 'None of',
 };
-const modeRowStyle: React.CSSProperties = { padding: '12px 12px 0', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 };
-const modeSelectStyle: React.CSSProperties = { flex: 1, minWidth: 0, font: 'inherit' };
+const modeRowStyle: React.CSSProperties = { padding: '12px 12px 0', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, lineHeight: '16px' };
+// Whole-pixel heights: a fractional row would put the virtual option list below
+// on sub-pixel offsets. 44px on touch screens, like the kits' other controls.
+const modeSelectStyle: React.CSSProperties = { flex: 1, minWidth: 0, font: 'inherit', boxSizing: 'border-box', height: 30 };
+const coarseModeSelectStyle: React.CSSProperties = { ...modeSelectStyle, height: 44 };
+const isCoarsePointer = (): boolean =>
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
 
 /**
  * Match mode for a multi-select filter, above the option list: Any of
@@ -97,7 +102,7 @@ function MultiSelectModeSelect({ modes, value, onChange, columnName }: {
   return (
     <div style={modeRowStyle} data-ogrid-multiselect-mode="">
       <select
-        style={modeSelectStyle}
+        style={isCoarsePointer() ? coarseModeSelectStyle : modeSelectStyle}
         aria-label={columnName ? `${columnName} match` : 'Match'}
         value={value}
         onChange={(e) => onChange(e.target.value as MultiSelectFilterMode)}
