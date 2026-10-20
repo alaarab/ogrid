@@ -214,6 +214,12 @@ export interface ColumnHeaderMenuInput {
   canUnhide?: boolean;
   /** Show "Add to sort": the grid is sorted by other columns and this one could become the next level. */
   canAddToSort?: boolean;
+  /** Show "Move left" / "Move right" (`columnReorder`). */
+  canReorder?: boolean;
+  /** Whether the column can move one position left (false at the edge of its pin zone). */
+  canMoveLeft?: boolean;
+  /** Whether the column can move one position right (false at the edge of its pin zone). */
+  canMoveRight?: boolean;
 }
 
 /**
@@ -224,6 +230,7 @@ export function getColumnHeaderMenuItems(input: ColumnHeaderMenuInput): IColumnH
   const {
     canPinLeft, canPinRight, canUnpin, currentSort, isSortable = true, isResizable = true,
     canEditStructure = false, canHide = false, canUnhide = false, canAddToSort = false,
+    canReorder = false, canMoveLeft = false, canMoveRight = false,
   } = input;
 
   const items: IColumnHeaderMenuItem[] = [];
@@ -232,8 +239,16 @@ export function getColumnHeaderMenuItems(input: ColumnHeaderMenuInput): IColumnH
   items.push(
     { id: 'pinLeft', label: 'Pin left', disabled: !canPinLeft },
     { id: 'pinRight', label: 'Pin right', disabled: !canPinRight },
-    { id: 'unpin', label: 'Unpin', disabled: !canUnpin, divider: isSortable || isResizable },
+    { id: 'unpin', label: 'Unpin', disabled: !canUnpin, divider: canReorder || isSortable || isResizable },
   );
+
+  // Reorder section: the keyboard alternative to dragging a header
+  if (canReorder) {
+    items.push(
+      { id: 'moveLeft', label: 'Move left', disabled: !canMoveLeft },
+      { id: 'moveRight', label: 'Move right', disabled: !canMoveRight, divider: isSortable || isResizable },
+    );
+  }
 
   // Sorting section
   if (isSortable) {
@@ -302,6 +317,8 @@ export interface ColumnHeaderMenuHandlers {
   onDeleteColumn?: () => void;
   onHideColumn?: () => void;
   onUnhideColumns?: () => void;
+  onMoveLeft?: () => void;
+  onMoveRight?: () => void;
   onClose: () => void;
 }
 

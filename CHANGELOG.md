@@ -4,6 +4,14 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Keyboard column reordering: with `columnReorder`, each column's header menu has **Move left** and **Move right**. They move the column one position past the next visible column, stay within its pin zone (disabled at the edge), and fire `onColumnOrderChange` like a drag does. Also exported from core: `moveColumnByStep`.
+
+### Fixed
+
+- The column drop indicator now lines up with the header edge when the grid is scrolled horizontally. It was drawn off by the scroll distance.
+
 ### Changed
 
 - Packages are now published with npm Trusted Publishing (GitHub Actions OIDC) instead of a long-lived npm token. No code changes.
