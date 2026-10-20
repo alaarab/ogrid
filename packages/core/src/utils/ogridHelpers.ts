@@ -1,6 +1,7 @@
 import type { IColumnDef, IColumnFilterDef, IFilters, FilterValue, FilterOption } from '../types';
 import { getCellValue } from './cellValue';
 import { normalizeConditionFilter } from './conditionFilter';
+import { getMultiSelectCellValues } from './multiSelectFilter';
 
 export function getFilterOptionValue(option: FilterOption): string {
   return typeof option === 'string' ? option : option.value;
@@ -73,7 +74,10 @@ export function deriveFilterOptionsFromData<T>(
       if (fc === undefined) continue;
       const v = getCellValue(item, fc.col);
       const set = valueSets.get(fc.field);
-      if (set) set.add(String(v ?? ''));
+      if (!set) continue;
+      // Array values (multiValue columns) contribute each item as an option.
+      if (Array.isArray(v)) for (const option of getMultiSelectCellValues(v)) set.add(option);
+      else set.add(String(v ?? ''));
     }
   }
 

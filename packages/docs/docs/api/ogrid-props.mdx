@@ -58,6 +58,7 @@ sort / filter / page props as plain hook parameters, and the
 | `defaultQuickFilter` | `string` | `''` | Starting quick filter text when `quickFilter` is not set. |
 | `onQuickFilterChange` | `(text: string) => void` | `undefined` | Fired with the new text when the search box changes it. |
 | `quickFilterBox` | `boolean \| { placeholder?: string; ariaLabel?: string }` | `false` | Show a search box for the quick filter at the start of the toolbar. |
+| `getQuickFilterText` | `(row: T) => string \| null \| undefined` | `undefined` | Extra per-row text the quick filter searches besides the visible columns (client-side). |
 
 ## Pagination
 

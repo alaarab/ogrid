@@ -130,6 +130,8 @@ export interface UseOGridDataFetchingParams<T> {
   quickFilter?: string;
   /** Columns the quick filter searches client-side (the visible ones). Default: `columns`. */
   quickFilterColumns?: ICoreColumnDef<T>[];
+  /** Extra per-row text the quick filter searches client-side. */
+  getQuickFilterText?: (row: T) => string | null | undefined;
 }
 
 export interface UseOGridDataFetchingState<T> {
@@ -171,14 +173,14 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const {
     isServerSide, dataSource, dataSourceKey, displayData, getRowId, columns, stableFilters,
     sort, sortModel: sortModelParam, sortVersion, page, pageSize, paginate = true, onError, onFirstDataRendered, workerSort,
-    editVersionRef, structureVersionRef, hiddenRowIds, quickFilterColumns,
+    editVersionRef, structureVersionRef, hiddenRowIds, quickFilterColumns, getQuickFilterText,
   } = params;
   // Trimmed; blank means no quick filter. Data sources get it as `quickFilter`.
   const quickFilter = params.quickFilter?.trim() || undefined;
   const quickFilterActive = quickFilter !== undefined;
   const clientDataOptions = useMemo(
-    () => (quickFilterActive ? { quickFilter, quickFilterColumns } : undefined),
-    [quickFilterActive, quickFilter, quickFilterColumns],
+    () => (quickFilterActive ? { quickFilter, quickFilterColumns, getQuickFilterText } : undefined),
+    [quickFilterActive, quickFilter, quickFilterColumns, getQuickFilterText],
   );
   // The re-sort trigger compares filters by identity: fold the quick filter in.
   const resortFilters = useMemo(

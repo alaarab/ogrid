@@ -109,6 +109,9 @@ export {
 } from './workerSortFilter';
 export { DEFAULT_WORKER_SORT_AUTO_THRESHOLD, shouldUseWorkerSort } from './workerSortMode';
 export { createQuickFilterPredicate, getQuickFilterTerms } from './quickFilter';
+export { createMultiSelectMatcher, getMultiSelectCellValues } from './multiSelectFilter';
+export { serializeFilters, parseFilters, validateFilters } from './filterSerialization';
+export type { IFilterValidationResult, IInvalidFilter } from './filterSerialization';
 export type { SortFilterRequest, SortFilterResponse } from '../workers/sortFilterWorker';
 export {
   getHeaderFilterConfig,
