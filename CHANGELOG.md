@@ -4,6 +4,11 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Quick filter: one search over the whole grid. `quickFilterBox` shows a search box at the start of the toolbar (debounced; Enter applies, Escape clears). A row is kept when every space-separated term appears in one of its visible columns, in the raw value or the displayed text, on top of the column filters. Keep the text yourself with `quickFilter` / `defaultQuickFilter` / `onQuickFilterChange`. Data sources receive it as `quickFilter` in `fetchPage`, `getRows` and `getRowCount` params. Also exported from core: `createQuickFilterPredicate`, `getQuickFilterTerms`, and a `processClientSideData` options argument.
+- Example apps take `?quickFilter` (search box) and `?numberFilter` (number filter on Budget).
+
 ### Changed
 
 - Packages are now published with npm Trusted Publishing (GitHub Actions OIDC) instead of a long-lived npm token. No code changes.

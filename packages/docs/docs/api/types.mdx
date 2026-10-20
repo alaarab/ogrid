@@ -342,6 +342,7 @@ interface IFetchParams {
   pageSize: number;
   sort?: { field: string; direction: 'asc' | 'desc' };
   filters: IFilters;
+  quickFilter?: string;
 }
 ```
 
@@ -351,6 +352,7 @@ interface IFetchParams {
 | `pageSize` | `number` | Number of items per page. |
 | `sort` | `{ field, direction }` | Active sort (field name + direction). Omit if no sort. |
 | `filters` | `IFilters` | Active filters (field  to  FilterValue). |
+| `quickFilter` | `string` | Search box text (`quickFilter` prop), trimmed. Omitted when empty. Keep rows where every space-separated term appears in some searched column. |
 
 ### IPageResult&lt;T&gt;
 

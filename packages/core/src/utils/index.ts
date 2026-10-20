@@ -55,6 +55,7 @@ export type { ParseValueResult } from './valueParsers';
 export { computeAggregations } from './aggregationUtils';
 export type { AggregationResult } from './aggregationUtils';
 export { processClientSideData } from './clientSideData';
+export type { IClientSideDataOptions } from './clientSideData';
 export {
   CONDITION_OPERATORS,
   getConditionOperatorLabel,
@@ -107,6 +108,7 @@ export {
   processClientSideDataAsync,
 } from './workerSortFilter';
 export { DEFAULT_WORKER_SORT_AUTO_THRESHOLD, shouldUseWorkerSort } from './workerSortMode';
+export { createQuickFilterPredicate, getQuickFilterTerms } from './quickFilter';
 export type { SortFilterRequest, SortFilterResponse } from '../workers/sortFilterWorker';
 export {
   getHeaderFilterConfig,

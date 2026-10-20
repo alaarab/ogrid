@@ -54,6 +54,10 @@ sort / filter / page props as plain hook parameters, and the
 |------|------|---------|-------------|
 | `filters` | `IFilters` | `undefined` | Controlled filter state. A record mapping field names to filter values. See [Types](./types) for `IFilters`. |
 | `onFiltersChange` | `(filters: IFilters) => void` | `undefined` | Callback fired when the user applies or clears a filter. Required for controlled filter mode. |
+| `quickFilter` | `string` | `undefined` | Controlled quick filter text: every space-separated term must appear in one of a row's visible columns. Sent to data sources as `quickFilter`. See [Quick filter](../features/filtering#quick-filter-search-box). |
+| `defaultQuickFilter` | `string` | `''` | Starting quick filter text when `quickFilter` is not set. |
+| `onQuickFilterChange` | `(text: string) => void` | `undefined` | Fired with the new text when the search box changes it. |
+| `quickFilterBox` | `boolean \| { placeholder?: string; ariaLabel?: string }` | `false` | Show a search box for the quick filter at the start of the toolbar. |
 
 ## Pagination
 
