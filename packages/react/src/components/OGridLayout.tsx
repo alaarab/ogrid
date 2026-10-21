@@ -175,13 +175,14 @@ const ExpandIcon = () => (
   </svg>
 );
 
-// SVG collapse icon (exit fullscreen)
+// SVG collapse icon (exit fullscreen): the expand icon's arrows turned inward,
+// kept inside the same 2-14 box so no stroke touches the viewBox edge.
 const CollapseIcon = () => (
   <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="4 10 0 10 0 14" />
-    <polyline points="12 6 16 6 16 2" />
-    <line x1="0" y1="10" x2="4" y2="6" />
-    <line x1="16" y1="6" x2="12" y2="10" />
+    <polyline points="2 10 6 10 6 14" />
+    <polyline points="14 6 10 6 10 2" />
+    <line x1="2" y1="14" x2="6" y2="10" />
+    <line x1="14" y1="2" x2="10" y2="6" />
   </svg>
 );
 
