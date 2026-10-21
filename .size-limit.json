@@ -20,7 +20,7 @@
   {
     "name": "react-radix",
     "path": "packages/react-radix/dist/esm/index.js",
-    "limit": "187 kB",
+    "limit": "188 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist",
       "./DataValidationDialog-*.js"
@@ -29,7 +29,7 @@
   {
     "name": "react-fluent",
     "path": "packages/react-fluent/dist/esm/index.js",
-    "limit": "227 kB",
+    "limit": "227.5 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist",
       "./DataValidationDialog-*.js"
@@ -38,7 +38,7 @@
   {
     "name": "react-xlsx",
     "path": "packages/react-xlsx/dist/esm/index.js",
-    "limit": "510.2 kB",
+    "limit": "510.8 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist",
       "./streamingReader.js",

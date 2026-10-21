@@ -4,6 +4,7 @@ import { createConditionPredicate } from './conditionFilter';
 import { normalizeSortModel } from './sortHelpers';
 import { formatCellValue } from './cellFormatting';
 import { getFilterField } from './ogridHelpers';
+import { createQuickFilterPredicate } from './quickFilter';
 import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey, createSortCollator } from '../workers/sortFilterPrimitives';
 
 const sortCollator = createSortCollator();
@@ -15,6 +16,14 @@ export { toDateTimestamp };
  * Cached column map to avoid rebuilding on every call.
  * WeakMap keyed by columns array reference.
  */
+/** Extra inputs for {@link processClientSideData}. */
+export interface IClientSideDataOptions<T> {
+  /** Quick filter text: every whitespace-separated term must appear in one of the searched columns. */
+  quickFilter?: string;
+  /** Columns the quick filter searches (default: all `columns`). Pass the visible ones. */
+  quickFilterColumns?: readonly IColumnDef<T>[];
+}
+
 const columnMapCache = new WeakMap<IColumnDef<unknown>[], Map<string, IColumnDef<unknown>>>();
 
 /**
@@ -26,6 +35,7 @@ const columnMapCache = new WeakMap<IColumnDef<unknown>[], Map<string, IColumnDef
  * @param filters - Current filter state (discriminated FilterValue union)
  * @param sortBy - Column ID to sort by, or a multi-level sort model (primary first). Optional.
  * @param sortDirection - Sort direction when `sortBy` is a column ID (default ascending)
+ * @param options - `quickFilter`: search text matched across `quickFilterColumns` (default: `columns`)
  * @returns Filtered and sorted array
  */
 export function processClientSideData<T>(
@@ -33,7 +43,8 @@ export function processClientSideData<T>(
   columns: IColumnDef<T>[],
   filters: IFilters,
   sortBy?: string | readonly ISortModelItem[],
-  sortDirection?: 'asc' | 'desc'
+  sortDirection?: 'asc' | 'desc',
+  options?: IClientSideDataOptions<T>
 ): T[] {
   // Get or build column lookup map (cached via WeakMap)
   let columnMap = columnMapCache.get(columns as IColumnDef<unknown>[]) as Map<string, IColumnDef<T>> | undefined;
@@ -113,6 +124,10 @@ export function processClientSideData<T>(
       }
     }
   }
+
+  // Quick filter last: it reads every searched column, so the column filters reject rows first.
+  const quick = createQuickFilterPredicate(options?.quickFilter, options?.quickFilterColumns ?? columns);
+  if (quick) predicates.push(quick);
 
   const filtered = predicates.length > 0;
   const rows = filtered
