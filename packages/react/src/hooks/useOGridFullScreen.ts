@@ -23,8 +23,11 @@ export function useOGridFullScreen(
   const isControlled = controlled !== undefined;
   const setFullScreen = useCallback((next: boolean) => {
     if (next === currentRef.current) return;
-    currentRef.current = next;
-    if (!isControlled) setInternal(next);
+    // Controlled: only ask. The state moves when the parent passes it back.
+    if (!isControlled) {
+      currentRef.current = next;
+      setInternal(next);
+    }
     onChangeRef.current?.(next);
   }, [isControlled]);
   return { isFullScreen, setFullScreen };

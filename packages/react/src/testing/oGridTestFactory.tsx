@@ -236,6 +236,37 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
       expect((container.firstElementChild as HTMLElement).style.position).not.toBe('fixed');
     });
 
+    it('a controlled grid asks again when the parent declines', () => {
+      const onFullScreenChange = jest.fn();
+      renderOGrid({ headerMenu: true, isFullScreen: false, onFullScreenChange });
+      for (let i = 0; i < 2; i++) {
+        fireEvent.click(screen.getByRole('button', { name: 'Grid options' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Full screen' }));
+      }
+      expect(onFullScreenChange.mock.calls).toEqual([[true], [true]]);
+    });
+
+    it('Reset columns restores default visibility, order and widths', () => {
+      const onColumnOrderChange = jest.fn();
+      const onColumnsReset = jest.fn();
+      renderOGrid({ headerMenu: true, columnReorder: true, onColumnOrderChange, onColumnsReset });
+      const resize = () => screen.getByRole('separator', { name: 'Resize column Status' });
+      const startWidth = resize().getAttribute('aria-valuenow');
+      fireEvent.keyDown(resize(), { key: 'ArrowRight' });
+      fireEvent.keyDown(resize(), { key: 'ArrowRight' });
+      expect(resize().getAttribute('aria-valuenow')).not.toBe(startWidth);
+      fireEvent.click(screen.getByRole('button', { name: 'Grid options' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Columns' }));
+      fireEvent.click(screen.getByRole('menuitemcheckbox', { name: /Status/ }));
+      expect(screen.queryByTestId('cell-status')).not.toBeInTheDocument();
+      fireEvent.keyDown(screen.getByRole('menuitemcheckbox', { name: /Status/ }), { key: 'Escape' });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Reset columns' }));
+      expect(screen.getAllByTestId('cell-status').length).toBeGreaterThan(0);
+      expect(resize().getAttribute('aria-valuenow')).toBe(startWidth);
+      expect(onColumnOrderChange).toHaveBeenLastCalledWith(fixtureColumns.map((c) => c.columnId));
+      expect(onColumnsReset).toHaveBeenCalledTimes(1);
+    });
+
     it('adds app items and submenus, and a function can hide built-ins', () => {
       const csv = jest.fn();
       const { unmount } = renderOGrid({

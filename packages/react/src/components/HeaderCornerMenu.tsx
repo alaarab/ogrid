@@ -69,6 +69,18 @@ export function buildFullScreenMenuItem(fullScreen: NonNullable<IGridMenusConfig
   };
 }
 
+function ExitFullScreenIcon(): React.ReactElement {
+  // Arrows pointing inward, inside the 2-14 box (same drawing as the toolbar's exit icon).
+  return (
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="2 10 6 10 6 14" />
+      <polyline points="14 6 10 6 10 2" />
+      <line x1="2" y1="14" x2="6" y2="10" />
+      <line x1="14" y1="2" x2="10" y2="6" />
+    </svg>
+  );
+}
+
 function SettingsIcon(): React.ReactElement {
   // Three sliders; every stroke stays inside the 2-14 box so nothing clips.
   return (
@@ -85,21 +97,21 @@ function SettingsIcon(): React.ReactElement {
 
 export interface HeaderCornerMenuProps {
   gridMenus: IGridMenusConfig;
-  /** Sticky header: the corner sticks to the top too. */
-  stickyHeader: boolean;
   onAutosizeAll: () => void;
+  /** Clears the table's own column widths; the rest of the reset comes from `gridMenus`. */
+  onResetWidths: () => void;
   styles: DataGridStyles;
   getPortalTarget?: (anchorElement: HTMLElement) => HTMLElement;
 }
 
 export function HeaderCornerMenu(props: HeaderCornerMenuProps): React.ReactElement {
-  const { gridMenus, stickyHeader, onAutosizeAll, styles, getPortalTarget } = props;
+  const { gridMenus, onAutosizeAll, onResetWidths, styles, getPortalTarget } = props;
   const [open, setOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const portalTheme = usePortalTheme(triggerRef, open);
   const [headerHeight, setHeaderHeight] = React.useState<number | null>(null);
 
-  // The corner covers every header row, so it follows the thead's height.
+  // The corner spans every header row, so it follows the thead's height.
   // Found from the corner itself: the wrapper's ref isn't attached yet when
   // this child's layout effect first runs.
   const cornerRef = React.useRef<HTMLDivElement>(null);
@@ -115,14 +127,24 @@ export function HeaderCornerMenu(props: HeaderCornerMenuProps): React.ReactEleme
   }, []);
 
   const close = React.useCallback(() => setOpen(false), []);
-  const { columnChooser, fullScreen, cornerItems } = gridMenus;
+  const { columnChooser, fullScreen, cornerItems, resetColumns } = gridMenus;
   const items = React.useMemo(() => {
     const builtIns: IGridMenuItem[] = [];
     if (columnChooser) builtIns.push({ ...buildColumnsMenuItem(columnChooser, 'columns', 'Columns'), divider: true });
     if (fullScreen) builtIns.push(buildFullScreenMenuItem(fullScreen));
-    builtIns.push({ id: 'autosizeAll', label: 'Autosize all columns', onClick: onAutosizeAll });
+    builtIns.push(
+      { id: 'autosizeAll', label: 'Autosize all columns', onClick: onAutosizeAll },
+      {
+        id: 'resetColumns',
+        label: 'Reset columns',
+        onClick: () => {
+          onResetWidths();
+          resetColumns();
+        },
+      },
+    );
     return resolveGridMenuItems(builtIns, cornerItems, { isFullScreen: fullScreen?.isFullScreen ?? false });
-  }, [columnChooser, fullScreen, cornerItems, onAutosizeAll]);
+  }, [columnChooser, fullScreen, cornerItems, onAutosizeAll, onResetWidths, resetColumns]);
 
   const classNames: GridMenuClassNames = {
     content: styles.gridMenu,
@@ -133,13 +155,12 @@ export function HeaderCornerMenu(props: HeaderCornerMenuProps): React.ReactEleme
     icon: styles.gridMenuIcon,
   };
 
+  const exit = fullScreen?.isFullScreen ? fullScreen : null;
+  const shortcut = gridMenus.fullScreenShortcut;
+  const exitTitle = `Exit full screen (Esc${shortcut ? ` or ${shortcut.length === 1 ? shortcut.toUpperCase() : shortcut}` : ''})`;
+
   return (
-    <div
-      ref={cornerRef}
-      className={styles.headerCorner}
-      style={stickyHeader ? { top: 0 } : undefined}
-      data-ogrid-header-corner=""
-    >
+    <div ref={cornerRef} className={styles.headerCorner} data-ogrid-header-corner="">
       <div className={styles.headerCornerCell} style={headerHeight ? { height: headerHeight } : undefined}>
         <button
           ref={triggerRef}
@@ -149,16 +170,9 @@ export function HeaderCornerMenu(props: HeaderCornerMenuProps): React.ReactEleme
           title="Grid options"
           aria-haspopup="menu"
           aria-expanded={open}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            setOpen((v) => !v);
-          }}
+          onClick={() => setOpen((v) => !v)}
           onKeyDown={(e) => {
-            // The button owns its keys; keep them from the grid's key handler.
-            if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
-            else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-              e.stopPropagation();
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
               e.preventDefault();
               setOpen(true);
             }
@@ -167,6 +181,19 @@ export function HeaderCornerMenu(props: HeaderCornerMenuProps): React.ReactEleme
           <SettingsIcon />
         </button>
       </div>
+      {exit && (
+        // Full screen hides the page's own controls: keep a way out in sight.
+        <button
+          type="button"
+          className={styles.headerCornerTrigger}
+          data-ogrid-exit-full-screen=""
+          aria-label="Exit full screen"
+          title={exitTitle}
+          onClick={() => exit.setFullScreen(false)}
+        >
+          <ExitFullScreenIcon />
+        </button>
+      )}
       {open && (
         <BaseGridMenu
           items={items}

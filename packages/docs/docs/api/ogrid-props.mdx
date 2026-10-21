@@ -165,6 +165,7 @@ See [Structure Editing](../features/structure-editing).
 | `onFullScreenChange` | `(isFullScreen: boolean) => void` | `undefined` | Called when the toolbar button or **Escape** enters or leaves fullscreen. With `isFullScreen` set, update it here. |
 | `fullScreenShortcut` | `string \| false` | `'f'` | Key that toggles fullscreen while the grid has focus and no cell is being edited (`'Shift+F'`, `'Mod+Shift+F'`). A plain key gives way on an editable cell. Active when fullscreen is on offer (`fullScreen`, `headerMenu` or `isFullScreen`). |
 | `headerMenu` | `boolean` | `false` | Settings button in the header's top-right corner with Columns, Full screen and Autosize all columns. Drops the toolbar's column chooser unless `columnChooser` is set. See [Header Menu](../features/header-menu). |
+| `onColumnsReset` | `() => void` | `undefined` | Called after the corner menu's Reset columns restores default visibility, order and widths, e.g. to clear saved column state. |
 | `headerMenuItems` | `IGridMenuItem[] \| (builtIns, { isFullScreen }) => IGridMenuItem[]` | `undefined` | Items for the corner menu: an array is added after the built-ins; a function returns the full list. Items with `items` open submenus. |
 | `columnMenuItems` | `IGridMenuItem[] \| (builtIns, { columnId }) => IGridMenuItem[]` | `undefined` | Items for each column's menu (options button and header right-click), same shapes. |
 | `rowHeight` | `number` | `36` | Fixed row height in pixels. Affects layout and virtual scrolling row height calculation. |

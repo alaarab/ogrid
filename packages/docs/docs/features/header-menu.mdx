@@ -13,8 +13,9 @@ import HeaderMenuDemo from '@site/src/components/demos/HeaderMenuDemo';
 - **Columns**: a show/hide checklist of the columns, with **Show all columns** at the top and a search box when there are more than 8.
 - **Full screen** / **Exit full screen**.
 - **Autosize all columns**.
+- **Reset columns**: back to the default visibility (`defaultVisible`), the column definition order and the default widths. `onColumnsReset` fires afterwards so you can clear saved column state.
 
-The button stays in the corner while the grid scrolls sideways, sits above pinned columns, and follows the theme (dark mode included). It is a normal tab stop: **Enter**, **Space** or **ArrowDown** opens the menu, the arrow keys move through it, **ArrowRight** and **ArrowLeft** open and leave submenus, and **Escape** closes it and returns focus to the button.
+The button sits in a narrow gutter at the right edge of the grid, level with the header rows, so it never covers a column and stays put while the grid scrolls. It follows the theme (dark mode included). In full screen the gutter also shows an **Exit full screen** button. It is a normal tab stop: **Enter**, **Space** or **ArrowDown** opens the menu, the arrow keys move through it, **ArrowRight** and **ArrowLeft** open and leave submenus, and **Escape** closes it and returns focus to the button.
 
 ## Live Demo
 
@@ -64,7 +65,7 @@ headerMenuItems={(builtIns, { isFullScreen }) => [
 ]}
 ```
 
-Built-in ids in the corner menu: `columns`, `fullScreen` and `autosizeAll`.
+Built-in ids in the corner menu: `columns`, `fullScreen`, `autosizeAll` and `resetColumns`.
 
 ### Item shape
 
@@ -113,8 +114,7 @@ While fullscreen is on offer, pressing **F** with the grid focused toggles it. I
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `--ogrid-z-header-corner` | `13` | Stacking order of the corner button, above sticky and pinned header cells |
-| `--ogrid-header-corner-width` | `32px` | Width of the corner (44px on touch screens) |
+| `--ogrid-header-corner-width` | `32px` | Width of the corner gutter (44px on touch screens) |
 
 ## Props
 
@@ -124,4 +124,5 @@ While fullscreen is on offer, pressing **F** with the grid focused toggles it. I
 | `headerMenuItems` | `IGridMenuItem[] \| (builtIns, { isFullScreen }) => IGridMenuItem[]` | | Items for the corner menu. |
 | `columnMenuItems` | `IGridMenuItem[] \| (builtIns, { columnId }) => IGridMenuItem[]` | | Items for every column menu. |
 | `fullScreenShortcut` | `string \| false` | `'f'` | Key that toggles fullscreen while the grid has focus. |
+| `onColumnsReset` | `() => void` | | Called after Reset columns. |
 | `isFullScreen` / `onFullScreenChange` | | | Control and follow fullscreen; see [OGrid props](../api/ogrid-props). |

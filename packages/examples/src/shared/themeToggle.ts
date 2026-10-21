@@ -48,7 +48,8 @@ export function createThemeToggle(onToggle?: (theme: 'light' | 'dark') => void):
     position: 'fixed',
     top: '12px',
     right: '12px',
-    zIndex: '9999',
+    // Below a fullscreen grid (--ogrid-z-fullscreen, 9999), so it never covers one.
+    zIndex: '9000',
     width: '40px',
     height: '40px',
     borderRadius: '50%',
