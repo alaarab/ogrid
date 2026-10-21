@@ -70,8 +70,9 @@ export {
   getPinStateForColumn,
   reorderColumnArray,
   calculateDropTarget,
+  moveColumnByStep,
 } from './columnReorder';
-export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams } from './columnReorder';
+export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams, IMoveColumnByStepParams } from './columnReorder';
 export {
   moveRows,
   applyRowOrder,

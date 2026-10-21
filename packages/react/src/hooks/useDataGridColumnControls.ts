@@ -9,8 +9,8 @@ import type { IColumnDef, IOGridDataGridProps } from '../types';
 
 /** Column resize and drag-reorder wiring for the header. */
 export function useDataGridColumnControls<T>(
-  props: Pick<IOGridDataGridProps<T>, 'onColumnResized' | 'columnOrder' | 'onColumnOrderChange' | 'columnReorder' | 'pinnedColumns'>,
-  layout: Pick<DataGridLayoutState<T>, 'columnSizingOverrides' | 'setColumnSizingOverrides' | 'flatColumns'>,
+  props: Pick<IOGridDataGridProps<T>, 'onColumnResized' | 'columnOrder' | 'onColumnOrderChange' | 'columnReorder'>,
+  layout: Pick<DataGridLayoutState<T>, 'columnSizingOverrides' | 'setColumnSizingOverrides' | 'flatColumns' | 'userPinnedColumns'>,
   wrapperRef: RefObject<HTMLDivElement | null>,
 ) {
   // Report drag resizes and double-click autosizes so the host (and OGrid's
@@ -32,7 +32,9 @@ export function useDataGridColumnControls<T>(
     columnOrder: props.columnOrder,
     onColumnOrderChange: props.onColumnOrderChange,
     enabled: props.columnReorder === true,
-    pinnedColumns: props.pinnedColumns,
+    // Explicit pins, so a column pinned by its def or the pin menu is a zone
+    // even when the grid isn't given `pinnedColumns`.
+    pinnedColumns: layout.userPinnedColumns,
     wrapperRef,
   });
   return { resize, reorder };
