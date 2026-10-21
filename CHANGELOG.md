@@ -12,6 +12,11 @@ All notable changes to OGrid will be documented in this file.
 - Multi-select on array-valued columns: `filterable: { type: 'multiSelect', multiValue: true }` lists each array item as an option and matches rows item by item; an empty array is blank.
 - Filter state helpers for URLs and storage: `serializeFilters`, `parseFilters` and `validateFilters`. Parsing never throws; malformed entries, unknown fields and (with `columns`) type mismatches are dropped and reported in `invalid`.
 - `getQuickFilterText(row)`: extra per-row text the quick filter searches besides the visible columns (comments, hidden fields).
+- Keyboard column reordering: with `columnReorder`, each column's header menu has **Move left** and **Move right**. They move the column one position past the next visible column, stay within its pin zone (disabled at the edge), and fire `onColumnOrderChange` like a drag does. Also exported from core: `moveColumnByStep`.
+
+### Fixed
+
+- The column drop indicator now lines up with the header edge when the grid is scrolled horizontally. It was drawn off by the scroll distance.
 
 ### Changed
 
