@@ -29,7 +29,7 @@ import { useOGridFreeze } from './useOGridFreeze';
 import { useLatestRef } from './useLatestRef';
 import { useValidationRules } from './useValidationRules';
 import { useOGridCellNotes } from './useOGridCellNotes';
-import { useSortFilterColumns } from './useSortFilterColumns';
+import { useSortFilterColumns, QUICK_FILTER_FIELDS } from './useSortFilterColumns';
 import {
   buildStatusBarConfig,
   buildSheetRowIndex,
@@ -154,10 +154,18 @@ export function useOGrid<T>(
     controlled: props.quickFilter, defaultValue: props.defaultQuickFilter,
     onChange: useStableOptionalCallback(props.onQuickFilterChange), setPage,
   });
-  const quickFilterColumns = useMemo(
-    () => processingColumns.filter((c) => visibleColumns.has(c.columnId)),
-    [processingColumns, visibleColumns],
-  );
+  // The quick filter matches shown text, so unlike sorting it follows formatter
+  // changes; formula columns keep the computed values from processingColumns.
+  const searchColumns = useSortFilterColumns(columns, QUICK_FILTER_FIELDS);
+  const quickFilterColumns = useMemo(() => {
+    const processed = new Map(processingColumns.map((c) => [c.columnId, c]));
+    return searchColumns
+      .filter((c) => visibleColumns.has(c.columnId))
+      .map((c) => {
+        const p = processed.get(c.columnId);
+        return p && p.valueGetter !== c.valueGetter ? { ...c, valueGetter: p.valueGetter } : c;
+      });
+  }, [searchColumns, processingColumns, visibleColumns]);
   const structureVersionRef = useRef(0);
   const dataFetchingState = useOGridDataFetching({
     isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, structureVersionRef, columns: processingColumns,
