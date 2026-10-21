@@ -203,6 +203,13 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
       expect(bordered.firstElementChild?.querySelector('[data-ogrid-scroll-container]')).not.toBeNull();
     });
 
+    it('keeps a toolbar that has a search box in it, without the chooser', () => {
+      renderOGrid({ headerMenu: true, quickFilterBox: true });
+      expect(screen.getByRole('searchbox', { name: 'Search all columns' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /column visibility/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Grid options' })).toBeInTheDocument();
+    });
+
     it('keeps the toolbar chooser when columnChooser is set explicitly', () => {
       renderOGrid({ headerMenu: true, columnChooser: 'toolbar' });
       expect(screen.getByRole('button', { name: /column visibility/i })).toBeInTheDocument();
