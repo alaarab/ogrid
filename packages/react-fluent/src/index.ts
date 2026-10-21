@@ -36,6 +36,7 @@ export type {
   UserLike,
   UserLikeInput,
   FilterValue,
+  MultiSelectFilterMode,
   IFilters,
   IFetchParams,
   IPageResult,
@@ -288,6 +289,11 @@ export {
   mergeFilter,
   deriveFilterOptionsFromData,
   getMultiSelectFilterFields,
+  serializeFilters,
+  parseFilters,
+  validateFilters,
+  createMultiSelectMatcher,
+  getMultiSelectCellValues,
   getStatusBarParts,
   getDataGridStatusBarConfig,
   GRID_CONTEXT_MENU_ITEMS,
@@ -409,3 +415,4 @@ export type {
   CellDragPayload, UseGridDragDropParams, UseGridDragDropResult, CellDropEvent, RowDropLine,
 } from '@alaarab/ogrid-react';
 export type { IDataValidationRule, IDataValidationFailure, DataValidationOperator, DataValidationAlertStyle, OnValidationFail } from '@alaarab/ogrid-core';
+export type { IFilterValidationResult, IInvalidFilter } from '@alaarab/ogrid-core';

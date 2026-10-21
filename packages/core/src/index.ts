@@ -28,6 +28,7 @@ export type {
   UserLike,
   UserLikeInput,
   FilterValue,
+  MultiSelectFilterMode,
   IFilters,
   ISortModelItem,
   SortModel,
@@ -234,6 +235,10 @@ export {
 
 // Utils  -  quickFilter
 export { createQuickFilterPredicate, getQuickFilterTerms } from './utils';
+
+// Utils  -  multi-select matching, filter state serialization
+export { createMultiSelectMatcher, getMultiSelectCellValues, serializeFilters, parseFilters, validateFilters } from './utils';
+export type { IFilterValidationResult, IInvalidFilter } from './utils';
 export type { SortFilterRequest, SortFilterResponse } from './utils';
 
 // Utils  -  dataGridViewModel

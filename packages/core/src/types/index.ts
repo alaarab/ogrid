@@ -28,6 +28,7 @@ export type {
   UserLike,
   UserLikeInput,
   FilterValue,
+  MultiSelectFilterMode,
   IFilters,
   ISortModelItem,
   SortModel,

@@ -154,6 +154,9 @@ export function useOGrid<T>(
     controlled: props.quickFilter, defaultValue: props.defaultQuickFilter,
     onChange: useStableOptionalCallback(props.onQuickFilterChange), setPage,
   });
+  // A new function re-filters (like a useMemo dependency), so a changed getter
+  // is never stale; memoize it to avoid re-filtering on every render.
+  const quickFilterTextGetter = props.getQuickFilterText;
   // The quick filter matches shown text, so unlike sorting it follows formatter
   // changes; formula columns keep the computed values from processingColumns.
   const searchColumns = useSortFilterColumns(columns, QUICK_FILTER_FIELDS);
@@ -175,6 +178,7 @@ export function useOGrid<T>(
     onError: props.onError, onFirstDataRendered: props.onFirstDataRendered, workerSort: props.workerSort,
     hiddenRowIds: hiddenRows.hiddenRowSet,
     quickFilter: quickFilterState.quickFilter, quickFilterColumns,
+    getQuickFilterText: quickFilterTextGetter,
   });
   const { displayItems, windowed, displayTotalCount } = dataFetchingState;
   // A windowed (lazy) source virtual-scrolls all rows: no pages, no pager.
