@@ -175,6 +175,21 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     expect(screen.getByRole('button', { name: /fullscreen/i })).toBeInTheDocument();
   });
 
+  it('onFullScreenChange reports fullscreen and isFullScreen controls it', () => {
+    const onFullScreenChange = jest.fn();
+    const first = renderOGrid({ fullScreen: true, onFullScreenChange });
+    fireEvent.click(screen.getByRole('button', { name: /fullscreen/i }));
+    expect(onFullScreenChange).toHaveBeenLastCalledWith(true);
+    expect((first.container.firstElementChild as HTMLElement).style.zIndex).toBe('var(--ogrid-z-fullscreen, 9999)');
+    expect(document.body.style.overflow).toBe('hidden');
+    first.unmount();
+    expect(document.body.style.overflow).toBe('');
+
+    const { container } = renderOGrid({ isFullScreen: true });
+    expect((container.firstElementChild as HTMLElement).style.position).toBe('fixed');
+    expect(screen.queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
+  });
+
   it('cellReferences=true renders column letters, row numbers, and name box', () => {
     const { container } = renderOGrid({ cellReferences: true });
     // Column letters should be present
