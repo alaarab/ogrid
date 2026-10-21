@@ -231,6 +231,23 @@ scale that `preset-shadcn.css` bridges automatically:
 Override `--ogrid-radius` once and every corner in OGrid scales (sm/lg/xl
 are `calc()`'d from the base).
 
+### Stacking order
+
+The grid's layers use `--ogrid-z-*` variables. The two that meet the rest of your page:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `--ogrid-z-fullscreen` | `9999` | The grid while it fills the viewport (`fullScreen`) |
+| `--ogrid-z-popover` | `10001` | OGrid's own popovers, menus and editors, kept above the fullscreen grid |
+
+If your app's dialogs and menus portal at a lower layer, a fullscreen grid covers them. Lower the fullscreen layer below your overlays:
+
+```css
+:root {
+  --ogrid-z-fullscreen: 45; /* under dialogs at z-index 50 */
+}
+```
+
 ### Dark mode signals
 
 OGrid honors three dark-mode activation signals:

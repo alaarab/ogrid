@@ -65,6 +65,46 @@ test.describe('Fullscreen layering', () => {
   });
 });
 
+test.describe('Fullscreen page', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await waitForGrid(page);
+  });
+
+  /** The fixed root the fullscreen grid renders into. */
+  function fullscreenRoot(page: Page): Locator {
+    return page.locator('div[style*="position: fixed"]').filter({ has: page.getByRole('button', { name: 'Exit fullscreen' }) });
+  }
+
+  test('--ogrid-z-fullscreen sets the fullscreen layer', async ({ page }) => {
+    await page.evaluate(() => document.documentElement.style.setProperty('--ogrid-z-fullscreen', '45'));
+    await enterFullscreen(page);
+    expect(await fullscreenRoot(page).evaluate((el) => getComputedStyle(el).zIndex)).toBe('45');
+  });
+
+  test('locks page scroll and puts the scroll position back on exit', async ({ page }) => {
+    // Make the grid what makes the page tall, so the page gets shorter when the
+    // grid leaves the page flow and the browser would clamp the scroll.
+    await page.getByRole('button', { name: 'Fullscreen', exact: true }).evaluate((b) => {
+      // root > bordered container > toolbar strip > end section > button
+      const root = b.parentElement?.parentElement?.parentElement?.parentElement;
+      if (!root) throw new Error('no grid root');
+      root.style.minHeight = '3000px';
+      window.scrollTo(0, 400);
+    });
+    const before = await page.evaluate(() => window.scrollY);
+    expect(before).toBeGreaterThan(0);
+    // Click through the DOM: Playwright's click would first scroll the button into view.
+    await page.getByRole('button', { name: 'Fullscreen', exact: true }).evaluate((b: HTMLElement) => b.click());
+    await expect(page.getByRole('button', { name: 'Exit fullscreen' })).toBeVisible();
+    expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).toBe('hidden');
+    await page.getByRole('button', { name: 'Exit fullscreen' }).evaluate((b: HTMLElement) => b.click());
+    await expect(page.getByRole('button', { name: 'Fullscreen', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).not.toBe('hidden');
+    expect(await page.evaluate(() => window.scrollY)).toBe(before);
+  });
+});
+
 /** The grid's horizontal scroller: the table's nearest ancestor that scrolls on x. */
 function scrollGridTo(page: Page, scrollLeft: number) {
   return page.evaluate((left) => {

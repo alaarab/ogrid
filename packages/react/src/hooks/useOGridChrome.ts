@@ -27,7 +27,7 @@ const NAME_BOX_STYLE: React.CSSProperties = {
 export function useOGridChrome<T>(
   props: Pick<
     IOGridProps<T>,
-    'toolbar' | 'toolbarBelow' | 'className' | 'emptyState' | 'fullScreen' | 'sheetDefs' | 'activeSheet' | 'onSheetChange' | 'onSheetAdd'
+    'toolbar' | 'toolbarBelow' | 'className' | 'emptyState' | 'fullScreen' | 'isFullScreen' | 'onFullScreenChange' | 'sheetDefs' | 'activeSheet' | 'onSheetChange' | 'onSheetAdd'
     | 'onSheetRename' | 'onSheetReorder' | 'onSheetDelete' | 'onSheetColorChange'
   >,
   showNameBox: boolean,
@@ -37,7 +37,7 @@ export function useOGridChrome<T>(
   nameBox?: Pick<UseOGridNameBoxResult, 'navigate' | 'returnFocus'>,
 ): UseOGridLayout {
   const { toolbar, toolbarBelow, className, emptyState, fullScreen, sheetDefs, activeSheet, onSheetChange, onSheetAdd } = props;
-  const { onSheetRename, onSheetReorder, onSheetDelete, onSheetColorChange } = props;
+  const { onSheetRename, onSheetReorder, onSheetDelete, onSheetColorChange, isFullScreen, onFullScreenChange } = props;
 
   const navigate = nameBox?.navigate;
   const returnFocus = nameBox?.returnFocus;
@@ -74,7 +74,9 @@ export function useOGridChrome<T>(
     emptyState,
     sideBarProps,
     fullScreen,
+    isFullScreen,
+    onFullScreenChange,
     formulaBar,
     sheetTabs: sheetTabsEl,
-  }), [resolvedToolbar, toolbarBelow, className, emptyState, sideBarProps, fullScreen, formulaBar, sheetTabsEl]);
+  }), [resolvedToolbar, toolbarBelow, className, emptyState, sideBarProps, fullScreen, isFullScreen, onFullScreenChange, formulaBar, sheetTabsEl]);
 }

@@ -4,6 +4,16 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `isFullScreen` and `onFullScreenChange` let apps control and follow fullscreen. `isFullScreen` also works without the `fullScreen` toolbar button.
+
+### Fixed
+
+- The fullscreen grid's layer now comes from `--ogrid-z-fullscreen` (default `9999`) instead of a fixed inline `9999`, so apps can put their own dialogs and menus above it.
+- Fullscreen now locks page scroll and puts the page's scroll position back on exit. Before, the page could get shorter behind the overlay and lose its scroll position.
+- With a `max-height` on the grid, the toolbar, filter chip row and footer no longer shrink and clip their contents; the grid body takes the squeeze.
+
 ### Changed
 
 - Packages are now published with npm Trusted Publishing (GitHub Actions OIDC) instead of a long-lived npm token. No code changes.

@@ -160,7 +160,9 @@ See [Structure Editing](../features/structure-editing).
 | `layoutMode` | `'content' \| 'fill'` | `'fill'` | How the grid sizes itself. `'content'` sizes to fit content. `'fill'` expands to fill its container. |
 | `suppressHorizontalScroll` | `boolean` | `false` | When `true`, disables horizontal scrolling by setting `overflow-x: hidden` on the grid wrapper. |
 | `stickyHeader` | `boolean` | `true` | When `true`, column headers stick to the top of the scroll container during vertical scrolling. Set to `false` to let headers scroll with data. |
-| `fullScreen` | `boolean` | `false` | When `true`, renders a fullscreen toggle button in the toolbar. Clicking it expands the grid to fill the entire viewport. Press **Escape** or click the button again to exit. |
+| `fullScreen` | `boolean` | `false` | When `true`, renders a fullscreen toggle button in the toolbar. Clicking it expands the grid to fill the entire viewport. Press **Escape** or click the button again to exit. The page behind is scroll-locked while fullscreen, and its scroll position comes back on exit. The layer is `--ogrid-z-fullscreen` (default `9999`); see [Theming](../guides/theming#stacking-order). |
+| `isFullScreen` | `boolean` | `undefined` | Controlled fullscreen state. Leave it unset to let the grid keep it. Works without `fullScreen`, for your own toggle. |
+| `onFullScreenChange` | `(isFullScreen: boolean) => void` | `undefined` | Called when the toolbar button or **Escape** enters or leaves fullscreen. With `isFullScreen` set, update it here. |
 | `rowHeight` | `number` | `36` | Fixed row height in pixels. Affects layout and virtual scrolling row height calculation. |
 | `density` | `'compact' \| 'normal' \| 'comfortable'` | `'normal'` | Cell spacing preset. Controls cell padding throughout the grid. |
 | `showRowNumbers` | `boolean` | `false` | Show Excel-style row number column (1, 2, 3...) at the start of the grid. |
