@@ -317,8 +317,9 @@ export function useDataGridLayout<T>(
   );
 
   // Keyboard reorder from the header menu: one displayed position at a time,
-  // never out of the column's pin zone. Zones come from the same pins as a
-  // header drag (`pinnedColumns`), so frozen columns are not a zone of their own.
+  // never out of the column's pin zone. Zones come from the explicit pins, the
+  // same as a header drag, so frozen columns are not a zone of their own.
+  const userPinnedColumns = pinningResult.userPinnedColumns;
   const { columnReorder, onColumnOrderChange } = params;
   const onColumnOrderChangeRef = useLatestRef(onColumnOrderChange);
   const reorderOn = columnReorder === true && onColumnOrderChange != null;
@@ -326,7 +327,7 @@ export function useDataGridLayout<T>(
     (columnId: string, direction: 'left' | 'right') => {
       const left: string[] = [];
       const right: string[] = [];
-      for (const [id, side] of Object.entries(pinnedColumns ?? {})) (side === 'left' ? left : right).push(id);
+      for (const [id, side] of Object.entries(userPinnedColumns)) (side === 'left' ? left : right).push(id);
       return moveColumnByStep({
         columnOrder: orderColumns(flatColumns, columnOrder).map((c) => c.columnId),
         displayedColumnIds: visibleCols.map((c) => c.columnId),
@@ -335,7 +336,7 @@ export function useDataGridLayout<T>(
         pinnedColumns: { left, right },
       });
     },
-    [pinnedColumns, flatColumns, columnOrder, visibleCols]
+    [userPinnedColumns, flatColumns, columnOrder, visibleCols]
   );
   const onMoveColumn = useMemo(
     () => reorderOn
@@ -375,12 +376,12 @@ export function useDataGridLayout<T>(
 
   // Memoize layout sub-object
   const layoutState = useMemo<DataGridLayoutState<T>>(() => ({
-    flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
+    flatColumns, userPinnedColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
     hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
     desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
     measuredColumnWidths, hiddenColumnGaps,
   }), [
-    flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
+    flatColumns, userPinnedColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
     hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
     desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
     measuredColumnWidths, hiddenColumnGaps,
