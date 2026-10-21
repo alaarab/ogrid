@@ -95,6 +95,8 @@ export function createOGrid(components: CreateOGridComponents) {
         toolbar={layout.toolbar}
         toolbarBelow={layout.toolbarBelow}
         fullScreen={layout.fullScreen}
+        isFullScreen={layout.isFullScreen}
+        onFullScreenChange={layout.onFullScreenChange}
         formulaBar={layout.formulaBar}
         sheetTabs={layout.sheetTabs}
         toolbarEnd={
