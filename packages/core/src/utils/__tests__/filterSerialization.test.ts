@@ -78,3 +78,46 @@ describe('filter serialization', () => {
     ]);
   });
 });
+
+describe('hostile and malformed input', () => {
+  it('never throws on inherited names or objects where strings belong', () => {
+    const hostile = [
+      '{"a":{"type":"condition","value":{"kind":"constructor","conditions":[{"operator":"equals","value":1}]}}}',
+      '{"a":{"type":"condition","value":{"kind":"toString","conditions":[]}}}',
+      '{"a":{"type":"multiSelect","value":["x"],"mode":{"toString":null}}}',
+      '{"a":{"type":"condition","value":{"kind":"number","conditions":[{"operator":{"toString":null}}]}}}',
+    ];
+    for (const text of hostile) {
+      expect(() => parseFilters(text)).not.toThrow();
+      expect(() => parseFilters(text, columns)).not.toThrow();
+      expect(Object.keys(parseFilters(text).filters)).toEqual([]);
+    }
+    expect(parseFilters(hostile[0]).invalid[0]?.reason).toBe('unknown condition kind "constructor"');
+    expect(parseFilters(hostile[2]).invalid[0]?.reason).toBe('multiSelect mode must be a string');
+  });
+
+  it('drops an entry whose fields throw when read', () => {
+    const entry = {};
+    Object.defineProperty(entry, 'type', { enumerable: true, get() { throw new Error('boom'); } });
+    const result = validateFilters({ a: entry });
+    expect(result.filters).toEqual({});
+    expect(result.invalid).toEqual([{ field: 'a', reason: 'unreadable filter value' }]);
+  });
+
+  it('rejects date bounds that are not real days instead of widening the range', () => {
+    expect(validateFilters({ d: { type: 'date', value: { from: '2026-99-99' } } }).invalid[0]?.reason).toBe('date from must be a real day (YYYY-MM-DD)');
+    expect(validateFilters({ d: { type: 'date', value: { from: '2026-02-30' } } }).filters).toEqual({});
+    const mixed = validateFilters({ d: { type: 'date', value: { from: '2026-01-01', to: 'soon' } } });
+    expect(mixed.filters).toEqual({});
+    expect(mixed.invalid[0]?.reason).toBe('date to must be a real day (YYYY-MM-DD)');
+    expect(validateFilters({ d: { type: 'date', value: { from: '2024-02-29' } } }).filters).toEqual({ d: { type: 'date', value: { from: '2024-02-29' } } });
+  });
+
+  it('keeps a "__proto__" field as an own entry and round-trips it', () => {
+    const { filters, invalid } = parseFilters('{"__proto__":{"type":"text","value":"x"}}');
+    expect(invalid).toEqual([]);
+    expect(Object.keys(filters)).toEqual(['__proto__']);
+    expect(Object.getPrototypeOf(filters)).toBe(Object.prototype);
+    expect(serializeFilters(filters)).toBe('{"__proto__":{"type":"text","value":"x"}}');
+  });
+});

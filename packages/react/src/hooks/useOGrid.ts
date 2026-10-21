@@ -154,14 +154,9 @@ export function useOGrid<T>(
     controlled: props.quickFilter, defaultValue: props.defaultQuickFilter,
     onChange: useStableOptionalCallback(props.onQuickFilterChange), setPage,
   });
-  // Held stable: an inline callback must not re-filter on every render. Changing
-  // what it returns for the same rows needs new data (or new quick filter text).
-  const quickFilterTextRef = useLatestRef(props.getQuickFilterText);
-  const hasQuickFilterText = props.getQuickFilterText != null;
-  const quickFilterTextGetter = useMemo(
-    () => (hasQuickFilterText ? (row: T) => quickFilterTextRef.current?.(row) : undefined),
-    [hasQuickFilterText, quickFilterTextRef],
-  );
+  // A new function re-filters (like a useMemo dependency), so a changed getter
+  // is never stale; memoize it to avoid re-filtering on every render.
+  const quickFilterTextGetter = props.getQuickFilterText;
   const quickFilterColumns = useMemo(
     () => processingColumns.filter((c) => visibleColumns.has(c.columnId)),
     [processingColumns, visibleColumns],

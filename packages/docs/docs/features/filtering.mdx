@@ -254,10 +254,12 @@ With your own input, consider debouncing it for large grids; the built-in box al
 To search text that isn't in a visible column (comments, notes, ids), return it from `getQuickFilterText`. Terms can match it like a column:
 
 ```tsx
-<OGrid quickFilterBox getQuickFilterText={(report) => report.comments.join(' ')} {...props} />
+const getQuickFilterText = (report: Report) => report.comments.join(' ');
+
+<OGrid quickFilterBox getQuickFilterText={getQuickFilterText} {...props} />
 ```
 
-The grid reads it when the rows or the search text change, so a change to what it returns shows up with the next data update.
+Passing a new function re-filters, so define it outside the component or wrap it in `useCallback`, and change its dependencies when what it returns changes. As with column filters, an edited row keeps its place until the filters, the search text or the getter change.
 
 With a `dataSource`, the grid does not search rows itself: it passes the trimmed text to `fetchPage` (and windowed `getRows` / `getRowCount`) as `quickFilter`, and your server applies it.
 
