@@ -193,6 +193,14 @@ const ESCAPE_OWNER_SELECTOR =
 interface PageScroll { x: number; y: number }
 
 /**
+ * One lock for the page, shared by every fullscreen grid: the first lock saves
+ * the page's overflow and scroll position, the last release puts them back.
+ * Per-grid locks would unlock the page under a grid that is still fullscreen.
+ */
+let pageLockCount = 0;
+let pageLockSaved: { html: string; body: string; scroll: PageScroll } | null = null;
+
+/**
  * Locks page scroll while a grid covers the viewport and returns the release.
  * The grid leaves the page flow, so the page can get shorter and the browser
  * clamps its scroll; the release puts back `scroll`, read before that happened.
@@ -200,14 +208,23 @@ interface PageScroll { x: number; y: number }
 function lockPageScroll(scroll: PageScroll): () => void {
   const html = document.documentElement;
   const body = document.body;
-  const prevHtmlOverflow = html.style.overflow;
-  const prevBodyOverflow = body.style.overflow;
-  html.style.overflow = 'hidden';
-  body.style.overflow = 'hidden';
+  if (pageLockCount === 0) {
+    pageLockSaved = { html: html.style.overflow, body: body.style.overflow, scroll };
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+  }
+  pageLockCount++;
+  let released = false;
   return () => {
-    html.style.overflow = prevHtmlOverflow;
-    body.style.overflow = prevBodyOverflow;
-    window.scrollTo(scroll.x, scroll.y);
+    if (released) return;
+    released = true;
+    pageLockCount--;
+    if (pageLockCount > 0 || !pageLockSaved) return;
+    const saved = pageLockSaved;
+    pageLockSaved = null;
+    html.style.overflow = saved.html;
+    body.style.overflow = saved.body;
+    window.scrollTo(saved.scroll.x, saved.scroll.y);
   };
 }
 
@@ -247,8 +264,12 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
 
   const setIsFullScreen = useCallback((next: boolean) => {
     if (next === isFullScreenRef.current) return;
-    isFullScreenRef.current = next;
-    if (!isControlled) setInternalFullScreen(next);
+    // Controlled: only ask. The state moves when the parent passes it back,
+    // so a declined request leaves the next one asking for the same thing.
+    if (!isControlled) {
+      isFullScreenRef.current = next;
+      setInternalFullScreen(next);
+    }
     onFullScreenChangeRef.current?.(next);
   }, [isControlled]);
 
