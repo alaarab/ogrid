@@ -47,6 +47,8 @@ export interface UseOGridLayout {
   emptyState?: { message?: React.ReactNode; render?: () => React.ReactNode };
   sideBarProps: SideBarProps | null;
   fullScreen?: boolean;
+  isFullScreen?: boolean;
+  onFullScreenChange?: (isFullScreen: boolean) => void;
   /** Formula bar element (rendered between toolbar and grid when formulas are enabled). */
   formulaBar?: React.ReactNode;
   /** Sheet tabs element (rendered between grid and footer when sheetDefs are provided). */

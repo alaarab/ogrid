@@ -362,6 +362,13 @@ interface IOGridBaseProps<T> extends IDataValidationProps<T> {
 
   /** When true, shows a fullscreen toggle button in the toolbar. Default: false. */
   fullScreen?: boolean;
+  /**
+   * Controlled fullscreen state. Leave undefined to let the grid keep it.
+   * Works without `fullScreen` too, for an app's own toggle.
+   */
+  isFullScreen?: boolean;
+  /** Called when the toolbar button or Escape enters or leaves fullscreen. */
+  onFullScreenChange?: (isFullScreen: boolean) => void;
 
   /** Side bar configuration. `true` shows default panels (columns + filters). Pass ISideBarDef for options. */
   sideBar?: boolean | ISideBarDef;

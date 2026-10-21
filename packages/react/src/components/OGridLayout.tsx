@@ -4,7 +4,7 @@
  */
 
 import * as React from 'react';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { SideBar } from './SideBar';
 import type { SideBarProps } from './SideBar';
 import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
@@ -25,6 +25,10 @@ export interface OGridLayoutProps {
   sideBar?: SideBarProps | null;
   /** When true, render a fullscreen toggle button in the toolbar. */
   fullScreen?: boolean;
+  /** Controlled fullscreen state. Leave undefined to let the grid keep it. */
+  isFullScreen?: boolean;
+  /** Called when the toggle button or Escape asks to enter or leave fullscreen. */
+  onFullScreenChange?: (isFullScreen: boolean) => void;
   /** Formula bar element (rendered between toolbar and grid). */
   formulaBar?: React.ReactNode;
   /** Sheet tabs element (rendered between grid and footer). */
@@ -58,6 +62,8 @@ const toolbarStripBase: React.CSSProperties = {
   gap: 8,
   flexWrap: 'wrap',
   minHeight: 0,
+  // A max-height on the grid shrinks the grid body, never the toolbar.
+  flexShrink: 0,
 };
 
 /** Toolbar strip with border-bottom (when it's the only toolbar row). */
@@ -92,12 +98,14 @@ const toolbarSectionStyle: React.CSSProperties = {
 
 /** Secondary toolbar row (e.g. active filter chips). Matches toolbar strip styling. */
 const toolbarBelowStyle: React.CSSProperties = {
+  flexShrink: 0,
   borderBottom: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
   padding: '6px 12px',
   background: 'var(--ogrid-header-bg, #f5f5f5)',
 };
 
 const footerStripStyle: React.CSSProperties = {
+  flexShrink: 0,
   borderTop: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
   background: 'var(--ogrid-header-bg, #f5f5f5)',
   padding: '6px 12px',
@@ -139,7 +147,7 @@ const rootStyle: React.CSSProperties = {
 const fullscreenRootStyle: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
-  zIndex: 9999,
+  zIndex: 'var(--ogrid-z-fullscreen, 9999)',
   display: 'flex',
   flexDirection: 'column',
   background: 'var(--ogrid-bg, #fff)',
@@ -167,19 +175,58 @@ const ExpandIcon = () => (
   </svg>
 );
 
-// SVG collapse icon (exit fullscreen)
+// SVG collapse icon (exit fullscreen): the expand icon's arrows turned inward,
+// kept inside the same 2-14 box so no stroke touches the viewBox edge.
 const CollapseIcon = () => (
   <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="4 10 0 10 0 14" />
-    <polyline points="12 6 16 6 16 2" />
-    <line x1="0" y1="10" x2="4" y2="6" />
-    <line x1="16" y1="6" x2="12" y2="10" />
+    <polyline points="2 10 6 10 6 14" />
+    <polyline points="14 6 10 6 10 2" />
+    <line x1="2" y1="14" x2="6" y2="10" />
+    <line x1="14" y1="2" x2="10" y2="6" />
   </svg>
 );
 
 /** Focus inside these means Escape belongs to them (text entry, popovers, menus), not full screen. */
 const ESCAPE_OWNER_SELECTOR =
   'input:not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable=""], [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"]';
+
+interface PageScroll { x: number; y: number }
+
+/**
+ * One lock for the page, shared by every fullscreen grid: the first lock saves
+ * the page's overflow and scroll position, the last release puts them back.
+ * Per-grid locks would unlock the page under a grid that is still fullscreen.
+ */
+let pageLockCount = 0;
+let pageLockSaved: { html: string; body: string; scroll: PageScroll } | null = null;
+
+/**
+ * Locks page scroll while a grid covers the viewport and returns the release.
+ * The grid leaves the page flow, so the page can get shorter and the browser
+ * clamps its scroll; the release puts back `scroll`, read before that happened.
+ */
+function lockPageScroll(scroll: PageScroll): () => void {
+  const html = document.documentElement;
+  const body = document.body;
+  if (pageLockCount === 0) {
+    pageLockSaved = { html: html.style.overflow, body: body.style.overflow, scroll };
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+  }
+  pageLockCount++;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    pageLockCount--;
+    if (pageLockCount > 0 || !pageLockSaved) return;
+    const saved = pageLockSaved;
+    pageLockSaved = null;
+    html.style.overflow = saved.html;
+    body.style.overflow = saved.body;
+    window.scrollTo(saved.scroll.x, saved.scroll.y);
+  };
+}
 
 /**
  * Renders OGrid layout as a unified bordered container:
@@ -203,12 +250,54 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
     fullScreen,
     formulaBar,
     sheetTabs,
+    isFullScreen: controlledFullScreen,
+    onFullScreenChange,
   } = props;
 
-  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [internalFullScreen, setInternalFullScreen] = useState(false);
+  const isFullScreen = controlledFullScreen ?? internalFullScreen;
+  const isFullScreenRef = useRef(isFullScreen);
+  isFullScreenRef.current = isFullScreen;
+  const isControlled = controlledFullScreen !== undefined;
+  const onFullScreenChangeRef = useRef(onFullScreenChange);
+  onFullScreenChangeRef.current = onFullScreenChange;
+
+  const setIsFullScreen = useCallback((next: boolean) => {
+    if (next === isFullScreenRef.current) return;
+    // Controlled: only ask. The state moves when the parent passes it back,
+    // so a declined request leaves the next one asking for the same thing.
+    if (!isControlled) {
+      isFullScreenRef.current = next;
+      setInternalFullScreen(next);
+    }
+    onFullScreenChangeRef.current?.(next);
+  }, [isControlled]);
 
   const toggleFullScreen = useCallback(() => {
-    setIsFullScreen((prev) => !prev);
+    setIsFullScreen(!isFullScreenRef.current);
+  }, [setIsFullScreen]);
+
+  // Lock the page behind the overlay. Released after the grid is back in the
+  // page flow (not in a cleanup, which can run before that), so the restored
+  // scroll position isn't clamped by a shorter page.
+  const releaseScrollLockRef = useRef<(() => void) | null>(null);
+  // Read during the render that enters fullscreen: by the layout effect the
+  // grid is already fixed and the browser has clamped the page scroll.
+  const pageScrollRef = useRef<PageScroll>({ x: 0, y: 0 });
+  if (isFullScreen && !releaseScrollLockRef.current && typeof window !== 'undefined') {
+    pageScrollRef.current = { x: window.scrollX, y: window.scrollY };
+  }
+  useLayoutEffect(() => {
+    if (isFullScreen) {
+      if (!releaseScrollLockRef.current) releaseScrollLockRef.current = lockPageScroll(pageScrollRef.current);
+    } else if (releaseScrollLockRef.current) {
+      releaseScrollLockRef.current();
+      releaseScrollLockRef.current = null;
+    }
+  }, [isFullScreen]);
+  useEffect(() => () => {
+    releaseScrollLockRef.current?.();
+    releaseScrollLockRef.current = null;
   }, []);
 
   // ESC key to exit fullscreen
@@ -225,7 +314,7 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isFullScreen]);
+  }, [isFullScreen, setIsFullScreen]);
 
   const hasSideBar = sideBar != null;
   const sideBarPosition = sideBar?.position ?? 'right';
