@@ -155,3 +155,40 @@ export function calculateDropTarget(
 
   return { targetIndex, indicatorX };
 }
+
+/** Parameters for {@link moveColumnByStep}. */
+export interface IMoveColumnByStepParams {
+  /** Full column order, hidden columns included (array of column ids). */
+  columnOrder: string[];
+  /** Columns as currently displayed, left to right (visible columns only). */
+  displayedColumnIds: readonly string[];
+  /** The column to move. */
+  columnId: string;
+  /** Move one displayed position to the left or to the right. */
+  direction: 'left' | 'right';
+  /** Pinned column configuration; a column never leaves its pin zone. */
+  pinnedColumns?: { left?: string[]; right?: string[] };
+}
+
+/**
+ * Move a column one displayed position left or right: past its visible
+ * neighbor, so hidden columns in between keep their place. This is the
+ * keyboard counterpart of a header drag.
+ *
+ * @returns The new full order, or null when the column is already at the edge
+ *   of its pin zone (or is not displayed).
+ */
+export function moveColumnByStep(params: IMoveColumnByStepParams): string[] | null {
+  const { columnOrder, displayedColumnIds, columnId, direction, pinnedColumns } = params;
+  const shownIndex = displayedColumnIds.indexOf(columnId);
+  if (shownIndex === -1) return null;
+  const neighbor = displayedColumnIds[direction === 'left' ? shownIndex - 1 : shownIndex + 1];
+  if (neighbor === undefined) return null;
+  if (getPinStateForColumn(neighbor, pinnedColumns) !== getPinStateForColumn(columnId, pinnedColumns)) return null;
+  const order = columnOrder.includes(columnId) && columnOrder.includes(neighbor)
+    ? columnOrder
+    : [...columnOrder, ...displayedColumnIds.filter((id) => !columnOrder.includes(id))];
+  const without = order.filter((id) => id !== columnId);
+  const neighborIndex = without.indexOf(neighbor);
+  return reorderColumnArray(without, columnId, direction === 'left' ? neighborIndex : neighborIndex + 1);
+}

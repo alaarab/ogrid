@@ -1,4 +1,4 @@
-import type { FilterOption } from '@alaarab/ogrid-core';
+import type { FilterOption, MultiSelectFilterMode } from '@alaarab/ogrid-core';
 /**
  * Shared filter content rendering for ColumnHeaderFilter across all React UI packages.
  * Each UI package provides its own popover wrapper + trigger; this component renders
@@ -27,7 +27,12 @@ export interface IColumnHeaderFilterProps {
   /** Toggle the sort; `{ additive: true }` (Shift+click) adds or cycles a sort level. */
   onSort?: (options?: { additive?: boolean }) => void;
   selectedValues?: string[];
-  onFilterChange?: (values: string[]) => void;
+  /** Multi-select: apply the chosen options, and how they match (`any` when omitted). */
+  onFilterChange?: (values: string[], mode?: MultiSelectFilterMode) => void;
+  /** Multi-select: how the applied options match. */
+  multiSelectMode?: MultiSelectFilterMode;
+  /** Multi-select: the match modes offered (Any of / None of, plus All of for `multiValue` columns). */
+  multiSelectModes?: readonly MultiSelectFilterMode[];
   options?: FilterOption[];
   isLoadingOptions?: boolean;
   textValue?: string;
@@ -270,6 +275,8 @@ export function getColumnHeaderFilterStateParams(props: IColumnHeaderFilterProps
     onSort: props.onSort,
     selectedValues: props.selectedValues,
     onFilterChange: props.onFilterChange,
+    multiSelectMode: props.multiSelectMode,
+    multiSelectModes: props.multiSelectModes,
     options: props.options,
     isLoadingOptions: props.isLoadingOptions ?? false,
     textValue: props.textValue ?? '',

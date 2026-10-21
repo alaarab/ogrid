@@ -54,6 +54,11 @@ sort / filter / page props as plain hook parameters, and the
 |------|------|---------|-------------|
 | `filters` | `IFilters` | `undefined` | Controlled filter state. A record mapping field names to filter values. See [Types](./types) for `IFilters`. |
 | `onFiltersChange` | `(filters: IFilters) => void` | `undefined` | Callback fired when the user applies or clears a filter. Required for controlled filter mode. |
+| `quickFilter` | `string` | `undefined` | Controlled quick filter text: every space-separated term must appear in one of a row's visible columns. Sent to data sources as `quickFilter`. See [Quick filter](../features/filtering#quick-filter-search-box). |
+| `defaultQuickFilter` | `string` | `''` | Starting quick filter text when `quickFilter` is not set. |
+| `onQuickFilterChange` | `(text: string) => void` | `undefined` | Fired with the new text when the search box changes it. |
+| `quickFilterBox` | `boolean \| { placeholder?: string; ariaLabel?: string }` | `false` | Show a search box for the quick filter at the start of the toolbar. |
+| `getQuickFilterText` | `(row: T) => string \| null \| undefined` | `undefined` | Extra per-row text the quick filter searches besides the visible columns (client-side). |
 
 ## Pagination
 
@@ -76,7 +81,7 @@ sort / filter / page props as plain hook parameters, and the
 | `columnVisibility` | `IColumnVisibilityState` | `undefined` | Controlled visibility diff. Takes precedence over `visibleColumns`. |
 | `onColumnVisibilityChange` | `(state: IColumnVisibilityState) => void` | `undefined` | Fired with the new diff when the user shows or hides columns. Save this value. |
 | `columnOrder` | `string[]` | `undefined` | Controlled column order as an array of column IDs. |
-| `onColumnOrderChange` | `(order: string[]) => void` | `undefined` | Callback fired when the user reorders columns. |
+| `onColumnOrderChange` | `(order: string[]) => void` | `undefined` | Fired with every column id in the new order when columns are reordered. Save this value. |
 | `onColumnResized` | `(columnId: string, width: number) => void` | `undefined` | Callback fired when the user finishes resizing a column. |
 | `responsiveColumns` | `boolean \| IResponsiveColumnsConfig` | `false` | Auto-hide columns by their `responsivePriority` as the container narrows. `true` uses default breakpoints (576/768/992/1200px); pass a config object for custom thresholds. |
 
@@ -145,7 +150,7 @@ See [Structure Editing](../features/structure-editing).
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
-| `columnReorder` | `boolean` | `false` | Enable drag-and-drop column reordering via header cells. See [Column Reordering](../features/column-reordering). |
+| `columnReorder` | `boolean` | `false` | Enable column reordering: drag a header, or use Move left / Move right in the header menu. See [Column Reordering](../features/column-reordering). |
 
 ## Virtual Scrolling
 

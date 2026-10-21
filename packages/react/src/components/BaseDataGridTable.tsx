@@ -539,8 +539,9 @@ export function BaseDataGridTableContent<T>(
                   />
                 )}
               </TableEl>
+              {/* Offset from the width anchor, its containing block, which moves with horizontal scroll. */}
               {isReorderDragging && dropIndicatorX != null && (
-                <DropIndicator dropIndicatorX={dropIndicatorX} wrapperLeft={wrapperRef.current?.getBoundingClientRect().left ?? 0} />
+                <DropIndicator dropIndicatorX={dropIndicatorX} wrapperLeft={tableContainerRef.current?.getBoundingClientRect().left ?? 0} />
               )}
               {dragDrop.dropLine && (
                 <div

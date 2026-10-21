@@ -161,6 +161,98 @@ export function createColumnModelTests(OGrid: OGridComponent): void {
       expect(headerIds(container)).toEqual(['name', 'status', 'id']);
     });
 
+    it('drag keeps an unpinned column out of a column-def pinned zone', async () => {
+      layout = mockLayout();
+      const columns: IColumnDef<FixtureRow>[] = [{ ...threeColumns[0]!, pinned: 'left' }, threeColumns[1]!, threeColumns[2]!];
+      const onColumnOrderChange = jest.fn();
+      const { container } = renderOGrid({ columns, columnReorder: true, onColumnOrderChange });
+      const idHeader = container.querySelector('th[data-column-id="id"]');
+      if (!idHeader) throw new Error('missing id header');
+      // Dropped over the pinned Name column: lands at the start of the unpinned zone instead.
+      await dragHeader(idHeader, 250, 10);
+      expect(onColumnOrderChange).toHaveBeenCalledWith(['name', 'id', 'status']);
+      expect(headerIds(container)).toEqual(['name', 'id', 'status']);
+    });
+
+    describe('keyboard reorder (header menu)', () => {
+      /** Open a column's header menu from the keyboard and return its items by action id. */
+      function openMenu(container: HTMLElement, columnName: string) {
+        const trigger = container.querySelector<HTMLElement>(`button[aria-label="${columnName} column options"]`);
+        if (!trigger) throw new Error(`missing ${columnName} options button`);
+        act(() => {
+          trigger.focus();
+        });
+        fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+        const item = (id: string) => document.querySelector<HTMLButtonElement>(`[role="menu"] [data-ogrid-menu-action="${id}"]`);
+        return { trigger, moveLeft: item('moveLeft'), moveRight: item('moveRight') };
+      }
+
+      it('is not offered without columnReorder', () => {
+        const { container } = renderOGrid();
+        expect(openMenu(container, 'Name').moveRight).toBeNull();
+      });
+
+      it('Move right / Move left reorder the column and report the order', () => {
+        const onColumnOrderChange = jest.fn();
+        const { container } = renderOGrid({ columnReorder: true, onColumnOrderChange });
+        const first = openMenu(container, 'Name');
+        expect(first.moveLeft?.disabled).toBe(true);
+        fireEvent.click(first.moveRight!);
+        expect(onColumnOrderChange).toHaveBeenLastCalledWith(['status', 'name', 'id']);
+        expect(headerIds(container)).toEqual(['status', 'name', 'id']);
+        expect(bodyIds(container)).toEqual(['status', 'name', 'id']);
+        const again = openMenu(container, 'Name');
+        fireEvent.click(again.moveLeft!);
+        expect(onColumnOrderChange).toHaveBeenLastCalledWith(['name', 'status', 'id']);
+        expect(headerIds(container)).toEqual(['name', 'status', 'id']);
+      });
+
+      it('disables Move right at the end and follows a controlled columnOrder', () => {
+        const onColumnOrderChange = jest.fn();
+        const { container, rerender } = renderOGrid({ columnReorder: true, columnOrder: ['id', 'name', 'status'], onColumnOrderChange });
+        expect(openMenu(container, 'Status').moveRight?.disabled).toBe(true);
+        fireEvent.click(openMenu(container, 'Status').moveLeft!);
+        expect(onColumnOrderChange).toHaveBeenLastCalledWith(['id', 'status', 'name']);
+        // Controlled: the grid shows what the host passes, not its own guess.
+        expect(headerIds(container)).toEqual(['id', 'name', 'status']);
+        rerender(<OGrid data={fixtureRows} columns={threeColumns} getRowId={getRowId} defaultPageSize={10} columnReorder columnOrder={['id', 'status', 'name']} onColumnOrderChange={onColumnOrderChange} />);
+        expect(headerIds(container)).toEqual(['id', 'status', 'name']);
+      });
+
+      it('steps over hidden columns, leaving them in place', () => {
+        const onColumnOrderChange = jest.fn();
+        const { container } = renderOGrid({
+          columnReorder: true, onColumnOrderChange, columnVisibility: { hidden: ['status'], shown: [] },
+        });
+        expect(headerIds(container)).toEqual(['name', 'id']);
+        fireEvent.click(openMenu(container, 'Name').moveRight!);
+        expect(onColumnOrderChange).toHaveBeenLastCalledWith(['status', 'id', 'name']);
+        expect(headerIds(container)).toEqual(['id', 'name']);
+      });
+
+      it('stays inside the pin zone', () => {
+        const onColumnOrderChange = jest.fn();
+        const columns: IColumnDef<FixtureRow>[] = [{ ...threeColumns[0]!, pinned: 'left' }, threeColumns[1]!, threeColumns[2]!];
+        const { container } = renderOGrid({ columns, columnReorder: true, onColumnOrderChange });
+        expect(openMenu(container, 'Status').moveLeft?.disabled).toBe(true);
+        expect(openMenu(container, 'Name').moveRight?.disabled).toBe(true);
+      });
+
+      it('keeps group headers over their leaves when a leaf moves out of its group', () => {
+        const columns = [
+          { headerName: 'Person', children: [threeColumns[0]!, threeColumns[1]!] },
+          threeColumns[2]!,
+        ];
+        const { container } = renderOGrid({ columns, columnReorder: true } as Partial<IOGridProps<FixtureRow>>);
+        fireEvent.click(openMenu(container, 'Status').moveRight!);
+        // Id is a top-level leaf spanning both header rows, so compare the body order only.
+        expect(bodyIds(container)).toEqual(['name', 'id', 'status']);
+        // The Person group splits into one header cell over Name and one over Status.
+        const groups = Array.from(container.querySelectorAll('thead th[scope="colgroup"]')).map((th) => th.textContent);
+        expect(groups).toEqual(['Person', 'Person']);
+      });
+    });
+
     it('applyColumnState({ columnWidths }) after mount changes the rendered width', () => {
       const ref = React.createRef<IOGridApi<FixtureRow>>();
       const { container } = renderOGrid({}, ref);

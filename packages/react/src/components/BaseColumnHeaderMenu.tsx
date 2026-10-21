@@ -39,6 +39,12 @@ export interface BaseColumnHeaderMenuProps {
   canUnhide?: boolean;
   onHideColumn?: () => void;
   onUnhideColumns?: () => void;
+  /** Show "Move left" / "Move right" (`columnReorder`). */
+  canReorder?: boolean;
+  canMoveLeft?: boolean;
+  canMoveRight?: boolean;
+  onMoveLeft?: () => void;
+  onMoveRight?: () => void;
   /** The grid is sorted by other columns: offer "Add to sort". */
   canAddToSort?: boolean;
   classNames?: ColumnHeaderMenuClassNames;
@@ -85,6 +91,11 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     canUnhide = false,
     onHideColumn,
     onUnhideColumns,
+    canReorder = false,
+    canMoveLeft = false,
+    canMoveRight = false,
+    onMoveLeft,
+    onMoveRight,
     canAddToSort = false,
     classNames,
     columnName,
@@ -109,8 +120,11 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       canHide,
       canUnhide,
       canAddToSort: canAddToSort && onAddToSort != null,
+      canReorder,
+      canMoveLeft,
+      canMoveRight,
     }),
-    [canPinLeft, canPinRight, canUnpin, currentSort, isSortable, isResizable, canEditStructure, canHide, canUnhide, canAddToSort, onAddToSort]
+    [canPinLeft, canPinRight, canUnpin, currentSort, isSortable, isResizable, canEditStructure, canHide, canUnhide, canAddToSort, onAddToSort, canReorder, canMoveLeft, canMoveRight]
   );
 
   const items = React.useMemo(() => getColumnHeaderMenuItems(menuInput), [menuInput]);
@@ -131,8 +145,10 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       deleteColumn: onDeleteColumn,
       hideColumn: onHideColumn,
       unhideColumns: onUnhideColumns,
+      moveLeft: onMoveLeft,
+      moveRight: onMoveRight,
     }),
-    [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAddToSort, onAutosizeThis, onAutosizeAll, onInsertColumnLeft, onInsertColumnRight, onDeleteColumn, onHideColumn, onUnhideColumns]
+    [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAddToSort, onAutosizeThis, onAutosizeAll, onInsertColumnLeft, onInsertColumnRight, onDeleteColumn, onHideColumn, onUnhideColumns, onMoveLeft, onMoveRight]
   );
 
   const menuItems = React.useMemo(() => {

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useMemo } from 'react';
 import { SheetTabs } from '../components/SheetTabs';
 import { NameBox } from '../components/NameBox';
+import { QuickFilterBox } from '../components/QuickFilterBox';
 import type { UseOGridNameBoxResult } from './useOGridNameBox';
 import type { SideBarProps } from '../components/SideBar';
 import type { IOGridProps } from '../types';
@@ -28,13 +29,14 @@ export function useOGridChrome<T>(
   props: Pick<
     IOGridProps<T>,
     'toolbar' | 'toolbarBelow' | 'className' | 'emptyState' | 'fullScreen' | 'isFullScreen' | 'onFullScreenChange' | 'sheetDefs' | 'activeSheet' | 'onSheetChange' | 'onSheetAdd'
-    | 'onSheetRename' | 'onSheetReorder' | 'onSheetDelete' | 'onSheetColorChange'
+    | 'onSheetRename' | 'onSheetReorder' | 'onSheetDelete' | 'onSheetColorChange' | 'quickFilterBox'
   >,
   showNameBox: boolean,
   activeCellRef: string | null,
   sideBarProps: SideBarProps | null,
   formulaBar: React.ReactNode,
   nameBox?: Pick<UseOGridNameBoxResult, 'navigate' | 'returnFocus'>,
+  quickFilter?: { quickFilter: string; setQuickFilter: (text: string) => void },
 ): UseOGridLayout {
   const { toolbar, toolbarBelow, className, emptyState, fullScreen, sheetDefs, activeSheet, onSheetChange, onSheetAdd } = props;
   const { onSheetRename, onSheetReorder, onSheetDelete, onSheetColorChange, isFullScreen, onFullScreenChange } = props;
@@ -48,9 +50,20 @@ export function useOGridChrome<T>(
     onCancel: returnFocus,
   }) : null, [showNameBox, activeCellRef, navigate, returnFocus]);
 
-  const resolvedToolbar = useMemo(() => showNameBox
-    ? React.createElement(React.Fragment, null, nameBoxEl, toolbar)
-    : toolbar, [showNameBox, nameBoxEl, toolbar]);
+  const { quickFilterBox } = props;
+  const boxOptions = typeof quickFilterBox === 'object' ? quickFilterBox : undefined;
+  const quickFilterText = quickFilter?.quickFilter ?? '';
+  const setQuickFilter = quickFilter?.setQuickFilter;
+  const quickFilterEl = useMemo(() => quickFilterBox && setQuickFilter ? React.createElement(QuickFilterBox, {
+    value: quickFilterText,
+    onChange: setQuickFilter,
+    placeholder: boxOptions?.placeholder,
+    ariaLabel: boxOptions?.ariaLabel,
+  }) : null, [quickFilterBox, quickFilterText, setQuickFilter, boxOptions?.placeholder, boxOptions?.ariaLabel]);
+
+  const resolvedToolbar = useMemo(() => showNameBox || quickFilterEl
+    ? React.createElement(React.Fragment, null, nameBoxEl, quickFilterEl, toolbar)
+    : toolbar, [showNameBox, nameBoxEl, quickFilterEl, toolbar]);
 
   // Sheet tabs element (only when sheetDefs are provided)
   const sheetTabsEl = useMemo(() => {
