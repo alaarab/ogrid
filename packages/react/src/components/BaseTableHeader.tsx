@@ -63,13 +63,15 @@ export interface BaseTableHeaderProps<T> {
   primitives: DataGridPrimitives;
   /** Unhide columns from a hidden-gap marker (`allowHiding`); omit to hide the markers. */
   onUnhideColumns?: (columnIds: string[]) => void;
+  /** The header corner menu sits over the right end: keep the last column's controls clear of it. */
+  reserveCorner?: boolean;
 }
 
 /** Stops a marker press from starting a column drag or a header click. */
 const stopPointer = (e: React.PointerEvent) => e.stopPropagation();
 
 export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactElement {
-  const { o, columnMeta, sortBy, sortDirection, styles, primitives, onUnhideColumns } = props;
+  const { o, columnMeta, sortBy, sortDirection, styles, primitives, onUnhideColumns, reserveCorner } = props;
   const {
     wrapperRef, interaction,
     handleResizeStart, handleResizeDoubleClick, handleResizeFocus, handleResizeKeyDown,
@@ -125,6 +127,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
       />
     );
   };
+  const lastColumnId = visibleCols[visibleCols.length - 1]?.columnId;
   const rowNumberCol = React.useMemo(
     () => ({ columnId: ROW_NUMBER_COLUMN_ID, name: '#', defaultWidth: ROW_NUMBER_COLUMN_WIDTH }) as IColumnDef<T>,
     [],
@@ -232,19 +235,30 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                 scope="col"
                 data-column-id={col.columnId}
                 rowSpan={leafRowSpan}
-                className={columnMeta.hdrClasses[col.columnId] || undefined}
+                className={[
+                  columnMeta.hdrClasses[col.columnId],
+                  reserveCorner && col.columnId === lastColumnId ? styles.headerCornerReserve : undefined,
+                ].filter(Boolean).join(' ') || undefined}
                 style={{
                   ...columnMeta.hdrStyles[col.columnId],
                   ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : undefined),
                 }}
                 aria-sort={ariaSort as 'ascending' | 'descending' | 'none' | undefined}
                 onPointerDown={columnReorder ? (e: React.PointerEvent) => handleHeaderMouseDown(col.columnId, e) : undefined}
+                onContextMenu={(e: React.MouseEvent<HTMLElement>) => {
+                  // Right-click a header: the column's menu, opened from its options button.
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const trigger = e.currentTarget.querySelector<HTMLElement>('[data-ogrid-column-menu-trigger]') ?? e.currentTarget;
+                  headerMenu.open(col.columnId, trigger);
+                }}
               >
                 <div className={styles.headerCellContent}>
                   <ColumnHeaderFilter {...(headerFilterConfigs.get(col.columnId) ?? getHeaderFilterConfig(col, headerFilterInput))} />
                   <button
                     type="button"
                     className={styles.headerMenuTrigger}
+                    data-ogrid-column-menu-trigger=""
                     onClick={(e) => {
                       e.stopPropagation();
                       if (headerMenu.isOpen && headerMenu.openForColumn === col.columnId) {

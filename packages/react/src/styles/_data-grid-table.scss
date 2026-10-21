@@ -962,3 +962,76 @@
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+// ---- Header corner menu (`headerMenu`) ----
+
+// Zero-height sticky strip at the top of the scroll container; the trigger
+// hangs off its right end over the header rows and stays put while the grid
+// scrolls sideways.
+.headerCorner {
+  position: sticky;
+  left: 0;
+  width: 100%;
+  height: 0;
+  z-index: var(--ogrid-z-header-corner, 13);
+  pointer-events: none;
+}
+
+.headerCornerCell {
+  position: absolute;
+  top: 0;
+  right: 0;
+  box-sizing: border-box;
+  width: var(--ogrid-header-corner-width, 32px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ogrid-header-bg, #f5f5f5);
+  border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  pointer-events: auto;
+  @media (pointer: coarse) { width: 44px; }
+}
+
+.headerCornerTrigger {
+  @include surface.focus-ring;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ogrid-radius-sm, 3px);
+  background: transparent;
+  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+  cursor: pointer;
+  &:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
+  &[aria-expanded='true'] { background: var(--ogrid-active-bg, rgba(0, 0, 0, 0.08)); }
+  @media (pointer: coarse) { width: 44px; height: 44px; }
+}
+
+.gridMenu {
+  @include menu.menu;
+  z-index: var(--ogrid-z-popover, 10001);
+}
+.gridMenuItem {
+  @include menu.item;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gridMenuSeparator { height: 1px; margin: 4px 8px; background: var(--ogrid-border, #e0e0e0); }
+.gridMenuSearch { @include menu.search; }
+.gridMenuCheck { @include menu.check; }
+.gridMenuIcon { @include menu.icon; }
+
+// Last header cell under the corner button: pad its right side so its
+// filter and options buttons stay clear. Doubled class beats kit th padding.
+.headerCornerReserve.headerCornerReserve {
+  padding-right: calc(var(--ogrid-header-corner-width, 32px) + 6px);
+  @media (pointer: coarse) { padding-right: 50px; }
+}

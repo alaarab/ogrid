@@ -1,15 +1,12 @@
 import * as React from 'react';
-import { createPortal } from 'react-dom';
 import { usePortalTheme } from '../hooks/usePortalTheme';
-import { useMenuKeyboardNav } from '../hooks/useMenuKeyboardNav';
+import { BaseGridMenu } from './BaseGridMenu';
+import type { GridMenuClassNames } from './BaseGridMenu';
+import type { IGridMenuItem } from '../types/gridMenuTypes';
 import { getColumnHeaderMenuItems } from '../utils';
 import type { ColumnHeaderMenuInput } from '../utils';
 
-export interface ColumnHeaderMenuClassNames {
-  content?: string;
-  item?: string;
-  separator?: string;
-}
+export type ColumnHeaderMenuClassNames = GridMenuClassNames;
 
 export interface BaseColumnHeaderMenuProps {
   isOpen: boolean;
@@ -49,11 +46,15 @@ export interface BaseColumnHeaderMenuProps {
   columnName?: string;
   /** Resolve the portal target element. Defaults to document.body. */
   getPortalTarget?: (anchorElement: HTMLElement) => HTMLElement;
+  /** Grid-level items (Choose columns, Full screen), placed after the autosize items. */
+  extraItems?: IGridMenuItem[];
+  /** Final say over the items: add, hide, reorder (`columnMenuItems`). */
+  customizeItems?: (items: IGridMenuItem[]) => IGridMenuItem[];
 }
 
 /**
  * Base column header dropdown menu for pin/sort/autosize actions.
- * Uses positioned div with portal rendering.
+ * Renders through BaseGridMenu (portaled, with submenus).
  * Shared by Radix and Fluent UI packages (Material uses MUI Menu instead).
  */
 export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
@@ -88,79 +89,13 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     classNames,
     columnName,
     getPortalTarget,
+    extraItems,
+    customizeItems,
   } = props;
 
-  const [position, setPosition] = React.useState<{ top: number; left: number } | null>(null);
-  const menuRef = React.useRef<HTMLDivElement>(null);
   // Carry the grid's scoped theme tokens into the portaled menu.
   const anchorRef = React.useMemo(() => ({ current: anchorElement ?? null }), [anchorElement]);
   const portalTheme = usePortalTheme(anchorRef, isOpen);
-
-  React.useEffect(() => {
-    if (!isOpen || !anchorElement) {
-      setPosition(null);
-      return;
-    }
-
-    const rect = anchorElement.getBoundingClientRect();
-    setPosition({
-      top: rect.bottom + 4,
-      left: rect.left,
-    });
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      // Don't close if clicking inside the menu itself (portal)  -  let onClick fire first
-      if (menuRef.current?.contains(target)) return;
-      if (anchorElement && !anchorElement.contains(target)) {
-        onClose();
-      }
-    };
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    // The menu is position: fixed from a one-time measurement, so close it once the header
-    // actually moves (grid or page scroll) rather than leave it detached. Scrolls that leave
-    // the header in place (inside the menu, unrelated scrollers, focus on open) keep it open.
-    const handleScroll = () => {
-      const now = anchorElement.getBoundingClientRect();
-      if (Math.abs(now.top - rect.top) >= 1 || Math.abs(now.left - rect.left) >= 1) onClose();
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-    window.addEventListener('scroll', handleScroll, true);
-    window.addEventListener('resize', onClose);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-      window.removeEventListener('scroll', handleScroll, true);
-      window.removeEventListener('resize', onClose);
-    };
-  }, [isOpen, anchorElement, onClose]);
-
-  // Keep the menu inside the viewport: shift left near the right edge, flip above the
-  // anchor near the bottom edge.
-  React.useLayoutEffect(() => {
-    const menu = menuRef.current;
-    if (!menu || !position || !anchorElement) return;
-    const margin = 8;
-    const menuRect = menu.getBoundingClientRect();
-    let { top, left } = position;
-    if (left + menuRect.width > window.innerWidth - margin) {
-      left = Math.max(margin, window.innerWidth - menuRect.width - margin);
-    }
-    if (top + menuRect.height > window.innerHeight - margin) {
-      const above = anchorElement.getBoundingClientRect().top - 4 - menuRect.height;
-      top = Math.max(margin, above);
-    }
-    if (top !== position.top || left !== position.left) setPosition({ top, left });
-  }, [position, anchorElement]);
 
   const menuInput: ColumnHeaderMenuInput = React.useMemo(
     () => ({
@@ -200,56 +135,40 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAddToSort, onAutosizeThis, onAutosizeAll, onInsertColumnLeft, onInsertColumnRight, onDeleteColumn, onHideColumn, onUnhideColumns]
   );
 
-  const getRestoreTarget = React.useCallback(() => anchorElement, [anchorElement]);
-  const { onKeyDown } = useMenuKeyboardNav(menuRef, {
-    active: isOpen && position != null,
-    onClose,
-    getRestoreTarget,
-  });
+  const menuItems = React.useMemo(() => {
+    const builtIns: IGridMenuItem[] = items.map((item) => ({
+      id: item.id,
+      label: item.label,
+      disabled: item.disabled,
+      divider: item.divider,
+      onClick: handlers[item.id],
+    }));
+    if (extraItems && extraItems.length > 0) {
+      // App-level items (Choose columns, Full screen) sit with the autosize section.
+      const after = builtIns.findIndex((item) => item.id === 'autosizeAll');
+      const at = after >= 0 ? after + 1 : builtIns.length;
+      const before = builtIns[at - 1];
+      if (before) builtIns[at - 1] = { ...before, divider: false };
+      const tail = builtIns.slice(at);
+      const lastExtra = extraItems[extraItems.length - 1];
+      const extras = tail.length > 0 && lastExtra ? [...extraItems.slice(0, -1), { ...lastExtra, divider: true }] : extraItems;
+      if (before && after < 0) builtIns[at - 1] = { ...before, divider: true };
+      builtIns.splice(at, 0, ...extras);
+    }
+    return customizeItems ? customizeItems(builtIns) : builtIns;
+  }, [items, handlers, extraItems, customizeItems]);
 
-  if (!isOpen || !position) return null;
+  if (!isOpen || !anchorElement) return null;
 
-  const portalTarget = anchorElement && getPortalTarget
-    ? getPortalTarget(anchorElement)
-    : document.body;
-
-  return createPortal(
-    <div
-      ref={menuRef}
-      role="menu"
-      aria-label={columnName ? `${columnName} column options` : 'Column options'}
-      onKeyDown={onKeyDown}
-      className={classNames?.content}
-      style={{
-        ...portalTheme,
-        position: 'fixed',
-        top: position.top,
-        left: position.left,
-        zIndex: 'var(--ogrid-z-popover, 10001)',
-      }}
-    >
-      {items.map((item, idx) => (
-        <React.Fragment key={item.id}>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className={classNames?.item}
-            data-ogrid-menu-action={item.id}
-            disabled={item.disabled}
-            onClick={() => {
-              handlers[item.id]?.();
-              onClose();
-            }}
-          >
-            {item.label}
-          </button>
-          {item.divider && idx < items.length - 1 && (
-            <div className={classNames?.separator} />
-          )}
-        </React.Fragment>
-      ))}
-    </div>,
-    portalTarget
+  return (
+    <BaseGridMenu
+      items={menuItems}
+      anchorElement={anchorElement}
+      onClose={onClose}
+      ariaLabel={columnName ? `${columnName} column options` : 'Column options'}
+      classNames={classNames}
+      getPortalTarget={getPortalTarget}
+      style={portalTheme}
+    />
   );
 }

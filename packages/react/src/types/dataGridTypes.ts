@@ -2,6 +2,8 @@ import type { IDataValidationRule, IDataValidationContext, OnValidationFail } fr
 import type { FilterOption, ICellConditionalFormat, IConditionalFormatRule } from '@alaarab/ogrid-core';
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
+import type { IColumnDefinition } from './columnTypes';
+import type { GridMenuItems, IHeaderMenuContext, IColumnMenuContext } from './gridMenuTypes';
 import type { IFormulaFunction, IFormulaLimits, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap, ISheetReferenceRange, IHiddenGaps, IRowOrderChange } from '@alaarab/ogrid-core';
 
 // Re-export all shared types and functions from core (no React-specific changes)
@@ -109,6 +111,25 @@ export interface IGridStructureActions<T> {
  * Hide/unhide actions the table's menus and gap markers call (OGrid builds
  * these when `allowHiding` is on).
  */
+/** Menu wiring OGrid hands its table: the header corner menu, column menu extras and fullscreen. */
+export interface IGridMenusConfig {
+  /** Show the header corner menu button. */
+  corner: boolean;
+  cornerItems?: GridMenuItems<IHeaderMenuContext>;
+  columnItems?: GridMenuItems<IColumnMenuContext>;
+  /** Column visibility for the Columns checklist; null hides it. */
+  columnChooser: {
+    columns: IColumnDefinition[];
+    visibleColumns: Set<string>;
+    onVisibilityChange: (columnId: string, visible: boolean) => void;
+    onSetVisibleColumns?: (columns: Set<string>) => void;
+  } | null;
+  /** Fullscreen state for the menu items and the shortcut; null hides them. */
+  fullScreen: { isFullScreen: boolean; setFullScreen: (next: boolean) => void } | null;
+  /** Normalized shortcut, or null when off. */
+  fullScreenShortcut: string | null;
+}
+
 export interface IGridHidingActions {
   /** Hide these columns (at least one column always stays visible). */
   hideColumns: (columnIds: string[]) => void;
@@ -343,6 +364,34 @@ interface IOGridBaseProps<T> extends IDataValidationProps<T> {
   isFullScreen?: boolean;
   /** Called when the toolbar button or Escape enters or leaves fullscreen. */
   onFullScreenChange?: (isFullScreen: boolean) => void;
+  /**
+   * Key that toggles fullscreen while the grid has focus and no cell is being
+   * edited, e.g. `'f'` or `'Shift+F'` (`Mod` is Ctrl or Cmd). A plain key is
+   * skipped on an editable cell, where typing starts an edit. Active when
+   * fullscreen is reachable (`fullScreen`, `headerMenu` or `isFullScreen`).
+   * Default: `'f'`. `false` turns it off.
+   */
+  fullScreenShortcut?: string | false;
+  /**
+   * Settings button in the top-right corner of the header row. Its menu holds
+   * Columns (a searchable show/hide checklist), Full screen and Autosize all
+   * columns. With it on, the toolbar's column chooser is dropped unless
+   * `columnChooser` is set, so a grid with no other toolbar content shows no
+   * toolbar row. Default: false.
+   */
+  headerMenu?: boolean;
+  /**
+   * Items for the header corner menu. An array is added after the built-in
+   * items (`columns`, `fullScreen`, `autosizeAll`); a function gets the
+   * built-in items and returns the full list, so it can hide or reorder them.
+   * Items with `items` open a submenu.
+   */
+  headerMenuItems?: GridMenuItems<IHeaderMenuContext>;
+  /**
+   * Items for each column's menu (the header options button and right-click).
+   * Same shapes as `headerMenuItems`; the function also gets the column id.
+   */
+  columnMenuItems?: GridMenuItems<IColumnMenuContext>;
 
   /** Side bar configuration. `true` shows default panels (columns + filters). Pass ISideBarDef for options. */
   sideBar?: boolean | ISideBarDef;
@@ -730,6 +779,8 @@ export interface IOGridDataGridProps<T> extends IDataValidationProps<T> {
   hidingActions?: IGridHidingActions;
   /** Freeze-panes state for the context menu. Omit to hide the Freeze menu items. */
   freezeActions?: IGridFreezeActions;
+  /** Header corner menu, extra column menu items and the fullscreen shortcut (from OGrid). */
+  gridMenus?: IGridMenusConfig;
   /** @internal Filled by the grid with its edit path and undo history (OGrid's cell API uses it). */
   gridEditBridgeRef?: React.MutableRefObject<IGridEditBridge<T> | null>;
   /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */

@@ -7,6 +7,11 @@ All notable changes to OGrid will be documented in this file.
 ### Added
 
 - `isFullScreen` and `onFullScreenChange` let apps control and follow fullscreen. `isFullScreen` also works without the `fullScreen` toolbar button.
+- `headerMenu`: a settings button in the top-right corner of the column header. Its menu has Columns (a searchable show/hide checklist), Full screen and Autosize all columns. It stays in the corner while the grid scrolls sideways and works from the keyboard. With it on, the toolbar's column chooser is left out unless `columnChooser` is set, so a grid with no other toolbar content shows no toolbar row.
+- `headerMenuItems` and `columnMenuItems` add your own items to the corner menu and the column menus. Items can open nested submenus (`items`), be checkable (`checked`) or show a search box (`searchable`). The function form receives the built-in items, so it can hide or reorder them.
+- Column menus (options button or right-click on a header) now offer Choose columns, and Full screen when fullscreen is on offer. Right-clicking a header opens its column menu.
+- `fullScreenShortcut` (default `'f'`) toggles fullscreen while the grid has focus. It never fires during an edit, and a plain key gives way on an editable cell.
+- `BaseGridMenu` and `IGridMenuItem` are exported for kits and apps that build their own menus.
 
 ### Fixed
 
