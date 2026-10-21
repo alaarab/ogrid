@@ -223,6 +223,11 @@ export function processClientSideDataAsync<T>(
         break;
       case 'multiSelect':
         if (val.value.length === 0) break;
+        // The worker matches one string per cell with "any of". Other modes,
+        // array columns and array values (with or without multiValue) are matched
+        // by the sync path, so the result doesn't depend on which path runs.
+        if ((val.mode ?? 'any') !== 'any' || col.filterable?.multiValue === true) return sync();
+        if (data.some((item) => Array.isArray(getCellValue(item, col)))) return sync();
         stringColumns.add(workerColumnOf(col));
         workerFilters[workerColumnOf(col)] = { type: 'multiSelect', value: val.value };
         break;

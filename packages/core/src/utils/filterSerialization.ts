@@ -18,6 +18,20 @@ const MODES: readonly MultiSelectFilterMode[] = ['any', 'all', 'none'];
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const hasOwn = (o: object, key: string): boolean => Object.prototype.hasOwnProperty.call(o, key);
+
+/** A real calendar day in YYYY-MM-DD (rejects 2026-02-30 and 2026-99-99). */
+function isCalendarDay(v: string): boolean {
+  if (!ISO_DAY.test(v)) return false;
+  const [y, m, d] = v.split('-').map(Number) as [number, number, number];
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
+/** Sets an own data property, even for keys like "__proto__". */
+function setOwn<V>(target: Record<string, V>, key: string, value: V): void {
+  Object.defineProperty(target, key, { value, enumerable: true, writable: true, configurable: true });
+}
 const isOperand = (v: unknown): v is string | number => typeof v === 'string' || (typeof v === 'number' && Number.isFinite(v));
 
 /** Rebuild one entry from known fields only, or return why it can't be used. */
@@ -32,7 +46,9 @@ function cleanFilterValue(raw: unknown): FilterValue | string {
       if (!Array.isArray(value) || !value.every((v) => typeof v === 'string')) return 'multiSelect value must be a string array';
       if (value.length === 0) return 'no options selected';
       const mode = raw.mode;
-      if (mode !== undefined && !MODES.includes(mode as MultiSelectFilterMode)) return `unknown multiSelect mode "${String(mode)}"`;
+      if (mode !== undefined && (typeof mode !== 'string' || !MODES.includes(mode as MultiSelectFilterMode))) {
+        return typeof mode === 'string' ? `unknown multiSelect mode "${mode}"` : 'multiSelect mode must be a string';
+      }
       return mode === undefined || mode === 'any'
         ? { type: 'multiSelect', value: [...value] }
         : { type: 'multiSelect', value: [...value], mode: mode as MultiSelectFilterMode };
@@ -52,19 +68,27 @@ function cleanFilterValue(raw: unknown): FilterValue | string {
       };
     case 'date': {
       if (!isRecord(value)) return 'date value must be { from?, to? }';
-      const from = typeof value.from === 'string' && ISO_DAY.test(value.from) ? value.from : undefined;
-      const to = typeof value.to === 'string' && ISO_DAY.test(value.to) ? value.to : undefined;
+      // Every bound given must be a real day: dropping a bad one would quietly widen the range.
+      for (const bound of ['from', 'to'] as const) {
+        const b = value[bound];
+        if (b !== undefined && b !== '' && (typeof b !== 'string' || !isCalendarDay(b))) return `date ${bound} must be a real day (YYYY-MM-DD)`;
+      }
+      const from = typeof value.from === 'string' && value.from ? value.from : undefined;
+      const to = typeof value.to === 'string' && value.to ? value.to : undefined;
       if (!from && !to) return 'date range needs from or to (YYYY-MM-DD)';
       return { type: 'date', value: { ...(from ? { from } : {}), ...(to ? { to } : {}) } };
     }
     case 'condition': {
       if (!isRecord(value) || !Array.isArray(value.conditions)) return 'condition value needs conditions';
+      // Own keys only: "constructor" or "toString" must not resolve to inherited members.
+      if (typeof value.kind !== 'string' || !hasOwn(CONDITION_OPERATORS, value.kind)) {
+        return typeof value.kind === 'string' ? `unknown condition kind "${value.kind}"` : 'condition kind must be a string';
+      }
       const kind = value.kind as ConditionFilterKind;
-      const operators = CONDITION_OPERATORS[kind] as readonly ConditionOperator[] | undefined;
-      if (!operators) return `unknown condition kind "${String(value.kind)}"`;
+      const operators = CONDITION_OPERATORS[kind] as readonly ConditionOperator[];
       const conditions: IFilterCondition[] = [];
       for (const c of value.conditions) {
-        if (!isRecord(c) || !operators.includes(c.operator as ConditionOperator)) continue;
+        if (!isRecord(c) || typeof c.operator !== 'string' || !operators.includes(c.operator as ConditionOperator)) continue;
         conditions.push({
           operator: c.operator as ConditionOperator,
           ...(isOperand(c.value) ? { value: c.value } : {}),
@@ -104,7 +128,13 @@ export function validateFilters<T>(value: unknown, columns?: readonly IColumnDef
   const byField = columns ? new Map(columns.filter((c) => c.filterable).map((c) => [getFilterField(c), c])) : undefined;
   for (const field of Object.keys(value)) {
     if (value[field] === undefined) continue;
-    const cleaned = cleanFilterValue(value[field]);
+    let cleaned: FilterValue | string;
+    try {
+      cleaned = cleanFilterValue(value[field]);
+    } catch {
+      // Getters or proxies in hand-built input: drop the entry, never throw.
+      cleaned = 'unreadable filter value';
+    }
     if (typeof cleaned === 'string') {
       invalid.push({ field, reason: cleaned });
       continue;
@@ -121,7 +151,7 @@ export function validateFilters<T>(value: unknown, columns?: readonly IColumnDef
         continue;
       }
     }
-    filters[field] = cleaned;
+    setOwn(filters, field, cleaned);
   }
   return { filters, invalid };
 }
@@ -136,7 +166,7 @@ export function serializeFilters(filters: IFilters | undefined): string {
   const fields = Object.keys(clean).sort();
   if (fields.length === 0) return '';
   const ordered: IFilters = {};
-  for (const field of fields) ordered[field] = clean[field];
+  for (const field of fields) setOwn(ordered, field, clean[field]);
   return JSON.stringify(ordered);
 }
 

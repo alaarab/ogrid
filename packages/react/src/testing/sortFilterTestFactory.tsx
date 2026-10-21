@@ -380,5 +380,13 @@ export function createSortFilterTests(OGrid: React.ComponentType<Props>): void {
       renderReports({ quickFilter: 'legal', getQuickFilterText: (r) => r.comment });
       expect(titles()).toEqual(['Q2']);
     });
+
+    it('a new getQuickFilterText re-filters', () => {
+      const base = { data: reports, columns: reportColumns, getRowId: (r: ReportRow) => r.id, defaultPageSize: 25, quickFilter: 'legal' };
+      const { rerender } = render(<ReportGrid {...({ ...base, getQuickFilterText: (r: ReportRow) => r.comment } as ReportProps)} />);
+      expect(titles()).toEqual(['Q2']);
+      rerender(<ReportGrid {...({ ...base, getQuickFilterText: () => '' } as ReportProps)} />);
+      expect(titles()).toEqual([]);
+    });
   });
 }
