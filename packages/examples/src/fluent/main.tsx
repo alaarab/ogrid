@@ -8,6 +8,7 @@ import { createThemeToggle, getInitialTheme, setTheme } from '../shared/themeTog
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 import { createProjectExampleScenario, VIRTUAL_GRID_HOST_STYLE } from '../shared/demoScenario';
 import { getExampleFeatureFlags } from '../shared/queryFlags';
+import { isHeaderMenuDemo, makeHeaderMenuItems, columnMenuItems } from '../shared/headerMenuDemo';
 import { ValidationExample } from '../shared/ValidationExample';
 import { XlsxExample } from '../shared/xlsxExample';
 import { makePremiumInputColumns, makePremiumInputRows } from '../shared/premiumInputsData';
@@ -21,6 +22,7 @@ import {
 const featureFlags = getExampleFeatureFlags(typeof window !== 'undefined' ? window.location.search : '');
 const projectScenario = createProjectExampleScenario(featureFlags);
 const isPremiumExample = featureFlags.premiumInputs;
+const headerMenuDemo = isHeaderMenuDemo(typeof window !== 'undefined' ? window.location.search : '');
 const initialRows = coerceExampleRows(isPremiumExample
   ? makePremiumInputRows()
   : projectScenario.data);
@@ -40,6 +42,12 @@ let setAppTheme: ((t: 'light' | 'dark') => void) | null = null;
 function App() {
   const [theme, setThemeState] = useState(getInitialTheme());
   const [data, setData] = useState<ExampleRow[]>(initialRows);
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const headerMenuItems = React.useMemo(
+    () => makeHeaderMenuItems(() => dataRef.current as unknown as Record<string, unknown>[]),
+    [],
+  );
   const apiRef = useRef<IOGridApi<unknown> | null>(null);
   const gridDataProps = !isPremiumExample && projectScenario.serverSide && projectScenario.dataSource
     ? { dataSource: coerceExampleDataSource(projectScenario.dataSource) }
@@ -113,7 +121,10 @@ function App() {
             formulas={isPremiumExample ? undefined : projectScenario.formulas}
             initialFormulas={isPremiumExample ? undefined : projectScenario.initialFormulas}
             sideBar={isPremiumExample ? undefined : projectScenario.sideBar}
-            fullScreen={isPremiumExample ? undefined : projectScenario.fullScreen}
+            fullScreen={isPremiumExample || headerMenuDemo ? undefined : projectScenario.fullScreen}
+          headerMenu={headerMenuDemo}
+          headerMenuItems={headerMenuDemo ? headerMenuItems : undefined}
+          columnMenuItems={headerMenuDemo ? columnMenuItems : undefined}
             responsiveColumns={isPremiumExample ? undefined : projectScenario.responsiveColumns}
             density={isPremiumExample ? undefined : projectScenario.density}
             virtualScroll={isPremiumExample ? undefined : projectScenario.virtualScroll}

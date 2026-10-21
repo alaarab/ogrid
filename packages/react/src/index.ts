@@ -63,6 +63,11 @@ export type {
   IVirtualScrollConfig,
   IColumnReorderConfig,
   IRowOrderChange,
+  IGridMenusConfig,
+  IGridMenuItem,
+  GridMenuItems,
+  IHeaderMenuContext,
+  IColumnMenuContext,
   ICellDropEvent,
   ISheetDef,
   IFormulaCellWriter,
@@ -73,7 +78,7 @@ export type {
   IGridHidingActions,
   IGridFreezeActions,
 } from './types';
-export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './types';
+export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource, resolveGridMenuItems } from './types';
 
 // Hooks
 export {
@@ -299,6 +304,8 @@ export type { SheetTabsProps } from './components/SheetTabs';
 export { SideBar } from './components/SideBar';
 export type { SideBarProps, SideBarFilterColumn } from './components/SideBar';
 export { BaseColumnHeaderMenu } from './components/BaseColumnHeaderMenu';
+export { BaseGridMenu } from './components/BaseGridMenu';
+export type { BaseGridMenuProps, GridMenuClassNames } from './components/BaseGridMenu';
 export type { BaseColumnHeaderMenuProps, ColumnHeaderMenuClassNames } from './components/BaseColumnHeaderMenu';
 export { PaginationControlsBase } from './components/PaginationControlsBase';
 export type {

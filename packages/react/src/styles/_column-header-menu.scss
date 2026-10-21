@@ -14,3 +14,6 @@
   cursor: pointer;
 }
 .separator { height: 1px; margin: 4px 8px; background: var(--ogrid-border, #e0e0e0); }
+.search { @include menu.search; }
+.check { @include menu.check; }
+.icon { @include menu.icon; }

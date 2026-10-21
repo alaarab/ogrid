@@ -65,7 +65,8 @@
      --ogrid-z-filter-popover      : 10001 filter popovers (portaled; above fullscreen 9999)
      --ogrid-z-popover             : 10001 portaled popovers/menus/editors (above fullscreen)
      --ogrid-z-fullscreen          : 9999 fullscreen grid container
-     --ogrid-z-context-menu        : 10000 context menu (fixed, above everything) */
+     --ogrid-z-context-menu        : 10000 context menu (fixed, above everything)
+     --ogrid-z-header-corner       : 13   header corner menu button (above sticky header cells) */
   --ogrid-z-resize-handle: 1;
   --ogrid-z-active-cell: 2;
   --ogrid-z-fill-handle: 3;
@@ -83,6 +84,7 @@
   --ogrid-z-popover: 10001;
   --ogrid-z-fullscreen: 9999;
   --ogrid-z-context-menu: 10000;
+  --ogrid-z-header-corner: 13;
 
   /* Core */
   --ogrid-bg: #ffffff;

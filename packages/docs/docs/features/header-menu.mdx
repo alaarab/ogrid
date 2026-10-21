@@ -1,0 +1,127 @@
+---
+sidebar_position: 14.4
+title: Header Menu
+description: A settings button in the header corner with Columns, Full screen and your own items, plus extensible column menus
+---
+
+import HeaderMenuDemo from '@site/src/components/demos/HeaderMenuDemo';
+
+# Header Menu
+
+`headerMenu` puts a settings button in the top-right corner of the column header. Its menu holds the controls that usually take up a toolbar row, so a grid can drop the toolbar row entirely:
+
+- **Columns**: a show/hide checklist of the columns, with **Show all columns** at the top and a search box when there are more than 8.
+- **Full screen** / **Exit full screen**.
+- **Autosize all columns**.
+
+The button stays in the corner while the grid scrolls sideways, sits above pinned columns, and follows the theme (dark mode included). It is a normal tab stop: **Enter**, **Space** or **ArrowDown** opens the menu, the arrow keys move through it, **ArrowRight** and **ArrowLeft** open and leave submenus, and **Escape** closes it and returns focus to the button.
+
+## Live Demo
+
+<HeaderMenuDemo />
+
+## Quick Example
+
+```tsx
+<OGrid
+  columns={columns}
+  data={rows}
+  getRowId={(row) => row.id}
+  headerMenu
+/>
+```
+
+With `headerMenu` on, the toolbar's column chooser is left out unless you set `columnChooser` yourself. When nothing else needs the toolbar (no `toolbar` content, no toolbar chooser, no `fullScreen` button), the grid renders no toolbar row at all.
+
+## Your own items and submenus
+
+`headerMenuItems` adds items to the corner menu. Give an item `items` to make it open a submenu; submenus can nest.
+
+```tsx
+<OGrid
+  headerMenu
+  headerMenuItems={[
+    {
+      id: 'export',
+      label: 'Export',
+      items: [
+        { id: 'csv', label: 'CSV', onClick: exportCsv },
+        { id: 'json', label: 'JSON', onClick: exportJson },
+      ],
+    },
+    { id: 'share', label: 'Copy link', onClick: copyLink },
+  ]}
+  {...gridProps}
+/>
+```
+
+An array is added after the built-in items. Pass a function to hide, reorder or wrap the built-in items: it receives them and returns the full list.
+
+```tsx
+headerMenuItems={(builtIns, { isFullScreen }) => [
+  { id: 'reset', label: 'Reset view', onClick: resetView },
+  ...builtIns.filter((item) => item.id !== 'autosizeAll'),
+]}
+```
+
+Built-in ids in the corner menu: `columns`, `fullScreen` and `autosizeAll`.
+
+### Item shape
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Stable id. |
+| `label` | `string` | Text shown. |
+| `icon` | `ReactNode` | Shown before the label. |
+| `onClick` | `() => void` | Runs when the item is chosen. The menu then closes, unless `keepOpen` is set. |
+| `items` | `IGridMenuItem[]` | Makes the item open a submenu. |
+| `disabled` | `boolean` | Greys the item out. |
+| `checked` | `boolean` | Renders a checkable item (`menuitemcheckbox`) in this state. |
+| `keepOpen` | `boolean` | Keep the menu open after `onClick`. |
+| `divider` | `boolean` | Separator after the item. |
+| `searchable` | `boolean` | For an item with `items`: a search box above its submenu filters the items by label. |
+
+## Column menus
+
+Each column's menu (its options button, or a right-click on the header) now also offers:
+
+- **Choose columns**: the same checklist as **Columns** above, as a submenu. Hidden with `columnChooser={false}`.
+- **Full screen**: when fullscreen is on offer (`fullScreen`, `headerMenu` or `isFullScreen`).
+
+`columnMenuItems` customizes column menus the same way. The function form also gets the column id:
+
+```tsx
+columnMenuItems={(builtIns, { columnId }) => [
+  ...builtIns.filter((item) => !['pinLeft', 'pinRight', 'unpin'].includes(item.id)),
+  { id: 'details', label: 'Column details', onClick: () => showDetails(columnId) },
+]}
+```
+
+Built-in column menu ids: `pinLeft`, `pinRight`, `unpin`, `sortAsc`, `sortDesc`, `addToSort`, `clearSort`, `autosizeThis`, `autosizeAll`, `chooseColumns`, `fullScreen`, `insertColumnLeft`, `insertColumnRight`, `deleteColumn`, `hideColumn` and `unhideColumns`. Only the items that apply to the column appear.
+
+## Fullscreen shortcut
+
+While fullscreen is on offer, pressing **F** with the grid focused toggles it. It doesn't fire while a cell is being edited or focus is in a text field or menu. On an editable cell a plain letter starts an edit instead, so use a shortcut with a modifier on editable grids:
+
+```tsx
+<OGrid headerMenu fullScreenShortcut="Shift+F" {...gridProps} />
+```
+
+`Mod` means Ctrl or Cmd (`'Mod+Shift+F'`). `fullScreenShortcut={false}` turns it off.
+
+## Styling
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `--ogrid-z-header-corner` | `13` | Stacking order of the corner button, above sticky and pinned header cells |
+| `--ogrid-header-corner-width` | `32px` | Width of the corner (44px on touch screens) |
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `headerMenu` | `boolean` | `false` | Show the settings button in the header corner. |
+| `headerMenuItems` | `IGridMenuItem[] \| (builtIns, { isFullScreen }) => IGridMenuItem[]` | | Items for the corner menu. |
+| `columnMenuItems` | `IGridMenuItem[] \| (builtIns, { columnId }) => IGridMenuItem[]` | | Items for every column menu. |
+| `fullScreenShortcut` | `string \| false` | `'f'` | Key that toggles fullscreen while the grid has focus. |
+| `isFullScreen` / `onFullScreenChange` | | | Control and follow fullscreen; see [OGrid props](../api/ogrid-props). |
