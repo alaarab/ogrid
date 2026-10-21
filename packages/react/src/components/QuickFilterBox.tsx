@@ -37,18 +37,25 @@ export function QuickFilterBox({
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
-
-  // A value set from outside (controlled prop, cleared filters) replaces the draft.
-  const [seen, setSeen] = React.useState(value);
-  if (value !== seen) {
-    setSeen(value);
-    setDraft(value);
-  }
+  // The last text this box sent. When `value` comes back as that text it is our
+  // own echo; anything else was set from outside (controlled prop, cleared filters).
+  const sentRef = React.useRef(value);
 
   const cancel = () => {
     if (timerRef.current != null) clearTimeout(timerRef.current);
     timerRef.current = null;
   };
+
+  // An outside value replaces the draft and drops a pending apply, so an old
+  // keystroke can't overwrite it. Layout effect: before any timer can fire.
+  React.useLayoutEffect(() => {
+    if (value === sentRef.current) return;
+    sentRef.current = value;
+    if (timerRef.current != null) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    setDraft(value);
+  }, [value]);
+
   // Drop a pending apply on unmount.
   React.useEffect(() => () => {
     if (timerRef.current != null) clearTimeout(timerRef.current);
@@ -56,7 +63,9 @@ export function QuickFilterBox({
 
   const apply = (text: string) => {
     cancel();
-    if (text !== value) onChangeRef.current(text);
+    if (text === sentRef.current) return;
+    sentRef.current = text;
+    onChangeRef.current(text);
   };
 
   return (
