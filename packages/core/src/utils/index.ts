@@ -55,6 +55,7 @@ export type { ParseValueResult } from './valueParsers';
 export { computeAggregations } from './aggregationUtils';
 export type { AggregationResult } from './aggregationUtils';
 export { processClientSideData } from './clientSideData';
+export type { IClientSideDataOptions } from './clientSideData';
 export {
   CONDITION_OPERATORS,
   getConditionOperatorLabel,
@@ -70,8 +71,9 @@ export {
   getPinStateForColumn,
   reorderColumnArray,
   calculateDropTarget,
+  moveColumnByStep,
 } from './columnReorder';
-export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams } from './columnReorder';
+export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams, IMoveColumnByStepParams } from './columnReorder';
 export {
   moveRows,
   applyRowOrder,
@@ -107,6 +109,10 @@ export {
   processClientSideDataAsync,
 } from './workerSortFilter';
 export { DEFAULT_WORKER_SORT_AUTO_THRESHOLD, shouldUseWorkerSort } from './workerSortMode';
+export { createQuickFilterPredicate, getQuickFilterTerms } from './quickFilter';
+export { createMultiSelectMatcher, getMultiSelectCellValues } from './multiSelectFilter';
+export { serializeFilters, parseFilters, validateFilters } from './filterSerialization';
+export type { IFilterValidationResult, IInvalidFilter } from './filterSerialization';
 export type { SortFilterRequest, SortFilterResponse } from '../workers/sortFilterWorker';
 export {
   getHeaderFilterConfig,

@@ -26,6 +26,7 @@ export type {
   UserLike,
   UserLikeInput,
   FilterValue,
+  MultiSelectFilterMode,
   IFilters,
   ISortModelItem,
   SortModel,
@@ -386,6 +387,11 @@ export {
   mergeFilter,
   deriveFilterOptionsFromData,
   getMultiSelectFilterFields,
+  serializeFilters,
+  parseFilters,
+  validateFilters,
+  createMultiSelectMatcher,
+  getMultiSelectCellValues,
   getStatusBarParts,
   getDataGridStatusBarConfig,
   GRID_CONTEXT_MENU_ITEMS,
@@ -553,3 +559,4 @@ export type { UseConditionalFormattingParams } from './hooks/useConditionalForma
 export type { IDataValidationRule, IDataValidationFailure, DataValidationOperator, DataValidationAlertStyle, OnValidationFail } from '@alaarab/ogrid-core';
 
 export type { DataValidationDialogProps } from './components/BaseDataGridTable.types';
+export type { IFilterValidationResult, IInvalidFilter } from '@alaarab/ogrid-core';

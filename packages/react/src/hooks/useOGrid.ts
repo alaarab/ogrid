@@ -20,6 +20,7 @@ import { useOGridSheetCoordinates } from './useOGridSheetCoordinates';
 import { useOGridFormulas } from './useOGridFormulas';
 import { useConditionalFormatting } from './useConditionalFormatting';
 import { useOGridChrome } from './useOGridChrome';
+import { useOGridQuickFilter } from './useOGridQuickFilter';
 import { useOGridStructureEdits } from './useOGridStructureEdits';
 import { useOGridCellApi } from './useOGridCellApi';
 import { useOGridNameBox } from './useOGridNameBox';
@@ -28,7 +29,7 @@ import { useOGridFreeze } from './useOGridFreeze';
 import { useLatestRef } from './useLatestRef';
 import { useValidationRules } from './useValidationRules';
 import { useOGridCellNotes } from './useOGridCellNotes';
-import { useSortFilterColumns } from './useSortFilterColumns';
+import { useSortFilterColumns, QUICK_FILTER_FIELDS } from './useSortFilterColumns';
 import {
   buildStatusBarConfig,
   buildSheetRowIndex,
@@ -134,20 +135,6 @@ export function useOGrid<T>(
     defaultHiddenRowIds: props.defaultHiddenRowIds,
     onHiddenRowIdsChange: props.onHiddenRowIdsChange,
   });
-  const structureVersionRef = useRef(0);
-  const dataFetchingState = useOGridDataFetching({
-    isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, structureVersionRef, columns: processingColumns,
-    stableFilters: filtersState.stableFilters, sort: sortingState.sort, sortModel: sortingState.sortModel,
-    sortVersion: sortingState.sortVersion,
-    page, pageSize, paginate: !fullyVirtualized,
-    onError: props.onError, onFirstDataRendered: props.onFirstDataRendered, workerSort: props.workerSort,
-    hiddenRowIds: hiddenRows.hiddenRowSet,
-  });
-  const { displayItems, windowed, displayTotalCount } = dataFetchingState;
-  // A windowed (lazy) source virtual-scrolls all rows: no pages, no pager.
-  const isWindowed = windowed != null;
-  useRowIdValidation(displayItems, getRowId);
-
   const visibilityModel = useOGridColumnVisibilityModel({
     columns,
     columnVisibility: props.columnVisibility,
@@ -162,6 +149,42 @@ export function useOGrid<T>(
     onVisibleColumnsChange: visibilityModel ? visibilityModel.onDisplayedChange : props.onVisibleColumnsChange,
   });
   const { visibleColumns, setVisibleColumns, handleVisibilityChange } = visibility;
+  // --- Quick filter (search box over the visible columns) ---
+  const quickFilterState = useOGridQuickFilter({
+    controlled: props.quickFilter, defaultValue: props.defaultQuickFilter,
+    onChange: useStableOptionalCallback(props.onQuickFilterChange), setPage,
+  });
+  // A new function re-filters (like a useMemo dependency), so a changed getter
+  // is never stale; memoize it to avoid re-filtering on every render.
+  const quickFilterTextGetter = props.getQuickFilterText;
+  // The quick filter matches shown text, so unlike sorting it follows formatter
+  // changes; formula columns keep the computed values from processingColumns.
+  const searchColumns = useSortFilterColumns(columns, QUICK_FILTER_FIELDS);
+  const quickFilterColumns = useMemo(() => {
+    const processed = new Map(processingColumns.map((c) => [c.columnId, c]));
+    return searchColumns
+      .filter((c) => visibleColumns.has(c.columnId))
+      .map((c) => {
+        const p = processed.get(c.columnId);
+        return p && p.valueGetter !== c.valueGetter ? { ...c, valueGetter: p.valueGetter } : c;
+      });
+  }, [searchColumns, processingColumns, visibleColumns]);
+  const structureVersionRef = useRef(0);
+  const dataFetchingState = useOGridDataFetching({
+    isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, structureVersionRef, columns: processingColumns,
+    stableFilters: filtersState.stableFilters, sort: sortingState.sort, sortModel: sortingState.sortModel,
+    sortVersion: sortingState.sortVersion,
+    page, pageSize, paginate: !fullyVirtualized,
+    onError: props.onError, onFirstDataRendered: props.onFirstDataRendered, workerSort: props.workerSort,
+    hiddenRowIds: hiddenRows.hiddenRowSet,
+    quickFilter: quickFilterState.quickFilter, quickFilterColumns,
+    getQuickFilterText: quickFilterTextGetter,
+  });
+  const { displayItems, windowed, displayTotalCount } = dataFetchingState;
+  // A windowed (lazy) source virtual-scrolls all rows: no pages, no pager.
+  const isWindowed = windowed != null;
+  useRowIdValidation(displayItems, getRowId);
+
   const selection = useOGridRowSelection({
     controlledSelectedRows: selectedRows,
     onSelectionChange: props.onSelectionChange,
@@ -402,7 +425,7 @@ export function useOGrid<T>(
     placement: columnChooserPlacement,
   }), [columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns, columnChooserPlacement]);
 
-  const layout = useOGridChrome(props, showNameBox, activeCellRef, sideBarProps, formulaBarEl, nameBox);
+  const layout = useOGridChrome(props, showNameBox, activeCellRef, sideBarProps, formulaBarEl, nameBox, quickFilterState);
 
   const filtersResult = useMemo<UseOGridFilters>(() => ({
     hasActiveFilters: filtersState.hasActiveFilters,

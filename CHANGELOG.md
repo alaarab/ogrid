@@ -7,6 +7,13 @@ All notable changes to OGrid will be documented in this file.
 ### Added
 
 - `isFullScreen` and `onFullScreenChange` let apps control and follow fullscreen. `isFullScreen` also works without the `fullScreen` toolbar button.
+- Quick filter: one search over the whole grid. `quickFilterBox` shows a search box at the start of the toolbar (debounced; Enter applies, Escape clears). A row is kept when every space-separated term appears in one of its visible columns, in the raw value or the displayed text, on top of the column filters. Keep the text yourself with `quickFilter` / `defaultQuickFilter` / `onQuickFilterChange`. Data sources receive it as `quickFilter` in `fetchPage`, `getRows` and `getRowCount` params. Also exported from core: `createQuickFilterPredicate`, `getQuickFilterTerms`, and a `processClientSideData` options argument.
+- Example apps take `?quickFilter` (search box) and `?numberFilter` (number filter on Budget).
+- Multi-select filter modes: a match select in the filter popover offers **Any of** (default), **None of** (exclude, "not in") and, on array columns, **All of**. The filter value carries it as `mode: 'any' | 'all' | 'none'` (left out for Any of, so saved filters are unchanged). New type `MultiSelectFilterMode`.
+- Multi-select on array-valued columns: `filterable: { type: 'multiSelect', multiValue: true }` lists each array item as an option and matches rows item by item; an empty array is blank.
+- Filter state helpers for URLs and storage: `serializeFilters`, `parseFilters` and `validateFilters`. Parsing never throws; malformed entries, unknown fields and (with `columns`) type mismatches are dropped and reported in `invalid`.
+- `getQuickFilterText(row)`: extra per-row text the quick filter searches besides the visible columns (comments, hidden fields).
+- Keyboard column reordering: with `columnReorder`, each column's header menu has **Move left** and **Move right**. They move the column one position past the next visible column, stay within its pin zone (disabled at the edge), and fire `onColumnOrderChange` like a drag does. Also exported from core: `moveColumnByStep`.
 
 ### Fixed
 
@@ -14,6 +21,7 @@ All notable changes to OGrid will be documented in this file.
 - Fullscreen now locks page scroll and puts the page's scroll position back on exit. Before, the page could get shorter behind the overlay and lose its scroll position.
 - With a `max-height` on the grid, the toolbar, filter chip row and footer no longer shrink and clip their contents; the grid body takes the squeeze.
 - The exit fullscreen icon no longer gets clipped: its strokes ran along the edge of the icon box and read as two squiggles. It is now the enter icon's arrows turned inward.
+- The column drop indicator now lines up with the header edge when the grid is scrolled horizontally. It was drawn off by the scroll distance.
 
 ### Changed
 
