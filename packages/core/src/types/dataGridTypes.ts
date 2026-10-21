@@ -61,6 +61,12 @@ export interface IFetchParams {
   /** Every sort level, primary first. Empty when the grid is unsorted. */
   sortModel?: SortModel;
   filters: IFilters;
+  /**
+   * Quick filter text from the grid's search box (`quickFilter` prop), trimmed;
+   * omitted when empty. A server source should keep rows where every
+   * whitespace-separated term appears in some searched column.
+   */
+  quickFilter?: string;
   /** Optional abort signal for cancelling stale requests when the grid state changes. */
   signal?: AbortSignal;
 }
@@ -80,6 +86,12 @@ export interface IRowWindowParams {
   /** Every sort level, primary first (see IFetchParams.sortModel). */
   sortModel?: SortModel;
   filters: IFilters;
+  /**
+   * Quick filter text from the grid's search box (`quickFilter` prop), trimmed;
+   * omitted when empty. A server source should keep rows where every
+   * whitespace-separated term appears in some searched column.
+   */
+  quickFilter?: string;
   /** Optional abort signal for cancelling stale window requests when grid state changes. */
   signal?: AbortSignal;
 }
@@ -101,6 +113,12 @@ export interface IRowQueryContext {
   /** Every sort level, primary first (see IFetchParams.sortModel). */
   sortModel?: SortModel;
   filters: IFilters;
+  /**
+   * Quick filter text from the grid's search box (`quickFilter` prop), trimmed;
+   * omitted when empty. A server source should keep rows where every
+   * whitespace-separated term appears in some searched column.
+   */
+  quickFilter?: string;
   /** Optional abort signal for cancelling a stale request. */
   signal?: AbortSignal;
 }

@@ -74,19 +74,23 @@ function waitForServerTick(signal?: AbortSignal, ms = SERVER_DELAY_MS): Promise<
 /**
  * `?pinned` pins the first column left and the last column right; `?columnGroups`
  * wraps the columns in two group headers. Both exist so the e2e suite can check
- * borders around sticky columns and group header rows.
+ * borders around sticky columns and group header rows. `?numberFilter` gives
+ * Budget a number filter (=, <, >, between, ...).
  */
 function arrangeColumns(
   columns: IColumnDef<Project>[],
   flags: ExampleFeatureFlags,
 ): Array<IColumnDef<Project> | IColumnGroupDef<Project>> {
+  const filtered = flags.numberFilter
+    ? columns.map((col): IColumnDef<Project> => (col.columnId === 'budget' ? { ...col, filterable: { type: 'number' } } : col))
+    : columns;
   const leaves = flags.pinned
-    ? columns.map((col, i): IColumnDef<Project> => {
+    ? filtered.map((col, i): IColumnDef<Project> => {
       if (i === 0) return { ...col, pinned: 'left' };
       if (i === columns.length - 1) return { ...col, pinned: 'right' };
       return col;
     })
-    : columns;
+    : filtered;
   if (!flags.columnGroups) return leaves;
   return [
     { headerName: 'Project', children: leaves.slice(0, 4) },

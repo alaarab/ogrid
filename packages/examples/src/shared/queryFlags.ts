@@ -2,6 +2,8 @@ export interface ExampleFeatureFlags {
   cellReferences: boolean;
   columnGroups: boolean;
   formulas: boolean;
+  /** `?numberFilter`: Budget gets a number (comparison) filter. */
+  numberFilter: boolean;
   pinned: boolean;
   premiumInputs: boolean;
   rowSelection: boolean;
@@ -17,6 +19,7 @@ export function getExampleFeatureFlags(search: string): ExampleFeatureFlags {
     cellReferences: params.has('cellReferences'),
     columnGroups: params.has('columnGroups'),
     formulas: params.has('formulas'),
+    numberFilter: params.has('numberFilter'),
     pinned: params.has('pinned'),
     premiumInputs: params.has('premiumInputs'),
     rowSelection: params.has('rowSelection'),

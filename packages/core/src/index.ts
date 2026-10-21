@@ -159,6 +159,7 @@ export type { AggregationResult } from './utils';
 
 // Utils  -  clientSideData
 export { processClientSideData } from './utils';
+export type { IClientSideDataOptions } from './utils';
 
 // Utils  -  conditionFilter
 export {
@@ -230,6 +231,9 @@ export {
   DEFAULT_WORKER_SORT_AUTO_THRESHOLD,
   shouldUseWorkerSort,
 } from './utils';
+
+// Utils  -  quickFilter
+export { createQuickFilterPredicate, getQuickFilterTerms } from './utils';
 export type { SortFilterRequest, SortFilterResponse } from './utils';
 
 // Utils  -  dataGridViewModel

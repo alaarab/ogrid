@@ -4,7 +4,7 @@
  * Each UI package calls createSortFilterTests(OGrid).
  */
 import * as React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import type { IColumnDef, IDataSource, IFetchParams, IFilters, IOGridProps, ISortModelItem } from '../types';
 
 export interface SortFilterRow {
@@ -247,6 +247,120 @@ export function createSortFilterTests(OGrid: React.ComponentType<Props>): void {
       openFilter('Score');
       expect((screen.getByRole('combobox', { name: 'Score condition 1' }) as HTMLSelectElement).value).toBe('lessThan');
       expect((screen.getByRole('spinbutton', { name: 'Score condition 1 value' }) as HTMLInputElement).value).toBe('75');
+    });
+  });
+
+  describe('quick filter', () => {
+    const box = () => screen.getByRole('searchbox', { name: 'Search all columns' });
+    const typeAndApply = (text: string) => {
+      fireEvent.change(box(), { target: { value: text } });
+      fireEvent.keyDown(box(), { key: 'Enter' });
+    };
+
+    it('the toolbar box filters rows across columns, every term required, and Escape clears', () => {
+      const onQuickFilterChange = jest.fn();
+      renderGrid({ quickFilterBox: true, onQuickFilterChange });
+      typeAndApply('sales');
+      expect(names()).toEqual(['Alice', 'Cara']);
+      // Terms can match in different columns.
+      typeAndApply('SALES  cara');
+      expect(names()).toEqual(['Cara']);
+      expect(onQuickFilterChange).toHaveBeenLastCalledWith('SALES  cara');
+      fireEvent.keyDown(box(), { key: 'Escape' });
+      expect(names()).toHaveLength(5);
+      expect(onQuickFilterChange).toHaveBeenLastCalledWith('');
+    });
+
+    it('applies after a pause while typing', async () => {
+      renderGrid({ quickFilterBox: true });
+      fireEvent.change(box(), { target: { value: 'ops' } });
+      expect(names()).toHaveLength(5);
+      await waitFor(() => expect(names()).toEqual(['Eve']));
+    });
+
+    it('matches displayed text, skips hidden columns, and stacks on column filters', () => {
+      const formatted: IColumnDef<SortFilterRow>[] = [
+        columns[0] as IColumnDef<SortFilterRow>,
+        { columnId: 'dept', name: 'Dept', valueFormatter: (v) => (v === 'Eng' ? 'Engineering' : String(v)) },
+        columns[2] as IColumnDef<SortFilterRow>,
+      ];
+      const { rerender } = renderGrid({ columns: formatted, quickFilter: 'engineering' });
+      expect(names()).toEqual(['Bob', 'Dan']);
+      const props = { data: rows, columns: formatted, getRowId: (r: SortFilterRow) => r.id, defaultPageSize: 25, defaultSortBy: '' };
+      rerender(<OGrid {...props} quickFilter="engineering" filters={{ score: { type: 'condition', value: { kind: 'number', conditions: [{ operator: 'lessThan', value: 75 }] } } }} />);
+      expect(names()).toEqual(['Dan']);
+      rerender(<OGrid {...props} quickFilter="engineering" visibleColumns={new Set(['name', 'score'])} />);
+      expect(names()).toEqual([]);
+    });
+
+    it('follows a formatter change: the old shown text stops matching', () => {
+      const withFormatter = (prefix: string): IColumnDef<SortFilterRow>[] => [
+        columns[0] as IColumnDef<SortFilterRow>,
+        { columnId: 'dept', name: 'Dept', valueFormatter: (v) => `${prefix} ${String(v)}` },
+        columns[2] as IColumnDef<SortFilterRow>,
+      ];
+      const props = { data: rows, getRowId: (r: SortFilterRow) => r.id, defaultPageSize: 25, defaultSortBy: '' };
+      const { rerender } = renderGrid({ columns: withFormatter('USD'), quickFilter: 'usd' });
+      expect(names()).toHaveLength(5);
+      rerender(<OGrid {...props} columns={withFormatter('EUR')} quickFilter="usd" />);
+      expect(names()).toEqual([]);
+      rerender(<OGrid {...props} columns={withFormatter('EUR')} quickFilter="eur" />);
+      expect(names()).toHaveLength(5);
+    });
+
+    it('a value set from outside drops a pending keystroke', () => {
+      jest.useFakeTimers();
+      try {
+        const onQuickFilterChange = jest.fn();
+        const props = { data: rows, columns, getRowId: (r: SortFilterRow) => r.id, defaultPageSize: 25, defaultSortBy: '', quickFilterBox: true, onQuickFilterChange };
+        const { rerender } = renderGrid({ quickFilterBox: true, quickFilter: '', onQuickFilterChange });
+        fireEvent.change(box(), { target: { value: 'draft' } });
+        rerender(<OGrid {...props} quickFilter="bob" />);
+        act(() => { jest.advanceTimersByTime(500); });
+        expect(onQuickFilterChange).not.toHaveBeenCalled();
+        expect((box() as HTMLInputElement).value).toBe('bob');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('the echo of its own value does not reset what the user is still typing', () => {
+      jest.useFakeTimers();
+      try {
+        const props = { data: rows, columns, getRowId: (r: SortFilterRow) => r.id, defaultPageSize: 25, defaultSortBy: '', quickFilterBox: true };
+        const onQuickFilterChange = jest.fn();
+        const { rerender } = renderGrid({ quickFilterBox: true, quickFilter: '', onQuickFilterChange });
+        fireEvent.change(box(), { target: { value: 'a' } });
+        act(() => { jest.advanceTimersByTime(250); });
+        expect(onQuickFilterChange).toHaveBeenLastCalledWith('a');
+        fireEvent.change(box(), { target: { value: 'al' } });
+        // The host echoes 'a' back after the user has typed on.
+        rerender(<OGrid {...props} onQuickFilterChange={onQuickFilterChange} quickFilter="a" />);
+        expect((box() as HTMLInputElement).value).toBe('al');
+        act(() => { jest.advanceTimersByTime(250); });
+        expect(onQuickFilterChange).toHaveBeenLastCalledWith('al');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('a controlled value shows in the box and the grid follows the host', () => {
+      const onQuickFilterChange = jest.fn();
+      renderGrid({ quickFilterBox: { placeholder: 'Find reports' }, quickFilter: 'bob', onQuickFilterChange });
+      expect(names()).toEqual(['Bob']);
+      expect((box() as HTMLInputElement).value).toBe('bob');
+      expect(box().getAttribute('placeholder')).toBe('Find reports');
+      typeAndApply('alice');
+      expect(onQuickFilterChange).toHaveBeenLastCalledWith('alice');
+      expect(names()).toEqual(['Bob']);
+    });
+
+    it('is passed to a data source as quickFilter (trimmed)', async () => {
+      const fetchPage = jest.fn(async (_params: IFetchParams) => ({ items: rows.slice(0, 1), totalCount: 1 }));
+      const dataSource: IDataSource<SortFilterRow> = { fetchPage };
+      render(<OGrid columns={columns} getRowId={(r) => r.id} dataSource={dataSource} quickFilter="  alice " />);
+      await waitFor(() => expect(fetchPage).toHaveBeenCalled());
+      expect(fetchPage.mock.calls[fetchPage.mock.calls.length - 1]?.[0].quickFilter).toBe('alice');
     });
   });
 }
