@@ -129,7 +129,7 @@ export class WindowedRowCache<T> {
    * `invalidate`) when the user sorts or filters.
    */
   setContext(context: IRowQueryContext): void {
-    this.context = { sort: context.sort, sortModel: context.sortModel, filters: context.filters };
+    this.context = { sort: context.sort, sortModel: context.sortModel, filters: context.filters, quickFilter: context.quickFilter };
     this.invalidate();
   }
 
@@ -227,6 +227,7 @@ export class WindowedRowCache<T> {
         sort: this.context.sort,
         ...(this.context.sortModel ? { sortModel: this.context.sortModel } : {}),
         filters: this.context.filters,
+        ...(this.context.quickFilter ? { quickFilter: this.context.quickFilter } : {}),
         signal: controller.signal,
       })
       .then((result) => {
@@ -263,6 +264,7 @@ export class WindowedRowCache<T> {
         sort: this.context.sort,
         ...(this.context.sortModel ? { sortModel: this.context.sortModel } : {}),
         filters: this.context.filters,
+        ...(this.context.quickFilter ? { quickFilter: this.context.quickFilter } : {}),
         signal: controller.signal,
       });
       if (generation !== this.generation) return;

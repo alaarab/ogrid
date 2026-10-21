@@ -26,6 +26,10 @@ export interface UseColumnHeaderMenuStateParams {
   getHiddenColumnsAround?: (columnId: string) => string[];
   /** Show hidden columns again. */
   onUnhideColumns?: (columnIds: string[]) => void;
+  /** Move a column one displayed position (`columnReorder`). Set to show "Move left/right". */
+  onMoveColumn?: (columnId: string, direction: 'left' | 'right') => void;
+  /** Whether a column can move that way (false at the edge of its pin zone). */
+  canMoveColumn?: (columnId: string, direction: 'left' | 'right') => boolean;
 }
 
 export interface UseColumnHeaderMenuStateResult {
@@ -57,6 +61,12 @@ export interface UseColumnHeaderMenuStateResult {
   canHide: boolean;
   /** Whether "Unhide columns" shows (hidden columns sit next to this one). */
   canUnhide: boolean;
+  handleMoveLeft: () => void;
+  handleMoveRight: () => void;
+  /** Whether "Move left" / "Move right" show (`columnReorder`). */
+  canReorder: boolean;
+  canMoveLeft: boolean;
+  canMoveRight: boolean;
   canPinLeft: boolean;
   canPinRight: boolean;
   canUnpin: boolean;
@@ -92,6 +102,8 @@ export function useColumnHeaderMenuState(
     canHideColumn,
     getHiddenColumnsAround,
     onUnhideColumns,
+    onMoveColumn,
+    canMoveColumn,
   } = params;
 
   const [isOpen, setIsOpen] = useState(false);
@@ -224,6 +236,20 @@ export function useColumnHeaderMenuState(
     close();
   }, [hiddenAroundKey, onUnhideColumns, close]);
 
+  const canReorder = onMoveColumn != null;
+  const canMoveLeft = !!(openForColumn && canReorder && (canMoveColumn?.(openForColumn, 'left') ?? true));
+  const canMoveRight = !!(openForColumn && canReorder && (canMoveColumn?.(openForColumn, 'right') ?? true));
+
+  const handleMoveLeft = useCallback(() => {
+    if (openForColumn && canMoveLeft) onMoveColumn?.(openForColumn, 'left');
+    close();
+  }, [openForColumn, canMoveLeft, onMoveColumn, close]);
+
+  const handleMoveRight = useCallback(() => {
+    if (openForColumn && canMoveRight) onMoveColumn?.(openForColumn, 'right');
+    close();
+  }, [openForColumn, canMoveRight, onMoveColumn, close]);
+
   return {
     isOpen,
     openForColumn,
@@ -248,6 +274,11 @@ export function useColumnHeaderMenuState(
     handleUnhideColumns,
     canHide,
     canUnhide,
+    handleMoveLeft,
+    handleMoveRight,
+    canReorder,
+    canMoveLeft,
+    canMoveRight,
     canPinLeft,
     canPinRight,
     canUnpin,
@@ -285,6 +316,11 @@ export function getColumnHeaderMenuProps(headerMenu: UseColumnHeaderMenuStateRes
     onUnhideColumns: headerMenu.handleUnhideColumns,
     canHide: headerMenu.canHide,
     canUnhide: headerMenu.canUnhide,
+    onMoveLeft: headerMenu.handleMoveLeft,
+    onMoveRight: headerMenu.handleMoveRight,
+    canReorder: headerMenu.canReorder,
+    canMoveLeft: headerMenu.canMoveLeft,
+    canMoveRight: headerMenu.canMoveRight,
     canPinLeft: headerMenu.canPinLeft,
     canPinRight: headerMenu.canPinRight,
     canUnpin: headerMenu.canUnpin,

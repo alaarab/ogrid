@@ -1,4 +1,4 @@
-import type { FilterOption } from '@alaarab/ogrid-core';
+import type { FilterOption, MultiSelectFilterMode } from '@alaarab/ogrid-core';
 /**
  * Shared filter content dispatching for ColumnHeaderFilter across all React UI packages.
  *
@@ -74,6 +74,49 @@ export interface DateRendererProps {
   onClear: () => void;
 }
 
+const MULTI_SELECT_MODE_LABELS: Record<MultiSelectFilterMode, string> = {
+  any: 'Any of',
+  all: 'All of',
+  none: 'None of',
+};
+const modeRowStyle: React.CSSProperties = { padding: '12px 12px 0', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, lineHeight: '16px' };
+// Whole-pixel heights: a fractional row would put the virtual option list below
+// on sub-pixel offsets. 44px on touch screens, like the kits' other controls.
+const modeSelectStyle: React.CSSProperties = { flex: 1, minWidth: 0, font: 'inherit', boxSizing: 'border-box', height: 30 };
+const coarseModeSelectStyle: React.CSSProperties = { ...modeSelectStyle, height: 44 };
+const isCoarsePointer = (): boolean =>
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+
+/**
+ * Match mode for a multi-select filter, above the option list: Any of
+ * (default), None of (exclude), and All of for `multiValue` columns. Applied
+ * with the options.
+ */
+function MultiSelectModeSelect({ modes, value, onChange, columnName }: {
+  modes: readonly MultiSelectFilterMode[];
+  value: MultiSelectFilterMode;
+  onChange: (mode: MultiSelectFilterMode) => void;
+  columnName?: string;
+}): React.ReactElement | null {
+  if (modes.length < 2) return null;
+  return (
+    <div style={modeRowStyle} data-ogrid-multiselect-mode="">
+      <select
+        style={isCoarsePointer() ? coarseModeSelectStyle : modeSelectStyle}
+        aria-label={columnName ? `${columnName} match` : 'Match'}
+        value={value}
+        onChange={(e) => onChange(e.target.value as MultiSelectFilterMode)}
+      >
+        {modes.map((mode) => (
+          <option key={mode} value={mode}>
+            {MULTI_SELECT_MODE_LABELS[mode]}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 /**
  * Dispatches to the appropriate filter content renderer based on filterType.
  * Eliminates the duplicated if/switch chain in each UI package's ColumnHeaderFilter.
@@ -100,7 +143,7 @@ export function renderFilterContent(
     return renderers.renderCondition ? renderers.renderCondition(props) : <ConditionFilterContent {...props} />;
   }
   if (filterType === 'multiSelect') {
-    return renderers.renderMultiSelect({
+    const list = renderers.renderMultiSelect({
       searchText: state.searchText,
       onSearchChange: state.setSearchText,
       options,
@@ -112,6 +155,17 @@ export function renderFilterContent(
       onApply: state.handlers.handleApplyMultiSelect,
       isLoading: isLoadingOptions,
     });
+    return (
+      <>
+        <MultiSelectModeSelect
+          modes={state.multiSelectModes}
+          value={state.tempMultiSelectMode}
+          onChange={state.setTempMultiSelectMode}
+          columnName={columnName}
+        />
+        {list}
+      </>
+    );
   }
   if (filterType === 'text') {
     return renderers.renderText({

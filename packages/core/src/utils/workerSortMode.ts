@@ -20,9 +20,13 @@ export function shouldUseWorkerSort<T>(
   const requested = workerSort === true || (workerSort === 'auto' && rowCount > DEFAULT_WORKER_SORT_AUTO_THRESHOLD);
   if (!requested) return false;
 
-  if (options?.filters && Object.values(options.filters).some((filter) => filter?.type === 'people')) {
+  // The worker matches people filters, multi-select modes other than `any`,
+  // and array values (multiValue columns) differently, so those stay synchronous.
+  if (options?.filters && Object.values(options.filters).some((filter) =>
+    filter?.type === 'people' || (filter?.type === 'multiSelect' && (filter.mode ?? 'any') !== 'any'))) {
     return false;
   }
+  if (options?.columns?.some((column) => column.filterable?.multiValue === true)) return false;
 
   if (options?.columns) {
     const fields = options.sortModel ? options.sortModel.map((level) => level.field) : [];
