@@ -185,8 +185,9 @@ export {
   getPinStateForColumn,
   reorderColumnArray,
   calculateDropTarget,
+  moveColumnByStep,
 } from './utils';
-export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams } from './utils';
+export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams, IMoveColumnByStepParams } from './utils';
 
 // Utils  -  rowReorder / rangeMove (drag-and-drop)
 export {

@@ -42,6 +42,17 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     return render(<DataGridTable {...defaultProps} {...overrides} />);
   }
 
+  it('keyboard column moves respect a pin declared on the column def (no pinnedColumns prop)', () => {
+    const onColumnOrderChange = jest.fn();
+    const columns = twoColumnColumns.map((c) => (c.columnId === 'name' ? { ...c, pinned: 'left' as const } : c));
+    renderTable({ columns, columnReorder: true, onColumnOrderChange, columnOrder: ['name', 'status'] });
+    fireEvent.click(screen.getByRole('button', { name: 'Status column options' }));
+    const moveLeft = screen.getByRole('menuitem', { name: 'Move left' });
+    expect(moveLeft).toBeDisabled();
+    fireEvent.click(moveLeft);
+    expect(onColumnOrderChange).not.toHaveBeenCalled();
+  });
+
   it('renders rows and cells for visible columns', () => {
     renderTable();
     expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Alpha', 'Beta']);
