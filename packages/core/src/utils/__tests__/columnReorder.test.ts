@@ -1,4 +1,5 @@
-import { calculateDropTarget, reorderColumnArray } from '../columnReorder';
+import { calculateDropTarget, moveColumnByStep, reorderColumnArray } from '../columnReorder';
+import { getColumnHeaderMenuItems } from '../gridContextMenuHelpers';
 
 /** Header cells laid out left to right, each 100px wide, plus matching body cells. */
 function buildTable(ids: string[], withBody = false): HTMLElement {
@@ -87,5 +88,53 @@ describe('calculateDropTarget + reorderColumnArray', () => {
         tableElement: buildTable(order, true),
       })
     ).not.toThrow();
+  });
+});
+
+describe('moveColumnByStep', () => {
+  const order = ['A', 'B', 'C', 'D'];
+  const move = (columnId: string, direction: 'left' | 'right', extra: Partial<Parameters<typeof moveColumnByStep>[0]> = {}) =>
+    moveColumnByStep({ columnOrder: order, displayedColumnIds: order, columnId, direction, ...extra });
+
+  it('swaps a column with its displayed neighbor', () => {
+    expect(move('B', 'left')).toEqual(['B', 'A', 'C', 'D']);
+    expect(move('B', 'right')).toEqual(['A', 'C', 'B', 'D']);
+  });
+
+  it('returns null at either edge', () => {
+    expect(move('A', 'left')).toBeNull();
+    expect(move('D', 'right')).toBeNull();
+  });
+
+  it('steps past hidden columns, which keep their place', () => {
+    // C is hidden: moving B right lands it after D, and moving D left lands it before B.
+    const shown = ['A', 'B', 'D'];
+    expect(move('B', 'right', { displayedColumnIds: shown })).toEqual(['A', 'C', 'D', 'B']);
+    expect(move('D', 'left', { displayedColumnIds: shown })).toEqual(['A', 'D', 'B', 'C']);
+    expect(move('C', 'left', { displayedColumnIds: shown })).toBeNull();
+  });
+
+  it('never crosses a pin zone boundary', () => {
+    const pinnedColumns = { left: ['A'], right: ['D'] };
+    expect(move('B', 'left', { pinnedColumns })).toBeNull();
+    expect(move('C', 'right', { pinnedColumns })).toBeNull();
+    expect(move('B', 'right', { pinnedColumns })).toEqual(['A', 'C', 'B', 'D']);
+  });
+
+  it('places columns missing from a partial order after the listed ones', () => {
+    expect(move('D', 'left', { columnOrder: ['B', 'A'], displayedColumnIds: ['B', 'A', 'C', 'D'] })).toEqual(['B', 'A', 'D', 'C']);
+  });
+});
+
+describe('header menu reorder items', () => {
+  const base = { canPinLeft: true, canPinRight: true, canUnpin: false };
+
+  it('offers Move left / Move right only when reordering is on', () => {
+    expect(getColumnHeaderMenuItems(base).some((i) => i.id === 'moveLeft')).toBe(false);
+    const items = getColumnHeaderMenuItems({ ...base, canReorder: true, canMoveLeft: false, canMoveRight: true });
+    const left = items.find((i) => i.id === 'moveLeft');
+    const right = items.find((i) => i.id === 'moveRight');
+    expect(left).toMatchObject({ label: 'Move left', disabled: true });
+    expect(right).toMatchObject({ label: 'Move right', disabled: false });
   });
 });

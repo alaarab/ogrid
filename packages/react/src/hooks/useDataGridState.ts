@@ -45,6 +45,8 @@ export interface UseDataGridStateParams<T> {
 /** Column layout, visibility, and sizing state. */
 export interface DataGridLayoutState<T> {
   flatColumns: IColumnDef<T>[];
+  /** Explicit pins (defs, pin menu, controlled prop) without frozen columns: the zones column moves stay inside. */
+  userPinnedColumns: Record<string, 'left' | 'right'>;
   visibleCols: IColumnDef<T>[];
   visibleColumnCount: number;
   totalColCount: number;
@@ -217,6 +219,11 @@ export interface DataGridPinningState {
     handleUnhideColumns: () => void;
     canHide: boolean;
     canUnhide: boolean;
+    handleMoveLeft: () => void;
+    handleMoveRight: () => void;
+    canReorder: boolean;
+    canMoveLeft: boolean;
+    canMoveRight: boolean;
     canPinLeft: boolean;
     canPinRight: boolean;
     canUnpin: boolean;
@@ -339,6 +346,8 @@ export function useDataGridState<T>(
     onDeleteColumn,
     onHideColumns,
     onUnhideColumns,
+    columnReorder: props.columnReorder,
+    onColumnOrderChange: props.onColumnOrderChange,
     columns,
     items,
     getRowId,
