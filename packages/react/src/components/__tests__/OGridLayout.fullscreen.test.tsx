@@ -90,6 +90,16 @@ describe('OGridLayout full screen state', () => {
     expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toBeTruthy();
   });
 
+  it('keeps asking for the same change while the parent declines it', () => {
+    const onFullScreenChange = jest.fn();
+    render(<OGridLayout fullScreen isFullScreen={false} onFullScreenChange={onFullScreenChange}><div /></OGridLayout>);
+    const button = screen.getByRole('button', { name: 'Fullscreen' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(onFullScreenChange.mock.calls).toEqual([[true], [true], [true]]);
+  });
+
   it('enters full screen from the prop without the toolbar button', () => {
     const { container } = render(<OGridLayout isFullScreen><div /></OGridLayout>);
     expect((container.firstElementChild as HTMLElement).style.position).toBe('fixed');
@@ -118,6 +128,39 @@ describe('OGridLayout full screen page lock', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Exit fullscreen' }));
     expect(document.documentElement.style.overflow).toBe('');
     expect(document.body.style.overflow).toBe('auto');
+    expect(scrollTo).toHaveBeenCalledWith(12, 640);
+  });
+
+  it('keeps the page locked until the last of two fullscreen grids exits', () => {
+    const { rerender } = render(
+      <>
+        <OGridLayout isFullScreen><div /></OGridLayout>
+        <OGridLayout isFullScreen={false}><div /></OGridLayout>
+      </>
+    );
+    rerender(
+      <>
+        <OGridLayout isFullScreen><div /></OGridLayout>
+        <OGridLayout isFullScreen><div /></OGridLayout>
+      </>
+    );
+    rerender(
+      <>
+        <OGridLayout isFullScreen={false}><div /></OGridLayout>
+        <OGridLayout isFullScreen><div /></OGridLayout>
+      </>
+    );
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(scrollTo).not.toHaveBeenCalled();
+    rerender(
+      <>
+        <OGridLayout isFullScreen={false}><div /></OGridLayout>
+        <OGridLayout isFullScreen={false}><div /></OGridLayout>
+      </>
+    );
+    expect(document.body.style.overflow).toBe('auto');
+    expect(document.documentElement.style.overflow).toBe('');
+    expect(scrollTo).toHaveBeenCalledTimes(1);
     expect(scrollTo).toHaveBeenCalledWith(12, 640);
   });
 
