@@ -14,8 +14,10 @@ export interface UseColumnPinningParams<T = unknown> {
 }
 
 export interface UseColumnPinningResult {
-  /** Current pinned columns (controlled or internal). */
+  /** Current pinned columns (controlled or internal), with frozen columns as left pins. */
   pinnedColumns: Record<string, 'left' | 'right'>;
+  /** Explicit pins only (column defs, the pin menu, or the controlled prop), without frozen columns. */
+  userPinnedColumns: Record<string, 'left' | 'right'>;
   /** Pin a column to left or right. */
   pinColumn: (columnId: string, side: 'left' | 'right') => void;
   /** Unpin a column. */
@@ -151,6 +153,7 @@ export function useColumnPinning<T = unknown>(params: UseColumnPinningParams<T>)
 
   return {
     pinnedColumns,
+    userPinnedColumns: userPins,
     pinColumn,
     unpinColumn,
     isPinned,
