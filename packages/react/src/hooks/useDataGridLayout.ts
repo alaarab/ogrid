@@ -2,7 +2,7 @@ import { useMemo, useState, useLayoutEffect, useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns, computeHiddenGaps, hiddenKeysAround } from '../utils';
 import type { RowId, IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, resolveResponsiveConfig, applyResponsiveHiding, getResponsiveHiddenColumns } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, resolveResponsiveConfig, applyResponsiveHiding, getResponsiveHiddenColumns, moveColumnByStep } from '@alaarab/ogrid-core';
 import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 import { useTableLayout } from './useTableLayout';
 import { useColumnPinning } from './useColumnPinning';
@@ -37,6 +37,9 @@ export interface UseDataGridLayoutParams<T> {
   /** Hide/unhide columns from the header menu (omit to hide those items and the gap markers). */
   onHideColumns?: (columnIds: string[]) => void;
   onUnhideColumns?: (columnIds: string[]) => void;
+  /** Header menu "Move left/right" (`columnReorder`); needs `onColumnOrderChange`. */
+  columnReorder?: boolean;
+  onColumnOrderChange?: (order: string[]) => void;
 }
 
 /** Columns in display order: `columnOrder` first, then the rest in definition order. */
@@ -313,6 +316,42 @@ export function useDataGridLayout<T>(
     [setColumnSizingOverrides, onAutosizeColumn, onColumnResized]
   );
 
+  // Keyboard reorder from the header menu: one displayed position at a time,
+  // never out of the column's pin zone. Zones come from the explicit pins, the
+  // same as a header drag, so frozen columns are not a zone of their own.
+  const userPinnedColumns = pinningResult.userPinnedColumns;
+  const { columnReorder, onColumnOrderChange } = params;
+  const onColumnOrderChangeRef = useLatestRef(onColumnOrderChange);
+  const reorderOn = columnReorder === true && onColumnOrderChange != null;
+  const moveColumn = useCallback(
+    (columnId: string, direction: 'left' | 'right') => {
+      const left: string[] = [];
+      const right: string[] = [];
+      for (const [id, side] of Object.entries(userPinnedColumns)) (side === 'left' ? left : right).push(id);
+      return moveColumnByStep({
+        columnOrder: orderColumns(flatColumns, columnOrder).map((c) => c.columnId),
+        displayedColumnIds: visibleCols.map((c) => c.columnId),
+        columnId,
+        direction,
+        pinnedColumns: { left, right },
+      });
+    },
+    [userPinnedColumns, flatColumns, columnOrder, visibleCols]
+  );
+  const onMoveColumn = useMemo(
+    () => reorderOn
+      ? (columnId: string, direction: 'left' | 'right') => {
+        const next = moveColumn(columnId, direction);
+        if (next) onColumnOrderChangeRef.current?.(next);
+      }
+      : undefined,
+    [reorderOn, moveColumn, onColumnOrderChangeRef]
+  );
+  const canMoveColumn = useCallback(
+    (columnId: string, direction: 'left' | 'right') => moveColumn(columnId, direction) != null,
+    [moveColumn]
+  );
+
   const headerMenuResult = useColumnHeaderMenuState({
     wrapperRef,
     pinnedColumns: pinningResult.pinnedColumns,
@@ -331,16 +370,18 @@ export function useDataGridLayout<T>(
     canHideColumn,
     getHiddenColumnsAround: hidingColumns ? getHiddenColumnsAround : undefined,
     onUnhideColumns,
+    onMoveColumn,
+    canMoveColumn: reorderOn ? canMoveColumn : undefined,
   });
 
   // Memoize layout sub-object
   const layoutState = useMemo<DataGridLayoutState<T>>(() => ({
-    flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
+    flatColumns, userPinnedColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
     hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
     desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
     measuredColumnWidths, hiddenColumnGaps,
   }), [
-    flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
+    flatColumns, userPinnedColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
     hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
     desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
     measuredColumnWidths, hiddenColumnGaps,
