@@ -67,7 +67,10 @@ export type {
   IGridCellNavigator,
   ICellDropEvent,
   IRowOrderChange,
+  IGridMenusConfig,
 } from './dataGridTypes';
+export type { IGridMenuItem, GridMenuItems, IHeaderMenuContext, IColumnMenuContext } from './gridMenuTypes';
+export { resolveGridMenuItems } from './gridMenuTypes';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './dataGridTypes';
 export type { PageSize } from '@alaarab/ogrid-core';

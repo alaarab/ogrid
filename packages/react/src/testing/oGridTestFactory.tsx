@@ -190,6 +190,184 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     expect(screen.queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
   });
 
+  describe('header corner menu', () => {
+    const openCorner = () => fireEvent.click(screen.getByRole('button', { name: 'Grid options' }));
+
+    it('replaces the toolbar row: no chooser or fullscreen button unless asked for', () => {
+      const { container } = renderOGrid({ headerMenu: true });
+      expect(screen.getByRole('button', { name: 'Grid options' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /column visibility/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
+      // root > bordered container: its first child is the grid area, not a toolbar strip.
+      const bordered = (container.firstElementChild as HTMLElement).firstElementChild as HTMLElement;
+      expect(bordered.firstElementChild?.querySelector('[data-ogrid-scroll-container]')).not.toBeNull();
+    });
+
+    it('keeps a toolbar that has a search box in it, without the chooser', () => {
+      renderOGrid({ headerMenu: true, quickFilterBox: true });
+      expect(screen.getByRole('searchbox', { name: 'Search all columns' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /column visibility/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Grid options' })).toBeInTheDocument();
+    });
+
+    it('keeps the toolbar chooser when columnChooser is set explicitly', () => {
+      renderOGrid({ headerMenu: true, columnChooser: 'toolbar' });
+      expect(screen.getByRole('button', { name: /column visibility/i })).toBeInTheDocument();
+    });
+
+    it('Columns toggles a column from the checklist and keeps the menu open', () => {
+      renderOGrid({ headerMenu: true });
+      openCorner();
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Columns' }));
+      const status = screen.getByRole('menuitemcheckbox', { name: /Status/ });
+      expect(status).toHaveAttribute('aria-checked', 'true');
+      // Required columns can't be hidden.
+      expect(screen.getByRole('menuitemcheckbox', { name: /Name/ })).toBeDisabled();
+      fireEvent.click(status);
+      expect(screen.queryByTestId('cell-status')).not.toBeInTheDocument();
+      expect(screen.getByRole('menuitemcheckbox', { name: /Status/ })).toHaveAttribute('aria-checked', 'false');
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Show all columns' }));
+      expect(screen.getAllByTestId('cell-status').length).toBeGreaterThan(0);
+    });
+
+    it('Full screen enters and exits fullscreen and reports it', () => {
+      const onFullScreenChange = jest.fn();
+      const { container } = renderOGrid({ headerMenu: true, onFullScreenChange });
+      openCorner();
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Full screen' }));
+      expect(onFullScreenChange).toHaveBeenLastCalledWith(true);
+      expect((container.firstElementChild as HTMLElement).style.position).toBe('fixed');
+      openCorner();
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Exit full screen' }));
+      expect(onFullScreenChange).toHaveBeenLastCalledWith(false);
+      expect((container.firstElementChild as HTMLElement).style.position).not.toBe('fixed');
+    });
+
+    it('a controlled grid asks again when the parent declines', () => {
+      const onFullScreenChange = jest.fn();
+      renderOGrid({ headerMenu: true, isFullScreen: false, onFullScreenChange });
+      for (let i = 0; i < 2; i++) {
+        fireEvent.click(screen.getByRole('button', { name: 'Grid options' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Full screen' }));
+      }
+      expect(onFullScreenChange.mock.calls).toEqual([[true], [true]]);
+    });
+
+    it('Reset columns restores default visibility, order and widths', () => {
+      const onColumnOrderChange = jest.fn();
+      const onColumnsReset = jest.fn();
+      renderOGrid({ headerMenu: true, columnReorder: true, onColumnOrderChange, onColumnsReset });
+      const resize = () => screen.getByRole('separator', { name: 'Resize column Status' });
+      const startWidth = resize().getAttribute('aria-valuenow');
+      fireEvent.keyDown(resize(), { key: 'ArrowRight' });
+      fireEvent.keyDown(resize(), { key: 'ArrowRight' });
+      expect(resize().getAttribute('aria-valuenow')).not.toBe(startWidth);
+      fireEvent.click(screen.getByRole('button', { name: 'Grid options' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Columns' }));
+      fireEvent.click(screen.getByRole('menuitemcheckbox', { name: /Status/ }));
+      expect(screen.queryByTestId('cell-status')).not.toBeInTheDocument();
+      fireEvent.keyDown(screen.getByRole('menuitemcheckbox', { name: /Status/ }), { key: 'Escape' });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Reset columns' }));
+      expect(screen.getAllByTestId('cell-status').length).toBeGreaterThan(0);
+      expect(resize().getAttribute('aria-valuenow')).toBe(startWidth);
+      expect(onColumnOrderChange).toHaveBeenLastCalledWith(fixtureColumns.map((c) => c.columnId));
+      expect(onColumnsReset).toHaveBeenCalledTimes(1);
+    });
+
+    it('adds app items and submenus, and a function can hide built-ins', () => {
+      const csv = jest.fn();
+      const { unmount } = renderOGrid({
+        headerMenu: true,
+        headerMenuItems: [{ id: 'export', label: 'Export', items: [{ id: 'csv', label: 'CSV', onClick: csv }] }],
+      });
+      openCorner();
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Export' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
+      expect(csv).toHaveBeenCalled();
+      unmount();
+
+      renderOGrid({
+        headerMenu: true,
+        headerMenuItems: (items) => [{ id: 'mine', label: 'Mine' }, ...items.filter((i) => i.id !== 'autosizeAll')],
+      });
+      openCorner();
+      const labels = screen.getAllByRole('menuitem').map((el) => el.textContent);
+      expect(labels[0]).toBe('Mine');
+      expect(labels).not.toContain('Autosize all columns');
+    });
+  });
+
+  describe('column menu items', () => {
+    it('right-clicking a header opens its menu with Choose columns and Full screen', () => {
+      renderOGrid({ fullScreen: true });
+      fireEvent.contextMenu(screen.getByRole('columnheader', { name: /Status/ }));
+      const menu = screen.getByRole('menu', { name: 'Status column options' });
+      expect(menu).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Choose columns' })).toHaveAttribute('aria-haspopup', 'menu');
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Full screen' }));
+      expect(screen.getByRole('button', { name: /exit fullscreen/i })).toBeInTheDocument();
+    });
+
+    it('leaves Full screen out when fullscreen is not enabled', () => {
+      renderOGrid();
+      fireEvent.contextMenu(screen.getByRole('columnheader', { name: /Status/ }));
+      expect(screen.getByRole('menuitem', { name: 'Choose columns' })).toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: /full screen/i })).not.toBeInTheDocument();
+    });
+
+    it('columnMenuItems gets the column id and can drop built-ins', () => {
+      const onPick = jest.fn();
+      renderOGrid({
+        columnMenuItems: (items, { columnId }) => [
+          ...items.filter((i) => !i.id.startsWith('pin') && i.id !== 'unpin'),
+          { id: 'pick', label: `Pick ${columnId}`, onClick: () => onPick(columnId) },
+        ],
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Status column options' }));
+      expect(screen.queryByRole('menuitem', { name: 'Pin left' })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Pick status' }));
+      expect(onPick).toHaveBeenCalledWith('status');
+    });
+  });
+
+  describe('fullScreenShortcut', () => {
+    const pressOnCell = (key: string, init: KeyboardEventInit = {}) => {
+      const cell = screen.getAllByTestId('cell-status')[0]?.closest('td')?.querySelector('[data-row-index]') as HTMLElement;
+      fireEvent.pointerDown(cell);
+      fireEvent.keyDown(cell, { key, ...init });
+    };
+
+    it('f toggles fullscreen on a read-only grid', () => {
+      const { container } = renderOGrid({ headerMenu: true, editable: false });
+      pressOnCell('f');
+      expect((container.firstElementChild as HTMLElement).style.position).toBe('fixed');
+      pressOnCell('f');
+      expect((container.firstElementChild as HTMLElement).style.position).not.toBe('fixed');
+    });
+
+    it('a plain key gives way on an editable cell; a modified one does not', () => {
+      const onCellValueChanged = jest.fn();
+      const columns = fixtureColumns.map((c) => (c.columnId === 'status' ? { ...c, editable: true } : c));
+      const { container, unmount } = renderOGrid({ headerMenu: true, editable: true, onCellValueChanged, columns });
+      pressOnCell('f');
+      expect((container.firstElementChild as HTMLElement).style.position).not.toBe('fixed');
+      unmount();
+      const second = renderOGrid({ headerMenu: true, editable: true, onCellValueChanged, columns, fullScreenShortcut: 'Shift+F' });
+      pressOnCell('F', { shiftKey: true });
+      expect((second.container.firstElementChild as HTMLElement).style.position).toBe('fixed');
+    });
+
+    it('is off without a way into fullscreen, or with false', () => {
+      const { container, unmount } = renderOGrid({ editable: false });
+      pressOnCell('f');
+      expect((container.firstElementChild as HTMLElement).style.position).not.toBe('fixed');
+      unmount();
+      const second = renderOGrid({ headerMenu: true, editable: false, fullScreenShortcut: false });
+      pressOnCell('f');
+      expect((second.container.firstElementChild as HTMLElement).style.position).not.toBe('fixed');
+    });
+  });
+
   it('cellReferences=true renders column letters, row numbers, and name box', () => {
     const { container } = renderOGrid({ cellReferences: true });
     // Column letters should be present

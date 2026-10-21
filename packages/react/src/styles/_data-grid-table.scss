@@ -962,3 +962,75 @@
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+// ---- Header corner menu (`headerMenu`) ----
+
+// The scroll area and a gutter beside it for the corner button, so the
+// button never sits over a header or cell. The gutter's top cell lines up
+// with the header rows.
+.headerCornerFrame {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  &[data-virtual-scroll] { flex: 1; }
+  > .tableWrapper { flex: 1 1 auto; width: auto; }
+}
+
+.headerCorner {
+  flex: 0 0 var(--ogrid-header-corner-width, 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  background: var(--ogrid-bg, #fff);
+  border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  @media (pointer: coarse) { flex-basis: 44px; }
+}
+
+.headerCornerCell {
+  box-sizing: border-box;
+  align-self: stretch;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ogrid-header-bg, #f5f5f5);
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+}
+
+.headerCornerTrigger {
+  @include surface.focus-ring;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ogrid-radius-sm, 3px);
+  background: transparent;
+  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+  cursor: pointer;
+  &:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
+  &[aria-expanded='true'] { background: var(--ogrid-active-bg, rgba(0, 0, 0, 0.08)); }
+  @media (pointer: coarse) { width: 44px; height: 44px; }
+}
+
+.gridMenu {
+  @include menu.menu;
+  z-index: var(--ogrid-z-popover, 10001);
+}
+.gridMenuItem {
+  @include menu.item;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gridMenuSeparator { height: 1px; margin: 4px 8px; background: var(--ogrid-border, #e0e0e0); }
+.gridMenuSearch { @include menu.search; }
+.gridMenuCheck { @include menu.check; }
+.gridMenuIcon { @include menu.icon; }

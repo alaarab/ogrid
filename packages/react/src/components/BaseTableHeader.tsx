@@ -239,12 +239,20 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                 }}
                 aria-sort={ariaSort as 'ascending' | 'descending' | 'none' | undefined}
                 onPointerDown={columnReorder ? (e: React.PointerEvent) => handleHeaderMouseDown(col.columnId, e) : undefined}
+                onContextMenu={(e: React.MouseEvent<HTMLElement>) => {
+                  // Right-click a header: the column's menu, opened from its options button.
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const trigger = e.currentTarget.querySelector<HTMLElement>('[data-ogrid-column-menu-trigger]') ?? e.currentTarget;
+                  headerMenu.open(col.columnId, trigger);
+                }}
               >
                 <div className={styles.headerCellContent}>
                   <ColumnHeaderFilter {...(headerFilterConfigs.get(col.columnId) ?? getHeaderFilterConfig(col, headerFilterInput))} />
                   <button
                     type="button"
                     className={styles.headerMenuTrigger}
+                    data-ogrid-column-menu-trigger=""
                     onClick={(e) => {
                       e.stopPropagation();
                       if (headerMenu.isOpen && headerMenu.openForColumn === col.columnId) {

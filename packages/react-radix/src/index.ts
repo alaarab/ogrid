@@ -251,6 +251,7 @@ export { SideBar } from '@alaarab/ogrid-react';
 export type { SideBarProps, SideBarFilterColumn } from '@alaarab/ogrid-react';
 export { BaseColumnHeaderMenu } from '@alaarab/ogrid-react';
 export type { BaseColumnHeaderMenuProps, ColumnHeaderMenuClassNames } from '@alaarab/ogrid-react';
+export type { IGridMenuItem, GridMenuItems, IHeaderMenuContext, IColumnMenuContext } from '@alaarab/ogrid-react';
 export { createOGrid } from '@alaarab/ogrid-react';
 export type { CreateOGridComponents, GridRowProps, InlineCellEditorProps } from '@alaarab/ogrid-react';
 export { CellErrorBoundary } from '@alaarab/ogrid-react';
