@@ -363,4 +363,81 @@ export function createSortFilterTests(OGrid: React.ComponentType<Props>): void {
       expect(fetchPage.mock.calls[fetchPage.mock.calls.length - 1]?.[0].quickFilter).toBe('alice');
     });
   });
+
+  describe('multi-select modes and array values', () => {
+    interface ReportRow {
+      id: number;
+      title: string;
+      status: string;
+      reviewers: string[];
+      comment: string;
+    }
+    const reports: ReportRow[] = [
+      { id: 1, title: 'Q1', status: 'open', reviewers: ['Ana', 'Ben'], comment: '' },
+      { id: 2, title: 'Q2', status: 'signed', reviewers: ['Ben'], comment: 'waiting on legal' },
+      { id: 3, title: 'Q3', status: 'open', reviewers: [], comment: '' },
+      { id: 4, title: 'Q4', status: 'draft', reviewers: ['Cy', 'Ana'], comment: '' },
+    ];
+    const reportColumns: IColumnDef<ReportRow>[] = [
+      { columnId: 'title', name: 'Title', renderCell: (r) => <span data-testid="rp-title">{r.title}</span> },
+      { columnId: 'status', name: 'Status', filterable: { type: 'multiSelect' } },
+      {
+        columnId: 'reviewers', name: 'Reviewers', filterable: { type: 'multiSelect', multiValue: true },
+        valueFormatter: (v) => (Array.isArray(v) ? v.join(', ') : ''),
+      },
+    ];
+    type ReportProps = IOGridProps<ReportRow>;
+    const ReportGrid = OGrid as unknown as React.ComponentType<ReportProps>;
+    const renderReports = (overrides: Partial<ReportProps> = {}) =>
+      render(<ReportGrid {...({ data: reports, columns: reportColumns, getRowId: (r: ReportRow) => r.id, defaultPageSize: 25, ...overrides } as ReportProps)} />);
+    const titles = () => screen.queryAllByTestId('rp-title').map((el) => el.textContent);
+    const apply = () => fireEvent.click(screen.getAllByRole('button', { name: 'Apply' })[0] as HTMLElement);
+
+    it('None of excludes the chosen options ("not in")', () => {
+      const onFiltersChange = jest.fn();
+      renderReports({ onFiltersChange });
+      fireEvent.click(screen.getByRole('button', { name: 'Filter Status' }));
+      const match = screen.getByRole('combobox', { name: 'Status match' });
+      expect(within(match).queryByRole('option', { name: 'All of' })).toBeNull();
+      fireEvent.change(match, { target: { value: 'none' } });
+      fireEvent.click(screen.getByRole('checkbox', { name: 'open' }));
+      apply();
+      expect(titles()).toEqual(['Q2', 'Q4']);
+      expect(onFiltersChange).toHaveBeenLastCalledWith({ status: { type: 'multiSelect', value: ['open'], mode: 'none' } });
+      // Reopening shows the applied mode.
+      fireEvent.click(screen.getByRole('button', { name: 'Filter Status' }));
+      expect((screen.getByRole('combobox', { name: 'Status match' }) as HTMLSelectElement).value).toBe('none');
+    });
+
+    it('array columns list each item as an option and support All of', () => {
+      renderReports();
+      fireEvent.click(screen.getByRole('button', { name: 'Filter Reviewers' }));
+      for (const name of ['Ana', 'Ben', 'Cy']) expect(screen.getByRole('checkbox', { name })).toBeInTheDocument();
+      fireEvent.change(screen.getByRole('combobox', { name: 'Reviewers match' }), { target: { value: 'all' } });
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Ana' }));
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Ben' }));
+      apply();
+      expect(titles()).toEqual(['Q1']);
+    });
+
+    it('array columns: Any of and None of', () => {
+      const { rerender } = renderReports({ filters: { reviewers: { type: 'multiSelect', value: ['Ana'] } } });
+      expect(titles()).toEqual(['Q1', 'Q4']);
+      rerender(<ReportGrid data={reports} columns={reportColumns} getRowId={(r) => r.id} defaultPageSize={25} filters={{ reviewers: { type: 'multiSelect', value: ['Ana'], mode: 'none' } }} />);
+      expect(titles()).toEqual(['Q2', 'Q3']);
+    });
+
+    it('getQuickFilterText lets the quick filter match text outside the columns', () => {
+      renderReports({ quickFilter: 'legal', getQuickFilterText: (r) => r.comment });
+      expect(titles()).toEqual(['Q2']);
+    });
+
+    it('a new getQuickFilterText re-filters', () => {
+      const base = { data: reports, columns: reportColumns, getRowId: (r: ReportRow) => r.id, defaultPageSize: 25, quickFilter: 'legal' };
+      const { rerender } = render(<ReportGrid {...({ ...base, getQuickFilterText: (r: ReportRow) => r.comment } as ReportProps)} />);
+      expect(titles()).toEqual(['Q2']);
+      rerender(<ReportGrid {...({ ...base, getQuickFilterText: () => '' } as ReportProps)} />);
+      expect(titles()).toEqual([]);
+    });
+  });
 }

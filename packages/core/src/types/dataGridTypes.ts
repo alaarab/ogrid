@@ -31,10 +31,17 @@ export function toUserLike(u: UserLikeInput | undefined): UserLike | undefined {
   };
 }
 
+/**
+ * How a multi-select filter matches: `any` (default) keeps rows holding one of
+ * the selected options, `all` rows holding every one (array-valued columns),
+ * `none` rows holding none of them (exclude, "not in").
+ */
+export type MultiSelectFilterMode = 'any' | 'all' | 'none';
+
 /** Discriminated filter value. The `type` field identifies the filter kind. */
 export type FilterValue =
   | { type: 'text'; value: string }
-  | { type: 'multiSelect'; value: string[] }
+  | { type: 'multiSelect'; value: string[]; mode?: MultiSelectFilterMode }
   | { type: 'people'; value: UserLike }
   | { type: 'date'; value: IDateFilterValue }
   | { type: 'condition'; value: IConditionFilterValue };

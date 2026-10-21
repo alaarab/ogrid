@@ -367,7 +367,9 @@ function FiltersPanel(props: {
                           const next = e.target.checked
                             ? [...current, value]
                             : current.filter((v) => v !== value);
-                          onFilterChange(filterKey, next.length > 0 ? { type: 'multiSelect', value: next } : undefined);
+                          // Keep the match mode (None of / All of) set from the column header.
+                          const mode = fv?.type === 'multiSelect' ? fv.mode : undefined;
+                          onFilterChange(filterKey, next.length > 0 ? { type: 'multiSelect', value: next, ...(mode ? { mode } : {}) } : undefined);
                         }}
                       />
                       <span>{getFilterOptionLabel(opt)}</span>

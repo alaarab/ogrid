@@ -5,6 +5,7 @@ import { normalizeSortModel } from './sortHelpers';
 import { formatCellValue } from './cellFormatting';
 import { getFilterField } from './ogridHelpers';
 import { createQuickFilterPredicate } from './quickFilter';
+import { createMultiSelectMatcher } from './multiSelectFilter';
 import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey, createSortCollator } from '../workers/sortFilterPrimitives';
 
 const sortCollator = createSortCollator();
@@ -22,6 +23,8 @@ export interface IClientSideDataOptions<T> {
   quickFilter?: string;
   /** Columns the quick filter searches (default: all `columns`). Pass the visible ones. */
   quickFilterColumns?: readonly IColumnDef<T>[];
+  /** Extra per-row text the quick filter searches besides the columns (comments, hidden fields). */
+  getQuickFilterText?: (row: T) => string | null | undefined;
 }
 
 const columnMapCache = new WeakMap<IColumnDef<unknown>[], Map<string, IColumnDef<unknown>>>();
@@ -72,12 +75,12 @@ export function processClientSideData<T>(
 
     switch (val.type) {
       case 'multiSelect':
-        // Cell values are coerced to string; null/undefined share the empty-string blank option.
-        // Object-typed column values will produce "[object Object]"  -  use valueGetter or
-        // valueFormatter on the column def to ensure meaningful string representation.
+        // Cell values are coerced to string (array values item by item); null/undefined
+        // share the empty-string blank option. Object-typed column values will produce
+        // "[object Object]"  -  use valueGetter on the column def for a meaningful value.
         if (val.value.length > 0) {
-          const allowedSet = new Set(val.value);
-          predicates.push((r) => allowedSet.has(String(getCellValue(r, col) ?? '')));
+          const matches = createMultiSelectMatcher(val.value, val.mode);
+          predicates.push((r) => matches(getCellValue(r, col)));
         }
         break;
       case 'text': {
@@ -126,7 +129,7 @@ export function processClientSideData<T>(
   }
 
   // Quick filter last: it reads every searched column, so the column filters reject rows first.
-  const quick = createQuickFilterPredicate(options?.quickFilter, options?.quickFilterColumns ?? columns);
+  const quick = createQuickFilterPredicate(options?.quickFilter, options?.quickFilterColumns ?? columns, options?.getQuickFilterText);
   if (quick) predicates.push(quick);
 
   const filtered = predicates.length > 0;

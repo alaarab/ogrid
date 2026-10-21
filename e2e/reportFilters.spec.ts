@@ -67,3 +67,23 @@ test.describe('Number comparison filter', () => {
     await expect.poll(() => rowTotal(page)).toBe(total);
   });
 });
+
+test.describe('Multi-select match mode', () => {
+  test('None of excludes the chosen status', async ({ page }) => {
+    await page.goto('/');
+    await waitForGrid(page);
+    const total = await rowTotal(page);
+    const first = ((await getColumnTexts(page, 'status'))[0] ?? '').trim();
+    expect(first).not.toBe('');
+
+    await page.getByRole('button', { name: 'Filter Status' }).click();
+    await page.getByRole('combobox', { name: 'Status match' }).selectOption('none');
+    // The filter popover holds the match select; the side bar has its own Status checkboxes.
+    const popover = page.locator('[data-ogrid-multiselect-mode]').locator('..');
+    await popover.getByRole('checkbox', { name: first, exact: true }).click();
+    await popover.getByRole('button', { name: 'Apply' }).click();
+
+    await expect.poll(() => rowTotal(page)).toBeLessThan(total);
+    for (const text of await getColumnTexts(page, 'status')) expect(text.trim()).not.toBe(first);
+  });
+});
