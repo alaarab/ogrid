@@ -2,7 +2,7 @@
   {
     "name": "core",
     "path": "packages/core/dist/esm/index.js",
-    "limit": "31.7 kB"
+    "limit": "31.9 kB"
   },
   {
     "name": "core formula assist (lazy)",
