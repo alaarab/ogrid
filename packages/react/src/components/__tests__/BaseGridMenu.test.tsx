@@ -103,6 +103,41 @@ describe('BaseGridMenu', () => {
     expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Budget' }));
   });
 
+  it('ArrowRight moves focus into a submenu that hover already opened', () => {
+    jest.useFakeTimers();
+    try {
+      render(<Harness items={[{ id: 'more', label: 'More', items: [{ id: 'x', label: 'X' }] }]} />);
+      const more = screen.getByRole('menuitem', { name: 'More' });
+      fireEvent.mouseEnter(more);
+      act(() => { jest.advanceTimersByTime(200); });
+      expect(document.activeElement).toBe(more);
+      key(more, 'ArrowRight');
+      expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'X' }));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('switching submenus starts the new one fresh (no search text carried over)', () => {
+    render(<Harness items={[
+      { id: 'cols', label: 'Columns', searchable: true, items: [{ id: 'a', label: 'Owner' }, { id: 'b', label: 'Status' }] },
+      { id: 'export', label: 'Export', items: [{ id: 'csv', label: 'CSV' }] },
+    ]} />);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Columns' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search columns' }), { target: { value: 'status' } });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Export' }));
+    expect(screen.getByRole('menuitem', { name: 'CSV' })).toBeInTheDocument();
+  });
+
+  it('renders nothing and touches no portal target without an anchor', () => {
+    const getPortalTarget = jest.fn(() => document.body);
+    const { container } = render(
+      <BaseGridMenu items={[{ id: 'a', label: 'A' }]} anchorElement={null} ariaLabel="Options" onClose={() => {}} getPortalTarget={getPortalTarget} />
+    );
+    expect(container.innerHTML).toBe('');
+    expect(getPortalTarget).not.toHaveBeenCalled();
+  });
+
   it('closes on a press outside the menu', () => {
     const onClose = jest.fn();
     render(<Harness onClose={onClose} items={[{ id: 'a', label: 'A' }]} />);

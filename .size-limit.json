@@ -12,7 +12,7 @@
   {
     "name": "react",
     "path": "packages/react/dist/esm/index.js",
-    "limit": "152 kB",
+    "limit": "152.5 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist"
     ]
@@ -20,7 +20,7 @@
   {
     "name": "react-radix",
     "path": "packages/react-radix/dist/esm/index.js",
-    "limit": "189.7 kB",
+    "limit": "190 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist",
       "./DataValidationDialog-*.js"
@@ -29,7 +29,7 @@
   {
     "name": "react-fluent",
     "path": "packages/react-fluent/dist/esm/index.js",
-    "limit": "229.5 kB",
+    "limit": "229.9 kB",
     "ignore": [
       "@alaarab/ogrid-core/formula/assist",
       "./DataValidationDialog-*.js"

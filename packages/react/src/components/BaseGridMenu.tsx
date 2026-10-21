@@ -42,6 +42,8 @@ export interface BaseGridMenuProps {
   onBack?: () => void;
   /** Set on submenus: the pointer entered it (keeps the parent from switching submenus). */
   onPointerEnterMenu?: () => void;
+  /** Bumped to move focus into an already open menu (a submenu opened by hover, then ArrowRight). */
+  focusRequest?: number;
 }
 
 const ITEM_SELECTOR = '[role^="menuitem"]:not(:disabled):not([aria-disabled="true"])';
@@ -55,14 +57,15 @@ function focusItem(el: HTMLElement | null | undefined) {
 export function BaseGridMenu(props: BaseGridMenuProps): React.ReactElement | null {
   const {
     items, anchorElement, onClose, ariaLabel, classNames, getPortalTarget, placement = 'below-start',
-    style, searchable = false, autoFocus = true, onBack, onPointerEnterMenu,
+    style, searchable = false, autoFocus = true, onBack, onPointerEnterMenu, focusRequest = 0,
   } = props;
   const isSubmenu = onBack != null;
   const menuRef = React.useRef<HTMLDivElement>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
   const [position, setPosition] = React.useState<{ top: number; left: number; maxHeight: number } | null>(null);
   const [query, setQuery] = React.useState('');
-  const [openSub, setOpenSub] = React.useState<{ id: string; anchor: HTMLElement; autoFocus: boolean } | null>(null);
+  // focusRequest > 0: the submenu takes focus (opened or entered from the keyboard, or by a click).
+  const [openSub, setOpenSub] = React.useState<{ id: string; anchor: HTMLElement; focusRequest: number } | null>(null);
   const hoverTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCloseRef = React.useRef(onClose);
   onCloseRef.current = onClose;
@@ -132,6 +135,14 @@ export function BaseGridMenu(props: BaseGridMenuProps): React.ReactElement | nul
     };
   }, [placed]);
 
+  // Focus into an already open menu on request (hover opened it without focus).
+  React.useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!placed || !menu || focusRequest === 0) return;
+    if (searchable && searchRef.current) searchRef.current.focus({ preventScroll: true });
+    else focusItem(menu.querySelector<HTMLElement>(ITEM_SELECTOR));
+  }, [focusRequest, placed, searchable]);
+
   // Root only: close on outside press, page/grid scroll that moves the anchor, and resize.
   React.useEffect(() => {
     if (isSubmenu || !anchorElement) return;
@@ -165,7 +176,10 @@ export function BaseGridMenu(props: BaseGridMenuProps): React.ReactElement | nul
 
   const openSubmenu = React.useCallback((id: string, anchor: HTMLElement, withFocus: boolean) => {
     clearHoverTimer();
-    setOpenSub({ id, anchor, autoFocus: withFocus });
+    setOpenSub((prev) => {
+      if (prev && prev.id === id) return withFocus ? { ...prev, focusRequest: prev.focusRequest + 1 } : prev;
+      return { id, anchor, focusRequest: withFocus ? 1 : 0 };
+    });
   }, [clearHoverTimer]);
 
   const closeSubmenu = React.useCallback((refocus: boolean) => {
@@ -225,8 +239,9 @@ export function BaseGridMenu(props: BaseGridMenuProps): React.ReactElement | nul
     }
   };
 
-  const portalTarget = anchorElement && getPortalTarget ? getPortalTarget(anchorElement) : document.body;
-  if (!anchorElement) return null;
+  // Nothing to place against (and no document during SSR): render nothing.
+  if (!anchorElement || typeof document === 'undefined') return null;
+  const portalTarget = getPortalTarget ? getPortalTarget(anchorElement) : document.body;
   const subItem = openSub ? items.find((item) => item.id === openSub.id) : undefined;
 
   return createPortal(
@@ -282,7 +297,7 @@ export function BaseGridMenu(props: BaseGridMenuProps): React.ReactElement | nul
                 if (isOpen) return;
                 if (!hasSub && !openSub) return;
                 hoverTimer.current = setTimeout(() => {
-                  if (hasSub) setOpenSub({ id: item.id, anchor: el, autoFocus: false });
+                  if (hasSub) setOpenSub({ id: item.id, anchor: el, focusRequest: 0 });
                   else setOpenSub(null);
                 }, HOVER_DELAY_MS);
               }}
@@ -312,6 +327,8 @@ export function BaseGridMenu(props: BaseGridMenuProps): React.ReactElement | nul
       )}
       {openSub && subItem?.items && (
         <BaseGridMenu
+          // A different item gets a fresh submenu: no search text or open child carried over.
+          key={subItem.id}
           items={subItem.items}
           anchorElement={openSub.anchor}
           onClose={onClose}
@@ -321,7 +338,8 @@ export function BaseGridMenu(props: BaseGridMenuProps): React.ReactElement | nul
           placement="right"
           style={style}
           searchable={subItem.searchable}
-          autoFocus={openSub.autoFocus}
+          autoFocus={openSub.focusRequest > 0}
+          focusRequest={openSub.focusRequest}
           onBack={() => closeSubmenu(true)}
           onPointerEnterMenu={clearHoverTimer}
         />

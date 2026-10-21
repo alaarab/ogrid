@@ -44,9 +44,30 @@ test.describe('Header corner menu', () => {
     await trigger(page).click();
     await page.getByRole('menuitem', { name: 'Full screen' }).click();
     await expect.poll(() => isFixed(page)).toBe(true);
-    await trigger(page).click();
-    await page.getByRole('menuitem', { name: 'Exit full screen' }).click();
+    // A visible way out, with Escape and the shortcut in its tooltip.
+    const exit = page.getByRole('button', { name: 'Exit full screen' });
+    await expect(exit).toBeVisible();
+    await expect(exit).toHaveAttribute('title', 'Exit full screen (Esc or F)');
+    await exit.click();
     await expect.poll(() => isFixed(page)).toBe(false);
+    await expect(exit).toHaveCount(0);
+  });
+
+  test('nothing in the grid renders under the corner button', async ({ page }) => {
+    const overlap = await page.evaluate(() => {
+      const scroller = document.querySelector('[data-ogrid-scroll-container]') as HTMLElement;
+      scroller.scrollLeft = scroller.scrollWidth;
+      const corner = document.querySelector('[data-ogrid-header-corner]') as HTMLElement;
+      return scroller.getBoundingClientRect().right - corner.getBoundingClientRect().left;
+    });
+    expect(overlap).toBeLessThanOrEqual(0.5);
+    // Scrolled to the end, the last column's options button is fully on screen.
+    const lastMenu = page.locator('thead th[data-column-id]').last().locator('[data-ogrid-column-menu-trigger]');
+    const onTop = await lastMenu.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return el.contains(document.elementFromPoint(r.right - 2, r.top + r.height / 2));
+    });
+    expect(onTop).toBe(true);
   });
 
   test('opens a nested submenu from an app item', async ({ page }) => {
@@ -75,7 +96,8 @@ test.describe('Header corner menu', () => {
   });
 
   test('f toggles full screen while the grid has focus', async ({ page }) => {
-    await trigger(page).focus();
+    // A header button: focus in the grid, not on an editable cell.
+    await page.getByRole('button', { name: 'Owner column options' }).focus();
     await page.keyboard.press('f');
     await expect.poll(() => isFixed(page)).toBe(true);
     await page.keyboard.press('f');

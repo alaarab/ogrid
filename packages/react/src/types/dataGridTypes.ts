@@ -126,6 +126,8 @@ export interface IGridMenusConfig {
   } | null;
   /** Fullscreen state for the menu items and the shortcut; null hides them. */
   fullScreen: { isFullScreen: boolean; setFullScreen: (next: boolean) => void } | null;
+  /** Restores default column visibility and order (the table clears widths itself). */
+  resetColumns: () => void;
   /** Normalized shortcut, or null when off. */
   fullScreenShortcut: string | null;
 }
@@ -381,8 +383,14 @@ interface IOGridBaseProps<T> extends IDataValidationProps<T> {
    */
   headerMenu?: boolean;
   /**
+   * Called after the corner menu's Reset columns has restored default column
+   * visibility, order and widths, e.g. to clear saved column state. Visibility
+   * and order changes also go through their own callbacks; widths have none.
+   */
+  onColumnsReset?: () => void;
+  /**
    * Items for the header corner menu. An array is added after the built-in
-   * items (`columns`, `fullScreen`, `autosizeAll`); a function gets the
+   * items (`columns`, `fullScreen`, `autosizeAll`, `resetColumns`); a function gets the
    * built-in items and returns the full list, so it can hide or reorder them.
    * Items with `items` open a submenu.
    */

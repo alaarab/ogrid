@@ -343,6 +343,19 @@ export function useOGrid<T>(
   const { headerMenu, headerMenuItems, columnMenuItems, fullScreenShortcut } = props;
   const fullScreenReachable = !!props.fullScreen || !!headerMenu || props.isFullScreen !== undefined;
   const chooserEnabled = props.columnChooser !== false;
+  const onColumnsResetRef = useLatestRef(props.onColumnsReset);
+  const { setColumnWidthOverrides } = columnLayout;
+  const resetColumns = useCallback(() => {
+    if (visibilityModel) {
+      visibilityModel.setState({ hidden: [], shown: [] });
+    } else {
+      const defaults = columns.filter((c) => c.defaultVisible !== false).map((c) => c.columnId);
+      setVisibleColumns(new Set(defaults.length > 0 ? defaults : columns.map((c) => c.columnId)));
+    }
+    handleColumnOrderChange(columns.map((c) => c.columnId));
+    setColumnWidthOverrides({});
+    onColumnsResetRef.current?.();
+  }, [visibilityModel, columns, setVisibleColumns, handleColumnOrderChange, setColumnWidthOverrides, onColumnsResetRef]);
   const gridMenus = useMemo<IGridMenusConfig>(() => ({
     corner: !!headerMenu,
     cornerItems: headerMenuItems,
@@ -357,7 +370,9 @@ export function useOGrid<T>(
       ? { isFullScreen: fullScreenState.isFullScreen, setFullScreen: fullScreenState.setFullScreen }
       : null,
     fullScreenShortcut: fullScreenReachable && fullScreenShortcut !== false ? (fullScreenShortcut ?? 'f') : null,
+    resetColumns,
   }), [
+    resetColumns,
     headerMenu, headerMenuItems, columnMenuItems, chooserEnabled, columnChooserColumns, visibleColumns,
     handleVisibilityChange, setVisibleColumns, fullScreenReachable, fullScreenState.isFullScreen,
     fullScreenState.setFullScreen, fullScreenShortcut,

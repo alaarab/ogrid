@@ -273,7 +273,8 @@ export function BaseDataGridTableContent<T>(
       if (!inField && isPlainShortcut(shortcut)) {
         const active = o.interaction.activeCell;
         const col = active ? visibleCols[active.columnIndex - colOffset] : undefined;
-        const row = active && !windowed ? items[active.rowIndex] : undefined;
+        // Same rows the editing path reads: a windowed grid edits its loaded rows.
+        const row = active ? (windowed ? windowed.loadedRows?.[active.rowIndex] : items[active.rowIndex]) : undefined;
         blockedByEdit = !!col && row !== undefined && gridProps.editable !== false && !!gridProps.onCellValueChanged && isColumnEditable<T>(col, row as T);
       }
       if (!inField && !blockedByEdit) {
@@ -300,6 +301,8 @@ export function BaseDataGridTableContent<T>(
       : undefined),
     [columnItems, openColumnId],
   );
+  const { setColumnSizingOverrides: setTableColumnSizing } = o.layout;
+  const resetColumnWidths = React.useCallback(() => setTableColumnSizing({}), [setTableColumnSizing]);
   const cornerPortalTarget = React.useMemo(
     () => (getContextMenuPortalTarget ? (anchor: HTMLElement) => getContextMenuPortalTarget(anchor) : undefined),
     [getContextMenuPortalTarget],
@@ -407,8 +410,8 @@ export function BaseDataGridTableContent<T>(
     }
   }
 
-  return (
-    <div style={virtualScrollEnabled ? GRID_ROOT_VIRTUAL_SCROLL_STYLE : GRID_ROOT_STYLE}>
+  const wrapperEl = (
+    <>
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the grid wrapper hosts the centralized keyboard-navigation layer (useKeyboardNavigation); key and clipboard events from the focused cell bubble here */}
       {/* biome-ignore lint/a11y/useSemanticElements: the wrapper must stay a div scroll container; role="region" is the intended landmark semantics */}
       <div
@@ -463,15 +466,6 @@ export function BaseDataGridTableContent<T>(
             {windowedLoading ? 'Loading rows\u2026' : ''}
           </div>
         )}
-        {gridMenus?.corner && (
-          <HeaderCornerMenu
-            gridMenus={gridMenus}
-            stickyHeader={o.stickyHeader}
-            onAutosizeAll={headerMenu.handleAutosizeAll}
-            styles={styles}
-            getPortalTarget={cornerPortalTarget}
-          />
-        )}
         <div className={styles.tableScrollContent}>
         <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
           <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
@@ -491,7 +485,6 @@ export function BaseDataGridTableContent<T>(
                   styles={styles}
                   primitives={primitives}
                   onUnhideColumns={gridProps.hidingActions?.unhideColumns}
-                  reserveCorner={!!gridMenus?.corner}
                 />
                 {!showEmptyInGrid && (
                   <BaseTableBody
@@ -655,6 +648,25 @@ export function BaseDataGridTableContent<T>(
           customizeItems={customizeColumnMenu}
         />
       </div>
+    </>
+  );
+
+  return (
+    <div style={virtualScrollEnabled ? GRID_ROOT_VIRTUAL_SCROLL_STYLE : GRID_ROOT_STYLE}>
+      {gridMenus?.corner ? (
+        // The corner menu gets its own gutter beside the scroll area, so no
+        // header or cell ever renders under it.
+        <div className={styles.headerCornerFrame} data-virtual-scroll={virtualScrollEnabled ? '' : undefined}>
+          {wrapperEl}
+          <HeaderCornerMenu
+            gridMenus={gridMenus}
+            onAutosizeAll={headerMenu.handleAutosizeAll}
+            onResetWidths={resetColumnWidths}
+            styles={styles}
+            getPortalTarget={cornerPortalTarget}
+          />
+        </div>
+      ) : wrapperEl}
       {findReplace.highlightCss && <style>{findReplace.highlightCss}</style>}
       {findReplace.enabled && findReplace.find.isOpen && FindReplacePanel && (
         <div style={FIND_PANEL_HOST_STYLE} data-ogrid-find-panel="">
