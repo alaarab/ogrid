@@ -29,6 +29,7 @@ import { useOGridFreeze } from './useOGridFreeze';
 import { useLatestRef } from './useLatestRef';
 import { useValidationRules } from './useValidationRules';
 import { useOGridCellNotes } from './useOGridCellNotes';
+import { useOGridFullScreen } from './useOGridFullScreen';
 import { useSortFilterColumns, QUICK_FILTER_FIELDS } from './useSortFilterColumns';
 import {
   buildStatusBarConfig,
@@ -40,7 +41,7 @@ import {
   resolveSelectionKnownItems,
   resolveSpreadsheetChrome,
 } from './ogridDerivations';
-import type { IOGridProps, IOGridDataGridProps, IOGridApi, IGridEditBridge, IGridHidingActions } from '../types';
+import type { IOGridProps, IOGridDataGridProps, IOGridApi, IGridEditBridge, IGridHidingActions, IGridMenusConfig } from '../types';
 import type { UseOGridColumnChooser, UseOGridFilters, UseOGridPagination, UseOGridResult } from './useOGrid.types';
 
 export type {
@@ -361,6 +362,45 @@ export function useOGrid<T>(
     ? dataFetchingState.allFilteredItems
     : undefined;
 
+  const fullScreenState = useOGridFullScreen(props.isFullScreen, props.onFullScreenChange);
+  const { headerMenu, headerMenuItems, columnMenuItems, fullScreenShortcut } = props;
+  const fullScreenReachable = !!props.fullScreen || !!headerMenu || props.isFullScreen !== undefined;
+  const chooserEnabled = props.columnChooser !== false;
+  const onColumnsResetRef = useLatestRef(props.onColumnsReset);
+  const { setColumnWidthOverrides } = columnLayout;
+  const resetColumns = useCallback(() => {
+    if (visibilityModel) {
+      visibilityModel.setState({ hidden: [], shown: [] });
+    } else {
+      const defaults = columns.filter((c) => c.defaultVisible !== false).map((c) => c.columnId);
+      setVisibleColumns(new Set(defaults.length > 0 ? defaults : columns.map((c) => c.columnId)));
+    }
+    handleColumnOrderChange(columns.map((c) => c.columnId));
+    setColumnWidthOverrides({});
+    onColumnsResetRef.current?.();
+  }, [visibilityModel, columns, setVisibleColumns, handleColumnOrderChange, setColumnWidthOverrides, onColumnsResetRef]);
+  const gridMenus = useMemo<IGridMenusConfig>(() => ({
+    corner: !!headerMenu,
+    cornerItems: headerMenuItems,
+    columnItems: columnMenuItems,
+    columnChooser: chooserEnabled ? {
+      columns: columnChooserColumns,
+      visibleColumns,
+      onVisibilityChange: handleVisibilityChange,
+      onSetVisibleColumns: setVisibleColumns,
+    } : null,
+    fullScreen: fullScreenReachable
+      ? { isFullScreen: fullScreenState.isFullScreen, setFullScreen: fullScreenState.setFullScreen }
+      : null,
+    fullScreenShortcut: fullScreenReachable && fullScreenShortcut !== false ? (fullScreenShortcut ?? 'f') : null,
+    resetColumns,
+  }), [
+    resetColumns,
+    headerMenu, headerMenuItems, columnMenuItems, chooserEnabled, columnChooserColumns, visibleColumns,
+    handleVisibilityChange, setVisibleColumns, fullScreenReachable, fullScreenState.isFullScreen,
+    fullScreenState.setFullScreen, fullScreenShortcut,
+  ]);
+
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
     scrollToRowRef, items: displayItems, windowed, columns: columnsProp, getRowId,
     sortBy: sortingState.sort.field, sortDirection: sortingState.sort.direction, sortModel: sortingState.sortModel,
@@ -384,7 +424,7 @@ export function useOGrid<T>(
     allowValidationEditing: props.allowValidationEditing, circleInvalidData: props.circleInvalidData,
     onValidationFail: props.onValidationFail, validationContext,
     rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef, hidingActions,
-    freezeActions: freeze.freezeActions,
+    freezeActions: freeze.freezeActions, gridMenus,
     rowDragging, onRowOrderChange, rangeMove, cellDrop, onCellDrop,
     rowOrderRows: rowDragging && !isServerSide ? displayData : undefined,
     findReplace, findRows, onFindPageChange: findRows ? setPage : undefined,
@@ -405,7 +445,7 @@ export function useOGrid<T>(
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, visibilityModel?.onFitHiddenColumnsChange, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, hidingActions, dgNoteProps,
-    freeze.frozenRows, freeze.frozenColumns, freeze.freezeActions, pinnedOverrides,
+    freeze.frozenRows, freeze.frozenColumns, freeze.freezeActions, gridMenus, pinnedOverrides,
     rowDragging, onRowOrderChange, rangeMove, cellDrop, onCellDrop,
     validationRules.rules, validationRules.change, props.allowValidationEditing, props.circleInvalidData, props.onValidationFail, validationContext,
     findReplace, findRows, setPage,
@@ -417,15 +457,21 @@ export function useOGrid<T>(
     pageSizeOptions, entityLabelPlural, hidden: fullyVirtualized || isWindowed,
   }), [page, pageSize, displayTotalCount, setPage, paginationState.setPageSize, pageSizeOptions, entityLabelPlural, fullyVirtualized, isWindowed]);
 
+  // The corner menu carries Columns, so it replaces the toolbar chooser unless the app asks for both.
+  const toolbarChooserPlacement = props.headerMenu && props.columnChooser === undefined ? 'none' : columnChooserPlacement;
   const columnChooser = useMemo<UseOGridColumnChooser>(() => ({
     columns: columnChooserColumns,
     visibleColumns,
     onVisibilityChange: handleVisibilityChange,
     onSetVisibleColumns: setVisibleColumns,
-    placement: columnChooserPlacement,
-  }), [columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns, columnChooserPlacement]);
+    placement: toolbarChooserPlacement,
+  }), [columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns, toolbarChooserPlacement]);
 
-  const layout = useOGridChrome(props, showNameBox, activeCellRef, sideBarProps, formulaBarEl, nameBox, quickFilterState);
+  const { isFullScreen, setFullScreen } = fullScreenState;
+  const layout = useOGridChrome(
+    { ...props, isFullScreen, onFullScreenChange: setFullScreen },
+    showNameBox, activeCellRef, sideBarProps, formulaBarEl, nameBox, quickFilterState,
+  );
 
   const filtersResult = useMemo<UseOGridFilters>(() => ({
     hasActiveFilters: filtersState.hasActiveFilters,

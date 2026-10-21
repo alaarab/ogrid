@@ -36,3 +36,34 @@
 
 @mixin menu { @extend %menu; }
 @mixin item { @extend %item; }
+
+// Search box above a searchable grid menu (column checklist).
+%search {
+  @include surface.control;
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  margin: 0 0 4px;
+  @media (pointer: coarse) { min-height: 44px; }
+}
+
+// Check mark slot of a checkable item; reserves its width when unchecked.
+%check {
+  display: inline-flex;
+  justify-content: center;
+  width: 16px;
+  flex-shrink: 0;
+  color: var(--ogrid-accent, #0078d4);
+}
+
+%icon {
+  display: inline-flex;
+  width: 16px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@mixin search { @extend %search; }
+@mixin check { @extend %check; }
+@mixin icon { @extend %icon; }

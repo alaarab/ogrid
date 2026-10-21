@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { getHeaderFilterConfig } from '../utils';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
+import type { IGridMenuItem } from '../types/gridMenuTypes';
 import { useDataGridTableOrchestration } from '../hooks/useDataGridTableOrchestration';
 import type { InlineCellEditorProps } from './createOGrid';
 
@@ -149,7 +150,10 @@ export interface DataGridPrimitives {
   /** Column header filter component. */
   ColumnHeaderFilter: React.ComponentType<ReturnType<typeof getHeaderFilterConfig>>;
   /** Column header options menu component. */
-  ColumnHeaderMenu: React.ComponentType<ReturnType<typeof getColumnHeaderMenuProps>>;
+  ColumnHeaderMenu: React.ComponentType<ReturnType<typeof getColumnHeaderMenuProps> & {
+    extraItems?: IGridMenuItem[];
+    customizeItems?: (items: IGridMenuItem[]) => IGridMenuItem[];
+  }>;
   /** Context menu component. */
   GridContextMenu: React.ComponentType<{
     x: number; y: number; hasSelection: boolean;

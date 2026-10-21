@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { replaceDataValidationRange, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { isColumnEditable, replaceDataValidationRange, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { useDataGridTableOrchestration } from '../hooks/useDataGridTableOrchestration';
 import { useColumnMeta } from '../hooks/useColumnMeta';
 import { useRenderCellContent } from '../hooks/useRenderCellContent';
@@ -24,6 +24,10 @@ import { MarchingAntsOverlay } from './MarchingAntsOverlay';
 import { FormulaRefOverlay } from './FormulaRefOverlay';
 import { BaseTableHeader } from './BaseTableHeader';
 import { BaseTableBody } from './BaseTableBody';
+import { HeaderCornerMenu, buildColumnsMenuItem, buildFullScreenMenuItem } from './HeaderCornerMenu';
+import { resolveGridMenuItems } from '../types/gridMenuTypes';
+import type { IGridMenuItem } from '../types/gridMenuTypes';
+import { isPlainShortcut, matchesShortcut } from '../utils/keyboardShortcut';
 import type { IOGridDataGridProps } from '../types';
 import type { DataGridStyles, DataGridPrimitives } from './BaseDataGridTable.types';
 
@@ -254,6 +258,56 @@ export function BaseDataGridTableContent<T>(
     handleGridKeyDown(e);
   }, [findKeyDown, handleGridKeyDown, findReplace]);
 
+  // Fullscreen shortcut: only while focus is on the grid itself (not a text
+  // field, menu or editor). A plain key gives way on an editable cell, where
+  // typing starts an edit.
+  const gridMenus = gridProps.gridMenus;
+  const gridKeyDown = findReplace.enabled ? handleWrapperKeyDown : handleGridKeyDown;
+  const handleRootKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    const shortcut = gridMenus?.fullScreenShortcut;
+    const fullScreen = gridMenus?.fullScreen;
+    if (shortcut && fullScreen && !e.defaultPrevented && !editingCell && matchesShortcut(e, shortcut)) {
+      const target = e.target as Element;
+      const inField = target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="menu"], [role="dialog"]');
+      let blockedByEdit = false;
+      if (!inField && isPlainShortcut(shortcut)) {
+        const active = o.interaction.activeCell;
+        const col = active ? visibleCols[active.columnIndex - colOffset] : undefined;
+        // Same rows the editing path reads: a windowed grid edits its loaded rows.
+        const row = active ? (windowed ? windowed.loadedRows?.[active.rowIndex] : items[active.rowIndex]) : undefined;
+        blockedByEdit = !!col && row !== undefined && gridProps.editable !== false && !!gridProps.onCellValueChanged && isColumnEditable<T>(col, row as T);
+      }
+      if (!inField && !blockedByEdit) {
+        e.preventDefault();
+        fullScreen.setFullScreen(!fullScreen.isFullScreen);
+        return;
+      }
+    }
+    gridKeyDown(e);
+  }, [gridMenus, editingCell, o.interaction.activeCell, visibleCols, colOffset, windowed, items, gridProps.editable, gridProps.onCellValueChanged, gridKeyDown]);
+
+  // Column menu extras: Choose columns and Full screen beside the autosize items, then the app's items.
+  const openColumnId = headerMenu.openForColumn;
+  const columnMenuExtras = React.useMemo(() => {
+    const extras: IGridMenuItem[] = [];
+    if (gridMenus?.columnChooser) extras.push(buildColumnsMenuItem(gridMenus.columnChooser, 'chooseColumns', 'Choose columns'));
+    if (gridMenus?.fullScreen) extras.push(buildFullScreenMenuItem(gridMenus.fullScreen));
+    return extras;
+  }, [gridMenus?.columnChooser, gridMenus?.fullScreen]);
+  const columnItems = gridMenus?.columnItems;
+  const customizeColumnMenu = React.useMemo(
+    () => (columnItems && openColumnId
+      ? (builtIns: IGridMenuItem[]) => resolveGridMenuItems(builtIns, columnItems, { columnId: openColumnId })
+      : undefined),
+    [columnItems, openColumnId],
+  );
+  const { setColumnSizingOverrides: setTableColumnSizing } = o.layout;
+  const resetColumnWidths = React.useCallback(() => setTableColumnSizing({}), [setTableColumnSizing]);
+  const cornerPortalTarget = React.useMemo(
+    () => (getContextMenuPortalTarget ? (anchor: HTMLElement) => getContextMenuPortalTarget(anchor) : undefined),
+    [getContextMenuPortalTarget],
+  );
+
   // ARIA grid geometry. aria-rowindex counts header rows and earlier pages;
   // aria-rowcount is -1 ("unknown") when the grid can't see the full total.
   const headerRowCount = o.headerRows.length + (o.showColumnLetters ? 1 : 0);
@@ -356,8 +410,8 @@ export function BaseDataGridTableContent<T>(
     }
   }
 
-  return (
-    <div style={virtualScrollEnabled ? GRID_ROOT_VIRTUAL_SCROLL_STYLE : GRID_ROOT_STYLE}>
+  const wrapperEl = (
+    <>
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the grid wrapper hosts the centralized keyboard-navigation layer (useKeyboardNavigation); key and clipboard events from the focused cell bubble here */}
       {/* biome-ignore lint/a11y/useSemanticElements: the wrapper must stay a div scroll container; role="region" is the intended landmark semantics */}
       <div
@@ -386,7 +440,7 @@ export function BaseDataGridTableContent<T>(
         data-min-table-width={Math.round(minTableWidth)}
         data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
         onContextMenu={PREVENT_DEFAULT}
-        onKeyDown={findReplace.enabled ? handleWrapperKeyDown : handleGridKeyDown}
+        onKeyDown={handleRootKeyDown}
         data-ogrid-find={findReplace.enabled ? findReplace.scopeId : undefined}
         onPaste={interaction.handleGridPaste}
         onCopy={interaction.handleGridCopy}
@@ -589,8 +643,31 @@ export function BaseDataGridTableContent<T>(
             getContextMenuPortalTarget ? getContextMenuPortalTarget(wrapperRef.current) : document.body
           )}
 
-        <ColumnHeaderMenu {...getColumnHeaderMenuProps(headerMenu)} />
+        <ColumnHeaderMenu
+          {...getColumnHeaderMenuProps(headerMenu)}
+          extraItems={columnMenuExtras}
+          customizeItems={customizeColumnMenu}
+        />
       </div>
+    </>
+  );
+
+  return (
+    <div style={virtualScrollEnabled ? GRID_ROOT_VIRTUAL_SCROLL_STYLE : GRID_ROOT_STYLE}>
+      {gridMenus?.corner ? (
+        // The corner menu gets its own gutter beside the scroll area, so no
+        // header or cell ever renders under it.
+        <div className={styles.headerCornerFrame} data-virtual-scroll={virtualScrollEnabled ? '' : undefined}>
+          {wrapperEl}
+          <HeaderCornerMenu
+            gridMenus={gridMenus}
+            onAutosizeAll={headerMenu.handleAutosizeAll}
+            onResetWidths={resetColumnWidths}
+            styles={styles}
+            getPortalTarget={cornerPortalTarget}
+          />
+        </div>
+      ) : wrapperEl}
       {findReplace.highlightCss && <style>{findReplace.highlightCss}</style>}
       {findReplace.enabled && findReplace.find.isOpen && FindReplacePanel && (
         <div style={FIND_PANEL_HOST_STYLE} data-ogrid-find-panel="">

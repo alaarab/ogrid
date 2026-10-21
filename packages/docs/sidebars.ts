@@ -56,6 +56,7 @@ const sidebars: SidebarsConfig = {
         'features/column-visibility',
         'features/column-types',
         'features/cell-references',
+        'features/header-menu',
         'features/toolbar',
         'features/sidebar',
         'features/context-menu',
