@@ -129,3 +129,35 @@ describe('OGridLayout full screen page lock', () => {
     expect(scrollTo).toHaveBeenCalledWith(12, 640);
   });
 });
+
+describe('OGridLayout full screen icons', () => {
+  /** Every x/y a shape draws through, read from points and line ends. */
+  function iconCoordinates(button: HTMLElement): number[] {
+    const svg = button.querySelector('svg') as SVGElement;
+    const coords: number[] = [];
+    for (const el of Array.from(svg.querySelectorAll('polyline, line'))) {
+      const points = el.getAttribute('points');
+      if (points) coords.push(...points.trim().split(/[\s,]+/).map(Number));
+      for (const attr of ['x1', 'y1', 'x2', 'y2']) {
+        const v = el.getAttribute(attr);
+        if (v != null) coords.push(Number(v));
+      }
+    }
+    return coords;
+  }
+
+  it('keeps both icons off the viewBox edge so strokes are not clipped', () => {
+    renderFullScreen();
+    const exit = iconCoordinates(screen.getByRole('button', { name: 'Exit fullscreen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Exit fullscreen' }));
+    const enter = iconCoordinates(screen.getByRole('button', { name: 'Fullscreen' }));
+    for (const coords of [enter, exit]) {
+      expect(coords.length).toBeGreaterThan(0);
+      // A 1.5 stroke needs at least 0.75 of room on each side of a 16 box.
+      for (const c of coords) {
+        expect(c).toBeGreaterThanOrEqual(1);
+        expect(c).toBeLessThanOrEqual(15);
+      }
+    }
+  });
+});
