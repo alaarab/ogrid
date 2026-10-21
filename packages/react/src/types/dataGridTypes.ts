@@ -12,6 +12,7 @@ export type {
   UserLike,
   UserLikeInput,
   FilterValue,
+  MultiSelectFilterMode,
   IFilters,
   ISortModelItem,
   SortModel,
@@ -331,6 +332,31 @@ interface IOGridBaseProps<T> extends IDataValidationProps<T> {
    * read-only cells, and Replace all is one undo step. Default: false.
    */
   findReplace?: boolean;
+  /**
+   * Quick filter: one search over the whole grid. A row is kept when every
+   * whitespace-separated term appears in one of its visible columns (raw value
+   * or displayed text, case-insensitive), on top of the column filters.
+   * Controlled when set; pair with `onQuickFilterChange`. With a `dataSource`
+   * the text is passed as `quickFilter` in fetch params for the server to apply.
+   */
+  quickFilter?: string;
+  /** Starting quick filter text when `quickFilter` is not controlled. */
+  defaultQuickFilter?: string;
+  /** Called with the new text when the search box (or the API) changes the quick filter. */
+  onQuickFilterChange?: (text: string) => void;
+  /**
+   * Extra text per row for the quick filter to search besides the visible
+   * columns, such as comments or fields with no column. Client-side only; a
+   * `dataSource` applies `quickFilter` on the server. A new function
+   * re-filters, so wrap it in `useCallback` (or define it outside the
+   * component) and give it new dependencies when what it returns changes.
+   */
+  getQuickFilterText?: (row: T) => string | null | undefined;
+  /**
+   * Show a search box for the quick filter at the start of the toolbar.
+   * Pass an object to set its `placeholder` or `ariaLabel`. Default: false.
+   */
+  quickFilterBox?: boolean | { placeholder?: string; ariaLabel?: string };
   /**
    * Excel-style conditional formatting rules (highlight rules, color scales,
    * data bars, icon sets). Statistics cover the full client-side data (the

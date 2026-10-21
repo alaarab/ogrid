@@ -10,7 +10,7 @@ import TabItem from '@theme/TabItem';
 
 # Column Reordering
 
-Let users rearrange columns by dragging a column header and dropping it at a new position. The grid shows a visual drop indicator while dragging.
+Let users rearrange columns by dragging a column header and dropping it at a new position. The grid shows a visual drop indicator while dragging. Keyboard users get **Move left** and **Move right** in each column's header menu.
 
 ## Live Demo
 
@@ -82,8 +82,38 @@ Set `columnReorder` to `true` on the grid to enable drag-and-drop column reorder
 
 OGrid supports both **uncontrolled** and **controlled** column order:
 
-- **Uncontrolled** -- the grid manages column order internally. Just set `columnReorder` and it works.
-- **Controlled** -- you own the state. Pass `columnOrder` and `onColumnOrderChange` to the grid.
+- **Uncontrolled** -- the grid manages column order internally. Just set `columnReorder` and it works. Add `onColumnOrderChange` to hear about changes (for example, to save them).
+- **Controlled** -- you own the state. Pass `columnOrder` and `onColumnOrderChange` to the grid. The grid shows the order you pass, so update it from the callback.
+
+`onColumnOrderChange` receives every column id, hidden columns included, in their new order.
+
+### Keyboard
+
+Each column's header menu (the ⋮ button, or <kbd>ArrowDown</kbd> when the button has focus) has **Move left** and **Move right** when `columnReorder` is on. Each moves the column one position, past the next visible column, and fires `onColumnOrderChange` the same way a drag does. An item is disabled when the column is already at the edge of its pin zone. After the move, focus returns to the column's menu button, so pressing <kbd>ArrowDown</kbd> again repeats it.
+
+### Saving the order
+
+The order is a plain array of column ids, so you can store it anywhere:
+
+```tsx
+const [columnOrder, setColumnOrder] = useState<string[] | undefined>(
+  () => JSON.parse(localStorage.getItem('report-columns') ?? 'null') ?? undefined,
+);
+
+<OGrid
+  columns={columns}
+  data={rows}
+  getRowId={(r) => r.id}
+  columnReorder
+  columnOrder={columnOrder}
+  onColumnOrderChange={(order) => {
+    setColumnOrder(order);
+    localStorage.setItem('report-columns', JSON.stringify(order));
+  }}
+/>
+```
+
+Columns missing from a saved order (for example, columns added in a later release) show after the listed ones in definition order, and ids that no longer exist are ignored.
 
 ### Controlled Column Order
 
@@ -142,7 +172,9 @@ In this example, "ID" and "Name" can be swapped with each other but cannot be dr
 
 ### Edge Cases
 
-- **Column groups:** Group headers are not draggable. Only leaf columns (with a `columnId`) participate in reordering.
+- **Column groups:** Group headers are not draggable. Only leaf columns (with a `columnId`) participate in reordering. A leaf moved out of its group splits the group header into one cell over each run of its columns, so headers always sit over their own columns.
+- **Hidden columns:** A hidden column keeps its place in the order while others move around it, and comes back there when shown.
+- **Frozen columns (`frozenColumns`):** The first N displayed columns are frozen, so moving a column into those positions freezes it.
 - **Resize handle zone:** The rightmost 8 pixels of each header cell are reserved for column resizing. Dragging in that zone starts a resize, not a reorder.
 - **Minimum drag distance:** A 5-pixel horizontal threshold prevents accidental reorders from clicks.
 
@@ -176,7 +208,7 @@ gridRef.current.applyColumnState(saved);
 |------|------|---------|-------------|
 | `columnReorder` | `boolean` | `false` | Enable drag-and-drop column reordering. |
 | `columnOrder` | `string[]` | -- | Controlled column display order (array of column ids). |
-| `onColumnOrderChange` | `(order: string[]) => void` | -- | Called when column order changes via drag-and-drop. |
+| `onColumnOrderChange` | `(order: string[]) => void` | -- | Called with the full new order when a column is moved by drag, the header menu, or the Grid API. |
 
 ### Grid API Methods
 

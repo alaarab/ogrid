@@ -85,6 +85,13 @@ export interface IColumnFilterDef {
   optionsSource?: 'api' | 'static' | 'years';
   /** Static multi-select choices. Take precedence over fetched or data-derived options. */
   options?: FilterOption[];
+  /**
+   * Multi-select only: the column's values are arrays (tags, reviewers). Each
+   * array item is an option, and the filter offers "All of" besides "Any of"
+   * and "None of". Matching handles array values either way; this flag adds
+   * the "All of" choice and keeps sorting off the Web Worker for the column.
+   */
+  multiValue?: boolean;
   /** @deprecated Has no effect: `optionsSource: 'years'` is not implemented. */
   yearsCount?: number;
 }

@@ -8,7 +8,7 @@ import type { FilterOption } from '../types/columnTypes';
 import type { ColumnFilterType, ConditionFilterKind, IConditionFilterValue, IDateFilterValue, ICellEditorProps } from '../types/columnTypes';
 import type { IColumnDef } from '../types/columnTypes';
 import { formatCellValue } from './cellFormatting';
-import type { RowId, UserLike, IFilters, FilterValue, ISortModelItem } from '../types/dataGridTypes';
+import type { RowId, UserLike, IFilters, FilterValue, ISortModelItem, MultiSelectFilterMode } from '../types/dataGridTypes';
 import { getCellValue, isColumnEditable } from './cellValue';
 import { isInSelectionRange } from '../types/dataGridTypes';
 import { isFilterConfig } from './ogridHelpers';
@@ -28,6 +28,8 @@ import { FormulaError } from '../formula/types';
  * multi-select popover state while it is open.
  */
 const EMPTY_SELECTED_VALUES: string[] = [];
+const SINGLE_VALUE_MODES: readonly MultiSelectFilterMode[] = ['any', 'none'];
+const MULTI_VALUE_MODES: readonly MultiSelectFilterMode[] = ['any', 'all', 'none'];
 
 export interface HeaderFilterConfigInput {
   sortBy?: string;
@@ -57,7 +59,12 @@ export interface HeaderFilterConfig {
   /** Toggle this column's sort. `additive` (Shift+click) adds or cycles a sort level instead of replacing the sort. */
   onSort?: (options?: { additive?: boolean }) => void;
   selectedValues?: string[];
-  onFilterChange?: (values: string[]) => void;
+  /** Multi-select: apply the chosen options, and how they match (`any` when omitted). */
+  onFilterChange?: (values: string[], mode?: MultiSelectFilterMode) => void;
+  /** Multi-select: how the applied options match. */
+  multiSelectMode?: MultiSelectFilterMode;
+  /** Multi-select: the match modes offered (Any of / None of, plus All of for `multiValue` columns). */
+  multiSelectModes?: readonly MultiSelectFilterMode[];
   options?: FilterOption[];
   isLoadingOptions?: boolean;
   textValue?: string;
@@ -127,8 +134,13 @@ export function getHeaderFilterConfig<T>(
       options: filterable?.options ?? input.filterOptions[filterField] ?? [],
       isLoadingOptions: filterable?.options ? false : input.loadingFilterOptions[filterField] ?? false,
       selectedValues: filterValue?.type === 'multiSelect' ? filterValue.value : EMPTY_SELECTED_VALUES,
-      onFilterChange: (values: string[]) =>
-        input.onFilterChange(filterField, values.length ? { type: 'multiSelect', value: values } : undefined),
+      multiSelectMode: filterValue?.type === 'multiSelect' ? (filterValue.mode ?? 'any') : 'any',
+      multiSelectModes: filterable?.multiValue ? MULTI_VALUE_MODES : SINGLE_VALUE_MODES,
+      onFilterChange: (values: string[], mode?: MultiSelectFilterMode) =>
+        input.onFilterChange(
+          filterField,
+          values.length ? { type: 'multiSelect', value: values, ...(mode && mode !== 'any' ? { mode } : {}) } : undefined,
+        ),
     };
   }
   if (filterType === 'date') {
