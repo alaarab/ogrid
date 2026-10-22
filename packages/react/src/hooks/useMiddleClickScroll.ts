@@ -32,8 +32,12 @@ const INTERACTIVE_TARGET_SELECTOR =
 
 type Axis = 'x' | 'y';
 
+/** Rounding and borders can leave a 1px overflow that is not scrollable content. */
+const OVERFLOW_SLACK = 1;
+
 function overflows(el: Element, axis: Axis): boolean {
-  return axis === 'y' ? el.scrollHeight > el.clientHeight : el.scrollWidth > el.clientWidth;
+  const extra = axis === 'y' ? el.scrollHeight - el.clientHeight : el.scrollWidth - el.clientWidth;
+  return extra > OVERFLOW_SLACK;
 }
 
 function allowsScroll(el: Element, axis: Axis): boolean {
