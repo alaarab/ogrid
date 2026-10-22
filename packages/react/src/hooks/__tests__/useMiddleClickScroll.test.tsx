@@ -2,9 +2,18 @@ import * as React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { getAutoScrollVelocity, useMiddleClickScroll } from '../useMiddleClickScroll';
 
-function Harness(): React.ReactElement {
+function Harness({ overflow = 'y' }: { overflow?: 'y' | 'x' | 'none' }): React.ReactElement {
   const wrapperRef = React.useRef<HTMLDivElement>(null);
   useMiddleClickScroll({ wrapperRef });
+  // The test DOM has no layout: give the wrapper content taller than itself.
+  React.useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    Object.defineProperty(el, 'clientHeight', { configurable: true, value: 100 });
+    Object.defineProperty(el, 'scrollHeight', { configurable: true, value: overflow === 'y' ? 1000 : 100 });
+    Object.defineProperty(el, 'clientWidth', { configurable: true, value: 100 });
+    Object.defineProperty(el, 'scrollWidth', { configurable: true, value: overflow === 'x' ? 1000 : 100 });
+  }, [overflow]);
   return (
     <div ref={wrapperRef} data-testid="wrapper">
       <a href="/somewhere" data-testid="link">
@@ -37,6 +46,63 @@ describe('useMiddleClickScroll', () => {
     const event = middleMouseDown(screen.getByTestId('link'));
     expect(event.defaultPrevented).toBe(false);
     expect(indicator()).toBeNull();
+  });
+
+  it('leaves middle-click to the browser when the wrapper has nothing to scroll', () => {
+    // A content-sized grid: the page scrolls, so the press and its auxclick stay native.
+    render(<Harness overflow="none" />);
+    const wrapper = screen.getByTestId('wrapper');
+    const down = middleMouseDown(wrapper);
+    expect(down.defaultPrevented).toBe(false);
+    expect(indicator()).toBeNull();
+    const aux = new MouseEvent('auxclick', { button: 1, bubbles: true, cancelable: true });
+    wrapper.dispatchEvent(aux);
+    expect(aux.defaultPrevented).toBe(false);
+  });
+
+  it('pans the page along an axis the grid cannot scroll', async () => {
+    // Content-sized grid that only scrolls sideways, on a page that scrolls down.
+    const root = document.scrollingElement ?? document.documentElement;
+    Object.defineProperty(root, 'clientHeight', { configurable: true, value: 500 });
+    Object.defineProperty(root, 'scrollHeight', { configurable: true, value: 5000 });
+    const frames: FrameRequestCallback[] = [];
+    const raf = globalThis.requestAnimationFrame;
+    const caf = globalThis.cancelAnimationFrame;
+    globalThis.requestAnimationFrame = (cb) => frames.push(cb);
+    globalThis.cancelAnimationFrame = () => {};
+    try {
+      render(<Harness overflow="x" />);
+      const wrapper = screen.getByTestId('wrapper');
+      root.scrollTop = 0;
+      expect(middleMouseDown(wrapper, 100, 100).defaultPrevented).toBe(true);
+      await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 100, clientY: 300 }));
+      for (let t = 0; t <= 480; t += 16) frames.shift()?.(1000 + t);
+      expect(root.scrollTop).toBeGreaterThan(0);
+      expect(wrapper.scrollTop).toBe(0);
+      act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
+    } finally {
+      globalThis.requestAnimationFrame = raf;
+      globalThis.cancelAnimationFrame = caf;
+      delete (root as { clientHeight?: number }).clientHeight;
+      delete (root as { scrollHeight?: number }).scrollHeight;
+      root.scrollTop = 0;
+    }
+  });
+
+  it('cancels the auxclick of a press it took over', async () => {
+    render(<Harness />);
+    const wrapper = screen.getByTestId('wrapper');
+    expect(middleMouseDown(wrapper).defaultPrevented).toBe(true);
+    const aux = new MouseEvent('auxclick', { button: 1, bubbles: true, cancelable: true });
+    wrapper.dispatchEvent(aux);
+    expect(aux.defaultPrevented).toBe(true);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
   });
 
   it('starts a pan on a non-interactive target', async () => {
