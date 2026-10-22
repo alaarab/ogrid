@@ -100,6 +100,30 @@ test.describe('Premium inputs parity', () => {
     await expect.poll(async () => getCellText(page, 0, 'color')).toMatch(/#1e88e5/i);
   });
 
+  test('popover editor sits on an opaque panel below its cell', async ({ page }) => {
+    // A transparent panel let the grid show through custom editors, and a
+    // centred one spilled over the column to the left.
+    const input = page.locator('input[placeholder="000000"], input[placeholder="#RRGGBB"], input[maxlength="6"], input[maxlength="7"]').first();
+    await openPopupEditor(page, 0, 'color', input);
+    const panel = await input.evaluate((el) => {
+      for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) {
+        const bg = getComputedStyle(node).backgroundColor;
+        if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+          const r = node.getBoundingClientRect();
+          return { inTable: !!node.closest('table'), left: r.left, top: r.top };
+        }
+      }
+      return null;
+    });
+    expect(panel).not.toBeNull();
+    expect(panel?.inTable).toBe(false);
+    const cell = await getDataCell(page, 0, 'color').boundingBox();
+    expect(panel?.top ?? 0).toBeGreaterThanOrEqual((cell?.y ?? 0) + (cell?.height ?? 0) - 1);
+    if (getFramework(page) === 'react-radix') {
+      expect(Math.abs((panel?.left ?? 0) - (cell?.x ?? 0))).toBeLessThanOrEqual(10);
+    }
+  });
+
   test('slider editor commits a typed value', async ({ page }) => {
     const framework = getFramework(page);
     const input = framework.startsWith('vue-')

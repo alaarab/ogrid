@@ -139,7 +139,15 @@ function RadixPopoverEditor({ open, onClose, setAnchorEl, anchorContent, editor 
         </div>
       </Popover.Anchor>
       <Popover.Portal>
-        <Popover.Content sideOffset={4} style={{ ...portalTheme, zIndex: 'var(--ogrid-z-popover, 10001)' }} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+        {/* Opens below the cell from its left edge, on its own panel so the grid doesn't show through. */}
+        <Popover.Content
+          className={styles.popoverEditor}
+          align="start"
+          sideOffset={4}
+          collisionPadding={8}
+          style={{ ...portalTheme, zIndex: 'var(--ogrid-z-popover, 10001)' }}
+          onOpenAutoFocus={(e: Event) => e.preventDefault()}
+        >
           {editor}
         </Popover.Content>
       </Popover.Portal>
