@@ -30,12 +30,43 @@ export function getAutoScrollVelocity(dx: number, dy: number): AutoScrollVelocit
 const INTERACTIVE_TARGET_SELECTOR =
   'a,[href],button,input,textarea,select,[contenteditable]:not([contenteditable="false"])';
 
+type Axis = 'x' | 'y';
+
+function overflows(el: Element, axis: Axis): boolean {
+  return axis === 'y' ? el.scrollHeight > el.clientHeight : el.scrollWidth > el.clientWidth;
+}
+
+function allowsScroll(el: Element, axis: Axis): boolean {
+  const style = getComputedStyle(el);
+  return /auto|scroll|overlay/.test(axis === 'y' ? style.overflowY : style.overflowX);
+}
+
+/**
+ * What a pan along one axis scrolls: the grid when it overflows that way,
+ * otherwise the nearest scrollable ancestor or the page (a grid sized to its
+ * content leaves the vertical scrolling to the page). Null when nothing can.
+ */
+export function findPanTarget(wrapper: Element, axis: Axis): Element | null {
+  if (overflows(wrapper, axis)) return wrapper;
+  const root = document.scrollingElement ?? document.documentElement;
+  for (let el = wrapper.parentElement; el && el !== root && el !== document.body; el = el.parentElement) {
+    if (overflows(el, axis) && allowsScroll(el, axis)) return el;
+  }
+  // The page counts unless it is locked (e.g. by another grid's full screen).
+  const locked = [document.documentElement, document.body].some((el) => {
+    const style = getComputedStyle(el);
+    return (axis === 'y' ? style.overflowY : style.overflowX) === 'hidden';
+  });
+  return !locked && overflows(root, axis) ? root : null;
+}
+
 /**
  * Enables middle-click (button 1) auto-scroll on a scrollable container.
  *
  * Middle-click shows a small origin indicator; moving the mouse away from
  * the origin scrolls the container in that direction. Outside a dead zone,
- * speed grows with distance from the origin up to a cap. Any subsequent click or Escape cancels the auto-scroll.
+ * speed grows with distance from the origin up to a cap. An axis the grid
+ * cannot scroll pans its nearest scrollable ancestor or the page instead. Any subsequent click or Escape cancels the auto-scroll.
  * Holding the middle button and dragging pans until the button is released.
  *
  * Listens for pointer events, not mouse events: grid cells cancel
@@ -62,6 +93,8 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
     let lastFrame = 0;
     let carryX = 0;
     let carryY = 0;
+    let targetX: Element | null = null;
+    let targetY: Element | null = null;
 
     // ── Indicator ──────────────────────────────────────────────────────────
 
@@ -126,8 +159,8 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
         const stepY = Math.trunc(carryY);
         carryX -= stepX;
         carryY -= stepY;
-        if (stepX !== 0) wrapper.scrollLeft += stepX;
-        if (stepY !== 0) wrapper.scrollTop += stepY;
+        if (stepX !== 0 && targetX) targetX.scrollLeft += stepX;
+        if (stepY !== 0 && targetY) targetY.scrollTop += stepY;
       }
       rafId = requestAnimationFrame(scrollLoop);
     }
@@ -170,8 +203,10 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
 
     // ── Start / stop ───────────────────────────────────────────────────────
 
-    function startPan(x: number, y: number) {
+    function startPan(x: number, y: number, panX: Element | null, panY: Element | null) {
       active = true;
+      targetX = panX;
+      targetY = panY;
       originX = x;
       originY = y;
       currentX = x;
@@ -208,6 +243,8 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
       }
       removeIndicator();
       document.body.style.cursor = '';
+      targetX = null;
+      targetY = null;
 
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerdown', onGlobalPointerDown, true);
@@ -223,22 +260,30 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
 
     // ── Wrapper listener (always attached) ─────────────────────────────────
 
+    /** The last middle press was taken over here, so its auxclick is ours too. */
+    let ownsPress = false;
+
     function onWrapperPointerDown(e: PointerEvent) {
       if (e.button !== 1) return;
+      ownsPress = false;
       const target = e.target as Element | null;
       if (target?.closest?.(INTERACTIVE_TARGET_SELECTOR)) return;
+      const panX = active ? null : findPanTarget(wrapper, 'x');
+      const panY = active ? null : findPanTarget(wrapper, 'y');
+      // Nothing to scroll either way: middle-click stays the browser's.
+      if (!active && !panX && !panY) return;
+      ownsPress = true;
       e.preventDefault();
       if (cooldown) return;
       if (active) { stopPan(); return; }
-      startPan(e.clientX, e.clientY);
+      startPan(e.clientX, e.clientY, panX, panY);
     }
 
-    // Prevent native autoscroll and middle-click paste on the wrapper, except
-    // over interactive targets (where middle-click should reach the element).
+    // Prevent native autoscroll and middle-click paste for a press the pan
+    // took over; any other middle-click reaches the element as usual.
     function onWrapperAuxClick(e: MouseEvent) {
-      if (e.button !== 1) return;
-      const target = e.target as Element | null;
-      if (target?.closest?.(INTERACTIVE_TARGET_SELECTOR)) return;
+      if (e.button !== 1 || !ownsPress) return;
+      ownsPress = false;
       e.preventDefault();
     }
 
