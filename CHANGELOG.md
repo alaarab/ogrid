@@ -4,6 +4,10 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Middle-click auto-scroll ignores a 1px overflow** (`@alaarab/ogrid-react`): a content-sized grid whose rounding or borders left it 1px taller than its box took the pan itself and moved 1px; it now pans the page as intended.
+
 ## [2.21.1] - 2026-10-22
 
 ## [2.21.0] - 2026-10-22
