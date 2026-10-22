@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.21.0] - 2026-10-22
+
 ### Added
 
 - `isFullScreen` and `onFullScreenChange` let apps control and follow fullscreen. `isFullScreen` also works without the `fullScreen` toolbar button.
