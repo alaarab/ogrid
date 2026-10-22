@@ -2,7 +2,7 @@ import * as React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { getAutoScrollVelocity, useMiddleClickScroll } from '../useMiddleClickScroll';
 
-function Harness({ overflow = 'y' }: { overflow?: 'y' | 'x' | 'none' }): React.ReactElement {
+function Harness({ overflow = 'y' }: { overflow?: 'y' | 'x' | 'x-sliver' | 'none' }): React.ReactElement {
   const wrapperRef = React.useRef<HTMLDivElement>(null);
   useMiddleClickScroll({ wrapperRef });
   // The test DOM has no layout: give the wrapper content taller than itself.
@@ -10,9 +10,9 @@ function Harness({ overflow = 'y' }: { overflow?: 'y' | 'x' | 'none' }): React.R
     const el = wrapperRef.current;
     if (!el) return;
     Object.defineProperty(el, 'clientHeight', { configurable: true, value: 100 });
-    Object.defineProperty(el, 'scrollHeight', { configurable: true, value: overflow === 'y' ? 1000 : 100 });
+    Object.defineProperty(el, 'scrollHeight', { configurable: true, value: overflow === 'y' ? 1000 : overflow === 'x-sliver' ? 101 : 100 });
     Object.defineProperty(el, 'clientWidth', { configurable: true, value: 100 });
-    Object.defineProperty(el, 'scrollWidth', { configurable: true, value: overflow === 'x' ? 1000 : 100 });
+    Object.defineProperty(el, 'scrollWidth', { configurable: true, value: overflow.startsWith('x') ? 1000 : 100 });
   }, [overflow]);
   return (
     <div ref={wrapperRef} data-testid="wrapper">
@@ -60,8 +60,8 @@ describe('useMiddleClickScroll', () => {
     expect(aux.defaultPrevented).toBe(false);
   });
 
-  it('pans the page along an axis the grid cannot scroll', async () => {
-    // Content-sized grid that only scrolls sideways, on a page that scrolls down.
+  it.each(['x', 'x-sliver'] as const)('pans the page along an axis the grid cannot scroll (%s)', async (overflow) => {
+    // Content-sized grid that only scrolls sideways (a 1px rounding overflow is not scrolling), on a page that scrolls down.
     const root = document.scrollingElement ?? document.documentElement;
     Object.defineProperty(root, 'clientHeight', { configurable: true, value: 500 });
     Object.defineProperty(root, 'scrollHeight', { configurable: true, value: 5000 });
@@ -71,7 +71,7 @@ describe('useMiddleClickScroll', () => {
     globalThis.requestAnimationFrame = (cb) => frames.push(cb);
     globalThis.cancelAnimationFrame = () => {};
     try {
-      render(<Harness overflow="x" />);
+      render(<Harness overflow={overflow} />);
       const wrapper = screen.getByTestId('wrapper');
       root.scrollTop = 0;
       expect(middleMouseDown(wrapper, 100, 100).defaultPrevented).toBe(true);
