@@ -4,6 +4,7 @@
 
 @use '../../../react/src/styles/data-grid-table' as *;
 @use '../../../core/src/styles/ogrid-theme' as *;
+@use '../../../react/src/styles/surface' as surface;
 
 // ---- Radix-specific: native <table> element styles ----
 
@@ -307,4 +308,16 @@
   .density-comfortable .dataTable th {
     padding: 6px 8px;
   }
+}
+
+// Panel behind a custom cellEditor component (the cell's popover editor).
+.popoverEditor {
+  @include surface.elevated;
+  box-sizing: border-box;
+  padding: 4px;
+  max-width: min(calc(100vw - 24px), var(--radix-popover-content-available-width));
+  max-height: min(calc(100dvh - 28px), var(--radix-popover-content-available-height));
+  overflow: auto;
+  color: var(--ogrid-fg, #242424);
+  background: var(--ogrid-bg, #fff);
 }

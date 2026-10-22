@@ -121,6 +121,21 @@ describe('Radix DataGridTable popover cell editors (react-inputs style)', () => 
     { columnId: 'status', name: 'Status', editable: true },
   ];
 
+  it('opens the editor panel from the cell\'s left edge', async () => {
+    // Unstyled, the panel was transparent and centred on the cell, so a wide
+    // editor spilled over the neighbouring column with the grid showing through.
+    const { cell } = renderGrid({ columns: popoverColumns });
+    fireEvent.pointerDown(cell(1, 0));
+    act(() => {
+      fireEvent.doubleClick(cell(1, 0));
+    });
+    const input = await screen.findByLabelText('Popover editor input');
+    const panel = input.closest('[data-radix-popper-content-wrapper] > *') as HTMLElement | null;
+    expect(panel).not.toBeNull();
+    // The panel's look comes from .popoverEditor (checked in the browser by e2e).
+    expect(panel?.getAttribute('data-align')).toBe('start');
+  });
+
   it('Home/End/PageUp/PageDown typed in a popover editor input stay with the editor', async () => {
     const { cell, onCellValueChanged } = renderGrid({ columns: popoverColumns });
     fireEvent.pointerDown(cell(1, 0));

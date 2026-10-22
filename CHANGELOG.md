@@ -24,6 +24,7 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Radix: custom cell editors (a `cellEditor` component, including the premium inputs) now open on a solid panel with a border, starting at the cell's left edge just below it. The panel had no background before, so the grid's text and badges showed through the editor, and it was centred on the cell, so a wide editor spread over the column to its left.
 - Middle-click auto-scroll now works on a grid that is sized to its content, where the page does the scrolling. Since 2.19.3 a middle-click there showed the scroll indicator but moved nothing. Each direction now scrolls the grid if the grid can scroll that way, and otherwise the nearest scrollable container or the page. Where nothing can scroll, middle-click is left to the browser.
 - The fullscreen grid's layer now comes from `--ogrid-z-fullscreen` (default `9999`) instead of a fixed inline `9999`, so apps can put their own dialogs and menus above it.
 - Fullscreen now locks page scroll and puts the page's scroll position back on exit. Before, the page could get shorter behind the overlay and lose its scroll position.
